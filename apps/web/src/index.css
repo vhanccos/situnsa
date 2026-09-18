@@ -4,6 +4,7 @@
 /** Sistema visual institucional §14: Azul #0B1F30, Grafito, Guinda, Verde. */
 /* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind v4 theme tokens */
 @theme {
+  --default-border-color: var(--color-slate-200);
   --font-sans: "Inter Variable", "Inter", "Segoe UI", system-ui, sans-serif;
   --color-navy-950: #0b1f30;
   --color-navy-800: #123149;

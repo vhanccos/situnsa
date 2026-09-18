@@ -143,7 +143,7 @@ export function ExpedienteDetallePage() {
           onCancelar={() => setEliminar(false)}
         />
       )}
-      <div className="rounded-lg border bg-slate-50 p-4">
+      <div>
         {tab === "datos" && (
           <>
             <DatosForm detalle={d} setEstado={setGuardado} onConflicto={setConflicto} />

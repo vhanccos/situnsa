@@ -247,7 +247,7 @@ export function DatosForm({
   return (
     <div className="space-y-4">
       {!grupo2 && (
-        <section className="rounded-lg bg-white p-4">
+        <section className="rounded-xl bg-white p-4 shadow-sm md:p-5">
           <h2 className="mb-3 text-sm font-bold">ETAPA 01</h2>
           {grid(PERSONA_1)}
           <h3 className="mb-3 mt-5 text-xs font-bold tracking-wide text-grafito-600">
@@ -258,7 +258,7 @@ export function DatosForm({
       )}
       {grupo2 && (
         <>
-          <section className="rounded-lg bg-white p-4">
+          <section className="rounded-xl bg-white p-4 shadow-sm md:p-5">
             <h2 className="mb-3 text-sm font-bold">ETAPA 01 · DATOS PERSONALES</h2>
             <h3 className="mb-3 text-xs font-bold tracking-wide text-grafito-600">
               PARTICIPANTE 01
@@ -269,13 +269,13 @@ export function DatosForm({
             </h3>
             {grid(PERSONA_2)}
           </section>
-          <section className="rounded-lg bg-white p-4">
+          <section className="rounded-xl bg-white p-4 shadow-sm md:p-5">
             <h2 className="mb-3 text-sm font-bold">ETAPA 01 · DATOS DE DOCUMENTOS</h2>
             {grid(DATOS_DOCUMENTOS)}
           </section>
         </>
       )}
-      <section className="rounded-lg bg-white p-4">
+      <section className="rounded-xl bg-white p-4 shadow-sm md:p-5">
         <h2 className="mb-3 text-sm font-bold">ETAPA 02</h2>
         {grid(ETAPA_02)}
       </section>
