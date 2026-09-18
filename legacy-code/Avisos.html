@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html><head><base target="_top"><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font-family:Arial,sans-serif;background:#f4f6f8;margin:0;color:#1B2228}.head{background:#081F30;color:#fff;padding:20px}.box{max-width:900px;margin:28px auto;background:#fff;border-radius:12px;padding:22px;box-shadow:0 8px 24px rgba(0,0,0,.08)}a{color:#610617;font-weight:700}</style><style id="unsa-v25-page">
+/* =========================================================
+   V25 PREMIUM UNSA · CAPA VISUAL UNIFICADA
+   Solo presentación. No modifica lógica, IDs ni eventos.
+========================================================= */
+:root{
+  --unsa-blue-950:#071b2b;--unsa-blue-900:#0b263b;--unsa-blue-800:#123a56;
+  --unsa-blue-700:#17527a;--unsa-blue-600:#1f6fa5;--unsa-wine:#7b1730;
+  --unsa-gold:#c79a3b;--unsa-bg:#f3f6f9;--unsa-surface:#ffffff;
+  --unsa-line:#d8e1e8;--unsa-text:#0a2940;--unsa-muted:#647b8d;
+  --unsa-success:#17865c;--unsa-warning:#d99a21;--unsa-danger:#b63c4b;
+  --unsa-shadow:0 10px 30px rgba(7,27,43,.08);
+}
+html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif!important;color:var(--unsa-text)!important}
+body{background:var(--unsa-bg)!important}
+button,input,select,textarea{font-family:inherit!important}
+h1,h2,h3,h4,h5,h6,strong{letter-spacing:-.015em}
+.topbar{background:linear-gradient(100deg,var(--unsa-blue-950),var(--unsa-blue-900) 62%,#102f46)!important;border-bottom:3px solid var(--unsa-wine)!important;box-shadow:0 5px 20px rgba(7,27,43,.22)!important}
+.topbar-brand h1{font-size:19px!important;letter-spacing:.02em!important}.topbar-brand span{color:#c9d8e3!important}
+.topbar-logo{width:52px!important;height:52px!important;border-radius:12px!important;background:#fff!important;color:var(--unsa-blue-950)!important;border:1px solid rgba(255,255,255,.3)!important;overflow:hidden!important;box-shadow:0 4px 14px rgba(0,0,0,.2)!important;font-size:0!important}
+.topbar-logo::after{content:"UNSA";display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:Georgia,serif;font-weight:800;font-size:15px;letter-spacing:.05em;color:var(--unsa-wine)}
+.dashboard-sidebar{background:linear-gradient(180deg,var(--unsa-blue-950),#0a2233)!important;border-right:1px solid rgba(255,255,255,.08)!important;box-shadow:8px 0 25px rgba(7,27,43,.08)!important}
+.sidebar-titulo{border-bottom:1px solid rgba(255,255,255,.12)!important}.sidebar-titulo strong{color:#fff!important}.sidebar-titulo small,.sidebar-seccion-label{color:#8faabd!important}
+.sidebar-item{color:#dce8ef!important;border-radius:9px!important;margin:3px 0!important;transition:.18s ease!important}.sidebar-item:hover{background:rgba(255,255,255,.075)!important;color:#fff!important;transform:translateX(2px)}
+.sidebar-item.activo{background:linear-gradient(90deg,var(--unsa-blue-700),var(--unsa-blue-800))!important;color:#fff!important;border-left:3px solid #6db7e8!important;box-shadow:0 6px 16px rgba(0,0,0,.16)!important}
+.submenu-tramite-v247{background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.1)!important;border-left:2px solid var(--unsa-blue-600)!important;border-radius:9px!important;padding:8px!important;margin:5px 0 12px 16px!important}
+.submenu-tramite-v247 button{background:transparent!important;color:#dce8ef!important;border:0!important;border-radius:7px!important;padding:10px 12px!important;text-align:left!important;width:100%!important;font-weight:650!important}.submenu-tramite-v247 button:hover{background:rgba(31,111,165,.24)!important;color:#fff!important}
+.submenu-exp-v247{color:#91abc0!important;font-size:10px!important;padding:5px 12px!important;letter-spacing:.08em!important}
+.dashboard-main,.main-content{background:var(--unsa-bg)!important}
+.panel,.card,.admin-card,.resumen-card,.modal-content,.modal-contenido,.detalle-card{border:1px solid var(--unsa-line)!important;border-radius:13px!important;background:var(--unsa-surface)!important;box-shadow:var(--unsa-shadow)!important}
+input,select,textarea{border:1px solid #c9d6df!important;border-radius:8px!important;background:#fff!important;color:var(--unsa-text)!important;box-shadow:none!important}
+input:focus,select:focus,textarea:focus{border-color:var(--unsa-blue-600)!important;box-shadow:0 0 0 3px rgba(31,111,165,.12)!important;outline:0!important}
+label{color:#486478!important;font-weight:700!important}
+button,.btn{border-radius:8px!important;font-weight:750!important;transition:.18s ease!important}button:hover,.btn:hover{transform:translateY(-1px)}
+.btn-primary,.btn-principal,.btn-guardar,.btn-ver-documento-admin{background:var(--unsa-blue-800)!important;color:#fff!important;border-color:var(--unsa-blue-800)!important}
+.btn-danger,.btn-eliminar{background:var(--unsa-danger)!important;color:#fff!important}.btn-success{background:var(--unsa-success)!important;color:#fff!important}.btn-warning{background:var(--unsa-warning)!important;color:#132b3b!important}
+table{border-collapse:separate!important;border-spacing:0!important}thead th{background:var(--unsa-blue-900)!important;color:#fff!important;font-size:11px!important;letter-spacing:.025em!important}tbody tr{background:#fff!important}tbody tr:hover{background:#f5f9fc!important}td{border-color:#e1e8ed!important}
+.badge,.estado-badge,.status-badge{border-radius:999px!important;font-weight:800!important}
+.modal,.modal-overlay{backdrop-filter:blur(5px)}
+.modal-header,.modal-cabecera{background:linear-gradient(90deg,var(--unsa-blue-950),var(--unsa-blue-900))!important;color:#fff!important;border-bottom:3px solid var(--unsa-wine)!important}
+/* Portal tesista */
+.tramite-body{background:#eef3f7!important}.tramite-header{background:linear-gradient(100deg,var(--unsa-blue-950),var(--unsa-blue-800))!important;border-bottom:3px solid var(--unsa-wine)!important;box-shadow:0 6px 22px rgba(7,27,43,.2)!important}.tramite-header h1{color:#fff!important}.tramite-header span{color:#c7d7e2!important}
+.tramite-card,.etapa-card,.subetapa-card,.historial-card{border-color:var(--unsa-line)!important;border-radius:12px!important;box-shadow:0 6px 20px rgba(7,27,43,.06)!important}
+/* Scrollbars */
+*{scrollbar-width:thin;scrollbar-color:#9eb1bf #edf2f5}*::-webkit-scrollbar{width:9px;height:9px}*::-webkit-scrollbar-track{background:#edf2f5}*::-webkit-scrollbar-thumb{background:#9eb1bf;border-radius:10px;border:2px solid #edf2f5}
+@media(max-width:800px){.topbar-logo{width:44px!important;height:44px!important}.dashboard-sidebar{box-shadow:none!important}}
+
+</style>
+<style id="unsa-v252-elegant-final">
+/* V25.2 ELEGANT UNSA — SOLO PRESENTACION */
+:root{--u-navy:#0b2d45;--u-navy2:#123e5d;--u-wine:#78152f;--u-gold:#d1a84b;--u-bg:#f3f5f7;--u-card:#fff;--u-soft:#edf1f4;--u-line:#d6dee5;--u-text:#123149;--u-muted:#6c7f8d;--u-green:#16835b;--u-red:#b43a4b;--u-orange:#d98724}
+html,body{font-family:"Segoe UI",Inter,Arial,sans-serif!important;background:var(--u-bg)!important;color:var(--u-text)!important;font-size:13px!important}
+body{letter-spacing:0!important}h1,h2,h3,h4,h5,h6,strong{font-family:"Segoe UI",Inter,Arial,sans-serif!important;letter-spacing:-.012em!important;color:var(--u-text)}
+.topbar{min-height:72px!important;padding:10px 24px!important;background:linear-gradient(100deg,#08263b 0%,#0d334d 72%,#123e5d 100%)!important;border-bottom:3px solid var(--u-wine)!important;box-shadow:0 5px 18px rgba(8,38,59,.16)!important}
+.topbar-logo{width:54px!important;height:54px!important;border-radius:12px!important;background:#fff!important;border:1px solid rgba(255,255,255,.5)!important;box-shadow:0 4px 12px rgba(0,0,0,.14)!important;overflow:hidden!important}
+.topbar-logo img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;padding:4px!important;background:#fff!important}.topbar-logo::after{display:none!important}
+.topbar-brand h1{font-size:20px!important;font-weight:750!important;color:#fff!important}.topbar-brand span{font-size:10.5px!important;color:#d3e0e8!important}.topbar-user{gap:9px!important}.topbar-user button,.btn-notificacion,.btn-logout{min-height:38px!important;border-radius:8px!important;font-size:11px!important}
+.dashboard-sidebar{width:246px!important;padding:12px 12px!important;background:linear-gradient(180deg,#74152f 0%,#651229 58%,#571022 100%)!important;border-right:0!important;box-shadow:5px 0 20px rgba(40,13,24,.08)!important}
+.sidebar-titulo{padding:4px 9px 12px!important}.sidebar-titulo strong{font-size:13px!important;font-weight:750!important;color:#fff!important;letter-spacing:.055em!important}.sidebar-titulo small{font-size:9px!important;color:#efd9df!important}.sidebar-seccion-label{margin:9px 8px 5px!important;font-size:8px!important;letter-spacing:.14em!important;color:#e9c7d0!important}.sidebar-separador{margin:9px 8px!important;border-color:rgba(255,255,255,.12)!important}
+.sidebar-item{min-height:36px!important;margin:2px 0!important;padding:7px 9px!important;border-radius:7px!important;font-size:11px!important;font-weight:650!important;color:#fff!important}.sidebar-item .sidebar-icon{width:24px!important;font-size:12px!important}.sidebar-item:hover{background:rgba(255,255,255,.09)!important;transform:none!important}.sidebar-item.activo{background:#4d0d1e!important;border-left:3px solid var(--u-gold)!important;box-shadow:none!important}
+.submenu-tramite-v247{margin:5px 3px 8px 14px!important;padding:5px!important;border:1px solid rgba(255,255,255,.15)!important;border-left:2px solid var(--u-gold)!important;border-radius:8px!important;background:rgba(255,255,255,.07)!important;box-shadow:none!important}.submenu-exp-v247{padding:5px 8px!important;font-size:8px!important;color:#f2dfe4!important}.submenu-tramite-v247 button{min-height:30px!important;padding:6px 8px!important;font-size:10.5px!important;font-weight:600!important;color:#fff!important;border-radius:6px!important}.submenu-tramite-v247 button:hover{background:rgba(255,255,255,.1)!important}
+.dashboard-main,.main-content{background:var(--u-bg)!important}.dashboard-content{padding:24px 28px!important}.dashboard-content h1,.dashboard-content h2{font-weight:700!important}
+.panel,.card,.admin-card,.resumen-card,.modal-content,.modal-contenido,.detalle-card,.form-card{border:1px solid var(--u-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:0 4px 14px rgba(18,49,73,.045)!important}
+input,select,textarea{border:1px solid #cbd6de!important;border-radius:7px!important;background:#fff!important;color:var(--u-text)!important;box-shadow:none!important;font-size:12px!important}input:focus,select:focus,textarea:focus{outline:0!important;border-color:#4b7897!important;box-shadow:0 0 0 3px rgba(75,120,151,.10)!important}
+label{font-size:10px!important;color:#526c7e!important;font-weight:650!important}button,.btn{font-family:inherit!important;border-radius:7px!important;font-weight:650!important}
+thead th{background:var(--u-navy)!important;color:#fff!important;font-size:9.5px!important;font-weight:700!important}tbody tr{background:#fff!important}tbody tr:hover{background:#f7f9fa!important}td{border-color:#e0e6eb!important}
+.modal-header,.modal-cabecera{background:var(--u-navy)!important;border-bottom:3px solid var(--u-wine)!important;color:#fff!important}
+/* Portal tesista y vistas auxiliares */
+.tramite-body{background:var(--u-bg)!important}.tramite-header{min-height:62px!important;background:linear-gradient(100deg,#08263b,#123e5d)!important;border-bottom:3px solid var(--u-wine)!important}.tramite-container{width:min(94%,1240px)!important;margin:18px auto!important}.tramite-resumen{gap:8px!important}.tramite-resumen .resumen-card,.proceso-completo,.historial-container{border:1px solid var(--u-line)!important;border-radius:9px!important;background:#fff!important;box-shadow:0 4px 14px rgba(18,49,73,.045)!important}.barra-progreso{background:linear-gradient(90deg,var(--u-navy2),#2b6d95)!important}
+@media(max-width:900px){.dashboard-sidebar{width:220px!important}.dashboard-content{padding:16px!important}}
+</style>
+
+</head><body><div class="head"><h2>Comunicados y avisos</h2></div><div class="box"><p>Esta vista queda reservada para la bandeja institucional de notificaciones del Sistema de Titulación.</p><p><a href="<?!= appUrl ?>?page=dashboard" target="_top">Volver al Dashboard</a></p></div></body></html>

@@ -1,0 +1,384 @@
+<style id="unsa-v252-elegant-final">
+/* V25.2 ELEGANT UNSA — SOLO PRESENTACION */
+:root{--u-navy:#0b2d45;--u-navy2:#123e5d;--u-wine:#78152f;--u-gold:#d1a84b;--u-bg:#f3f5f7;--u-card:#fff;--u-soft:#edf1f4;--u-line:#d6dee5;--u-text:#123149;--u-muted:#6c7f8d;--u-green:#16835b;--u-red:#b43a4b;--u-orange:#d98724}
+html,body{font-family:"Segoe UI",Inter,Arial,sans-serif!important;background:var(--u-bg)!important;color:var(--u-text)!important;font-size:13px!important}
+body{letter-spacing:0!important}h1,h2,h3,h4,h5,h6,strong{font-family:"Segoe UI",Inter,Arial,sans-serif!important;letter-spacing:-.012em!important;color:var(--u-text)}
+.topbar{min-height:72px!important;padding:10px 24px!important;background:linear-gradient(100deg,#08263b 0%,#0d334d 72%,#123e5d 100%)!important;border-bottom:3px solid var(--u-wine)!important;box-shadow:0 5px 18px rgba(8,38,59,.16)!important}
+.topbar-logo{width:54px!important;height:54px!important;border-radius:12px!important;background:#fff!important;border:1px solid rgba(255,255,255,.5)!important;box-shadow:0 4px 12px rgba(0,0,0,.14)!important;overflow:hidden!important}
+.topbar-logo img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;padding:4px!important;background:#fff!important}.topbar-logo::after{display:none!important}
+.topbar-brand h1{font-size:20px!important;font-weight:750!important;color:#fff!important}.topbar-brand span{font-size:10.5px!important;color:#d3e0e8!important}.topbar-user{gap:9px!important}.topbar-user button,.btn-notificacion,.btn-logout{min-height:38px!important;border-radius:8px!important;font-size:11px!important}
+.dashboard-sidebar{width:246px!important;padding:12px 12px!important;background:linear-gradient(180deg,#74152f 0%,#651229 58%,#571022 100%)!important;border-right:0!important;box-shadow:5px 0 20px rgba(40,13,24,.08)!important}
+.sidebar-titulo{padding:4px 9px 12px!important}.sidebar-titulo strong{font-size:13px!important;font-weight:750!important;color:#fff!important;letter-spacing:.055em!important}.sidebar-titulo small{font-size:9px!important;color:#efd9df!important}.sidebar-seccion-label{margin:9px 8px 5px!important;font-size:8px!important;letter-spacing:.14em!important;color:#e9c7d0!important}.sidebar-separador{margin:9px 8px!important;border-color:rgba(255,255,255,.12)!important}
+.sidebar-item{min-height:36px!important;margin:2px 0!important;padding:7px 9px!important;border-radius:7px!important;font-size:11px!important;font-weight:650!important;color:#fff!important}.sidebar-item .sidebar-icon{width:24px!important;font-size:12px!important}.sidebar-item:hover{background:rgba(255,255,255,.09)!important;transform:none!important}.sidebar-item.activo{background:#4d0d1e!important;border-left:3px solid var(--u-gold)!important;box-shadow:none!important}
+.submenu-tramite-v247{margin:5px 3px 8px 14px!important;padding:5px!important;border:1px solid rgba(255,255,255,.15)!important;border-left:2px solid var(--u-gold)!important;border-radius:8px!important;background:rgba(255,255,255,.07)!important;box-shadow:none!important}.submenu-exp-v247{padding:5px 8px!important;font-size:8px!important;color:#f2dfe4!important}.submenu-tramite-v247 button{min-height:30px!important;padding:6px 8px!important;font-size:10.5px!important;font-weight:600!important;color:#fff!important;border-radius:6px!important}.submenu-tramite-v247 button:hover{background:rgba(255,255,255,.1)!important}
+.dashboard-main,.main-content{background:var(--u-bg)!important}.dashboard-content{padding:24px 28px!important}.dashboard-content h1,.dashboard-content h2{font-weight:700!important}
+.panel,.card,.admin-card,.resumen-card,.modal-content,.modal-contenido,.detalle-card,.form-card{border:1px solid var(--u-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:0 4px 14px rgba(18,49,73,.045)!important}
+input,select,textarea{border:1px solid #cbd6de!important;border-radius:7px!important;background:#fff!important;color:var(--u-text)!important;box-shadow:none!important;font-size:12px!important}input:focus,select:focus,textarea:focus{outline:0!important;border-color:#4b7897!important;box-shadow:0 0 0 3px rgba(75,120,151,.10)!important}
+label{font-size:10px!important;color:#526c7e!important;font-weight:650!important}button,.btn{font-family:inherit!important;border-radius:7px!important;font-weight:650!important}
+thead th{background:var(--u-navy)!important;color:#fff!important;font-size:9.5px!important;font-weight:700!important}tbody tr{background:#fff!important}tbody tr:hover{background:#f7f9fa!important}td{border-color:#e0e6eb!important}
+.modal-header,.modal-cabecera{background:var(--u-navy)!important;border-bottom:3px solid var(--u-wine)!important;color:#fff!important}
+/* Portal tesista y vistas auxiliares */
+.tramite-body{background:var(--u-bg)!important}.tramite-header{min-height:62px!important;background:linear-gradient(100deg,#08263b,#123e5d)!important;border-bottom:3px solid var(--u-wine)!important}.tramite-container{width:min(94%,1240px)!important;margin:18px auto!important}.tramite-resumen{gap:8px!important}.tramite-resumen .resumen-card,.proceso-completo,.historial-container{border:1px solid var(--u-line)!important;border-radius:9px!important;background:#fff!important;box-shadow:0 4px 14px rgba(18,49,73,.045)!important}.barra-progreso{background:linear-gradient(90deg,var(--u-navy2),#2b6d95)!important}
+@media(max-width:900px){.dashboard-sidebar{width:220px!important}.dashboard-content{padding:16px!important}}
+</style>
+
+<script>
+
+/* =========================================================
+   LOGIN
+   SISTEMA DE TITULACIÓN USE FIPS
+   Compatible con Auth.gs consolidado.
+========================================================= */
+
+let LOGIN_EN_PROCESO = false;
+
+
+/* =========================================================
+   ENTER
+========================================================= */
+
+function loginEnter(event){
+
+  if(
+    event &&
+    event.key === 'Enter'
+  ){
+    event.preventDefault();
+    login();
+  }
+}
+
+
+/* =========================================================
+   MENSAJE
+========================================================= */
+
+function loginMensaje(texto, tipo){
+
+  const elemento =
+    document.getElementById('mensaje');
+
+  if(!elemento){
+    return;
+  }
+
+  elemento.textContent =
+    String(texto || '');
+
+  elemento.dataset.tipo =
+    tipo || '';
+}
+
+
+/* =========================================================
+   ESTADO DEL BOTÓN
+========================================================= */
+
+function loginCargando(activo){
+
+  LOGIN_EN_PROCESO =
+    !!activo;
+
+  const boton =
+    document.getElementById(
+      'btnIngresar'
+    );
+
+  if(!boton){
+    return;
+  }
+
+  boton.disabled =
+    LOGIN_EN_PROCESO;
+
+  boton.textContent =
+    LOGIN_EN_PROCESO
+      ? 'Ingresando...'
+      : 'Ingresar';
+}
+
+
+/* =========================================================
+   INICIAR SESIÓN
+========================================================= */
+
+function login(){
+
+  if(LOGIN_EN_PROCESO){
+    return;
+  }
+
+  const usuarioInput =
+    document.getElementById(
+      'usuario'
+    );
+
+  const passwordInput =
+    document.getElementById(
+      'password'
+    );
+
+  const usuario =
+    usuarioInput
+      ? usuarioInput.value.trim()
+      : '';
+
+  const password =
+    passwordInput
+      ? passwordInput.value.trim()
+      : '';
+
+  loginMensaje(
+    '',
+    ''
+  );
+
+  if(!usuario){
+
+    loginMensaje(
+      'Ingrese su usuario.',
+      'error'
+    );
+
+    if(usuarioInput){
+      usuarioInput.focus();
+    }
+
+    return;
+  }
+
+  if(!password){
+
+    loginMensaje(
+      'Ingrese su contraseña.',
+      'error'
+    );
+
+    if(passwordInput){
+      passwordInput.focus();
+    }
+
+    return;
+  }
+
+  loginCargando(true);
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(response){
+
+        response =
+          response || {};
+
+        if(!response.status){
+
+          loginCargando(false);
+
+          loginMensaje(
+            response.message ||
+            'Usuario o contraseña incorrectos.',
+            'error'
+          );
+
+          if(passwordInput){
+            passwordInput.value = '';
+            passwordInput.focus();
+          }
+
+          return;
+        }
+
+        const datosUsuario = {
+
+          correo:
+            response.correo || '',
+
+          usuario:
+            response.usuario || '',
+
+          nombre:
+            response.nombre || '',
+
+          rol:
+            response.rol || '',
+
+          dni:
+            response.dni ||
+            response.usuario ||
+            '',
+
+          expediente:
+            response.expediente || '',
+
+          programa:
+            response.programa || ''
+
+        };
+
+        /*
+          Limpiamos sesiones anteriores para impedir
+          que datos de otro usuario permanezcan activos.
+        */
+        sessionStorage.clear();
+        localStorage.clear();
+
+        Object.keys(
+          datosUsuario
+        ).forEach(
+          function(key){
+
+            const valor =
+              String(
+                datosUsuario[key] || ''
+              );
+
+            sessionStorage.setItem(
+              key,
+              valor
+            );
+
+            localStorage.setItem(
+              key,
+              valor
+            );
+          }
+        );
+
+        /* FASE 7: sesión backend MVC + SOA */
+        const tokenSesion = String(response.token || '');
+        const permisosSesion = Array.isArray(response.permisos)
+          ? response.permisos
+          : [];
+        const expiraSesion = String(response.sesionExpiraEn || '');
+
+        sessionStorage.setItem('token', tokenSesion);
+        sessionStorage.setItem('permisos', JSON.stringify(permisosSesion));
+        sessionStorage.setItem('sesionExpiraEn', expiraSesion);
+
+        /* localStorage se conserva temporalmente solo por compatibilidad. */
+        localStorage.setItem('token', tokenSesion);
+        localStorage.setItem('permisos', JSON.stringify(permisosSesion));
+        localStorage.setItem('sesionExpiraEn', expiraSesion);
+
+        const url =
+          String(
+            response.url || ''
+          )
+          .trim()
+          .replace(
+            /^['"]+|['"]+$/g,
+            ''
+          );
+
+        if(!url){
+
+          loginCargando(false);
+
+          loginMensaje(
+            'No se recibió una ruta válida de acceso.',
+            'error'
+          );
+
+          return;
+        }
+
+        /*
+          BD-18.8
+          No se navega a script.google.com desde el iframe.
+          Se evalúa la vista del rol y se sustituye el documento actual,
+          conservando sessionStorage/localStorage y evitando X-Frame-Options.
+        */
+        loginMensaje(
+          'Acceso correcto. Cargando su portal...',
+          'ok'
+        );
+
+        google.script.run
+          .withSuccessHandler(function(vista){
+            if(!vista || !vista.status || !vista.html){
+              loginCargando(false);
+              loginMensaje(
+                (vista && vista.message) ||
+                'No se pudo cargar el portal.',
+                'error'
+              );
+              return;
+            }
+
+            try{
+              document.open();
+              document.write(vista.html);
+              document.close();
+            }catch(errorVista){
+              loginCargando(false);
+              loginMensaje(
+                'Acceso correcto, pero no se pudo abrir el portal: ' +
+                (errorVista.message || errorVista),
+                'error'
+              );
+            }
+          })
+          .withFailureHandler(function(errorVista){
+            loginCargando(false);
+            loginMensaje(
+              'Acceso correcto, pero no se pudo cargar el portal. ' +
+              (errorVista && errorVista.message ? errorVista.message : ''),
+              'error'
+            );
+          })
+          .BD188_OBTENER_VISTA_POST_LOGIN(
+            response.rol || ''
+          );
+
+      }
+    )
+
+    .withFailureHandler(
+      function(error){
+
+        loginCargando(false);
+
+        loginMensaje(
+          'No se pudo iniciar sesión. ' +
+          (
+            error &&
+            error.message
+              ? error.message
+              : ''
+          ),
+          'error'
+        );
+
+      }
+    )
+
+    .BD183_LOGIN(
+      usuario,
+      password
+    );
+}
+
+
+/* =========================================================
+   FOCO INICIAL
+========================================================= */
+
+document.addEventListener(
+  'DOMContentLoaded',
+  function(){
+
+    const usuario =
+      document.getElementById(
+        'usuario'
+      );
+
+    if(usuario){
+      usuario.focus();
+    }
+
+  }
+);
+
+</script>
+

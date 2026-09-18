@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Taller de Tesis</title>
+  <style>
+    :root{
+      --azul:#081F30;
+      --guinda:#610617;
+      --verde:#197648;
+      --gris:#eef2f5;
+      --borde:#d6dee4;
+      --texto:#17242d;
+      --muted:#687680;
+      --blanco:#fff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;color:var(--texto)}
+    button,input,select,textarea{font:inherit}
+    .top{height:96px;background:var(--azul);border-bottom:4px solid var(--guinda);color:#fff;display:flex;align-items:center}
+    .topin{width:min(1400px,100%);margin:auto;padding:0 28px}
+    .top h1{margin:0 0 8px;font-size:26px}.top p{margin:0;font-size:14px}
+    .layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 96px)}
+    .side{background:#16232c;color:#fff;padding:20px 12px}
+    .brand{padding:0 8px 18px;border-bottom:1px solid #31404a;margin-bottom:14px}
+    .brand strong{display:block;font-size:14px}.brand small{font-size:11px;color:#b9c6cf}
+    .group{font-size:10px;letter-spacing:1.2px;color:#93a7b4;font-weight:700;margin:18px 8px 8px}
+    .nav{display:flex;flex-direction:column;gap:5px}
+    .nav button{width:100%;border:0;background:transparent;color:#fff;text-align:left;border-radius:9px;padding:13px 14px;font-weight:700;font-size:12px;cursor:pointer}
+    .nav button:hover{background:#24343f}.nav button.active{background:var(--guinda)}
+    .main{padding:24px;min-width:0}
+    .banner,.card{background:#fff;border:1px solid var(--borde);border-radius:12px}
+    .banner{padding:18px 20px;border-left:5px solid var(--guinda);margin-bottom:18px}
+    .banner h2{margin:0 0 7px;font-size:21px}.banner p{margin:0;color:var(--muted);font-size:12px}
+    .toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:15px}
+    .toolbar h2{margin:0}.toolbar p{margin:4px 0 0;color:var(--muted);font-size:12px}
+    .btn{border:0;border-radius:8px;padding:11px 15px;font-weight:800;font-size:12px;cursor:pointer}
+    .btn.blue{background:var(--azul);color:#fff}.btn.red{background:var(--guinda);color:#fff}.btn.green{background:var(--verde);color:#fff}.btn.gray{background:#e8edf0;color:#26343d}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .content-card{padding:18px}
+    .table-wrap{overflow:auto;border:1px solid var(--borde);border-radius:10px}
+    table{width:100%;border-collapse:collapse;min-width:920px;background:#fff}
+    th{background:var(--azul);color:#fff;padding:11px;font-size:11px;text-align:left}
+    td{padding:11px;border-bottom:1px solid #e8edf0;font-size:12px;vertical-align:middle}
+    tr:hover td{background:#f8fafb}
+    .badge{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:800;background:#e8edf0}
+    .badge.ok{background:#dff0e6;color:#155a36}.badge.wait{background:#fff1d9;color:#805b10}
+    .muted{color:var(--muted)}
+    .empty{padding:34px;text-align:center;color:var(--muted)}
+    .error{padding:14px;border-radius:9px;background:#fae8e8;color:#8a1520;margin:12px 0;white-space:pre-wrap}
+    .success{padding:14px;border-radius:9px;background:#e3f3e9;color:#155a36;margin:12px 0}
+    .loading{padding:28px;text-align:center;color:var(--muted)}
+    .spinner{display:inline-block;width:22px;height:22px;border:3px solid #dfe5e8;border-top-color:var(--guinda);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:10px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px}
+    .stat{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:14px}.stat b{display:block;font-size:22px;color:var(--azul)}.stat span{font-size:10px;color:var(--muted);font-weight:700}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .field{display:flex;flex-direction:column;gap:6px}.field label{font-size:11px;font-weight:800}.field input,.field select,.field textarea{border:1px solid #cbd5db;border-radius:8px;padding:10px;background:#fff}
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}.modal-bg.open{display:flex}
+    .modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:13px;box-shadow:0 18px 55px rgba(0,0,0,.28)}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--borde)}.modal-head h3{margin:0}.x{border:0;background:#edf1f3;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:20px}
+    .modal-body{padding:18px}.modal-foot{padding:14px 18px;border-top:1px solid var(--borde);display:flex;justify-content:flex-end;gap:10px}
+    .docs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.doc{border:1px solid var(--borde);border-radius:8px;padding:9px;font-size:10px}.doc a{color:var(--azul);font-weight:800}
+    .copybox{font-size:11px;margin-top:10px;padding:10px;border:1px solid var(--borde);border-radius:8px}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.side{position:static}.stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.docs{grid-template-columns:1fr}.main{padding:14px}}
+  </style>
+<style id="unsa-v25-page">
+/* =========================================================
+   V25 PREMIUM UNSA · CAPA VISUAL UNIFICADA
+   Solo presentación. No modifica lógica, IDs ni eventos.
+========================================================= */
+:root{
+  --unsa-blue-950:#071b2b;--unsa-blue-900:#0b263b;--unsa-blue-800:#123a56;
+  --unsa-blue-700:#17527a;--unsa-blue-600:#1f6fa5;--unsa-wine:#7b1730;
+  --unsa-gold:#c79a3b;--unsa-bg:#f3f6f9;--unsa-surface:#ffffff;
+  --unsa-line:#d8e1e8;--unsa-text:#0a2940;--unsa-muted:#647b8d;
+  --unsa-success:#17865c;--unsa-warning:#d99a21;--unsa-danger:#b63c4b;
+  --unsa-shadow:0 10px 30px rgba(7,27,43,.08);
+}
+html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif!important;color:var(--unsa-text)!important}
+body{background:var(--unsa-bg)!important}
+button,input,select,textarea{font-family:inherit!important}
+h1,h2,h3,h4,h5,h6,strong{letter-spacing:-.015em}
+.topbar{background:linear-gradient(100deg,var(--unsa-blue-950),var(--unsa-blue-900) 62%,#102f46)!important;border-bottom:3px solid var(--unsa-wine)!important;box-shadow:0 5px 20px rgba(7,27,43,.22)!important}
+.topbar-brand h1{font-size:19px!important;letter-spacing:.02em!important}.topbar-brand span{color:#c9d8e3!important}
+.topbar-logo{width:52px!important;height:52px!important;border-radius:12px!important;background:#fff!important;color:var(--unsa-blue-950)!important;border:1px solid rgba(255,255,255,.3)!important;overflow:hidden!important;box-shadow:0 4px 14px rgba(0,0,0,.2)!important;font-size:0!important}
+.topbar-logo::after{content:"UNSA";display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:Georgia,serif;font-weight:800;font-size:15px;letter-spacing:.05em;color:var(--unsa-wine)}
+.dashboard-sidebar{background:linear-gradient(180deg,var(--unsa-blue-950),#0a2233)!important;border-right:1px solid rgba(255,255,255,.08)!important;box-shadow:8px 0 25px rgba(7,27,43,.08)!important}
+.sidebar-titulo{border-bottom:1px solid rgba(255,255,255,.12)!important}.sidebar-titulo strong{color:#fff!important}.sidebar-titulo small,.sidebar-seccion-label{color:#8faabd!important}
+.sidebar-item{color:#dce8ef!important;border-radius:9px!important;margin:3px 0!important;transition:.18s ease!important}.sidebar-item:hover{background:rgba(255,255,255,.075)!important;color:#fff!important;transform:translateX(2px)}
+.sidebar-item.activo{background:linear-gradient(90deg,var(--unsa-blue-700),var(--unsa-blue-800))!important;color:#fff!important;border-left:3px solid #6db7e8!important;box-shadow:0 6px 16px rgba(0,0,0,.16)!important}
+.submenu-tramite-v247{background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.1)!important;border-left:2px solid var(--unsa-blue-600)!important;border-radius:9px!important;padding:8px!important;margin:5px 0 12px 16px!important}
+.submenu-tramite-v247 button{background:transparent!important;color:#dce8ef!important;border:0!important;border-radius:7px!important;padding:10px 12px!important;text-align:left!important;width:100%!important;font-weight:650!important}.submenu-tramite-v247 button:hover{background:rgba(31,111,165,.24)!important;color:#fff!important}
+.submenu-exp-v247{color:#91abc0!important;font-size:10px!important;padding:5px 12px!important;letter-spacing:.08em!important}
+.dashboard-main,.main-content{background:var(--unsa-bg)!important}
+.panel,.card,.admin-card,.resumen-card,.modal-content,.modal-contenido,.detalle-card{border:1px solid var(--unsa-line)!important;border-radius:13px!important;background:var(--unsa-surface)!important;box-shadow:var(--unsa-shadow)!important}
+input,select,textarea{border:1px solid #c9d6df!important;border-radius:8px!important;background:#fff!important;color:var(--unsa-text)!important;box-shadow:none!important}
+input:focus,select:focus,textarea:focus{border-color:var(--unsa-blue-600)!important;box-shadow:0 0 0 3px rgba(31,111,165,.12)!important;outline:0!important}
+label{color:#486478!important;font-weight:700!important}
+button,.btn{border-radius:8px!important;font-weight:750!important;transition:.18s ease!important}button:hover,.btn:hover{transform:translateY(-1px)}
+.btn-primary,.btn-principal,.btn-guardar,.btn-ver-documento-admin{background:var(--unsa-blue-800)!important;color:#fff!important;border-color:var(--unsa-blue-800)!important}
+.btn-danger,.btn-eliminar{background:var(--unsa-danger)!important;color:#fff!important}.btn-success{background:var(--unsa-success)!important;color:#fff!important}.btn-warning{background:var(--unsa-warning)!important;color:#132b3b!important}
+table{border-collapse:separate!important;border-spacing:0!important}thead th{background:var(--unsa-blue-900)!important;color:#fff!important;font-size:11px!important;letter-spacing:.025em!important}tbody tr{background:#fff!important}tbody tr:hover{background:#f5f9fc!important}td{border-color:#e1e8ed!important}
+.badge,.estado-badge,.status-badge{border-radius:999px!important;font-weight:800!important}
+.modal,.modal-overlay{backdrop-filter:blur(5px)}
+.modal-header,.modal-cabecera{background:linear-gradient(90deg,var(--unsa-blue-950),var(--unsa-blue-900))!important;color:#fff!important;border-bottom:3px solid var(--unsa-wine)!important}
+/* Portal tesista */
+.tramite-body{background:#eef3f7!important}.tramite-header{background:linear-gradient(100deg,var(--unsa-blue-950),var(--unsa-blue-800))!important;border-bottom:3px solid var(--unsa-wine)!important;box-shadow:0 6px 22px rgba(7,27,43,.2)!important}.tramite-header h1{color:#fff!important}.tramite-header span{color:#c7d7e2!important}
+.tramite-card,.etapa-card,.subetapa-card,.historial-card{border-color:var(--unsa-line)!important;border-radius:12px!important;box-shadow:0 6px 20px rgba(7,27,43,.06)!important}
+/* Scrollbars */
+*{scrollbar-width:thin;scrollbar-color:#9eb1bf #edf2f5}*::-webkit-scrollbar{width:9px;height:9px}*::-webkit-scrollbar-track{background:#edf2f5}*::-webkit-scrollbar-thumb{background:#9eb1bf;border-radius:10px;border:2px solid #edf2f5}
+@media(max-width:800px){.topbar-logo{width:44px!important;height:44px!important}.dashboard-sidebar{box-shadow:none!important}}
+
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="topin">
+    <h1>TALLER DE TESIS</h1>
+    <p>Administración de inscripciones, talleres, asesores, avance y asistencia</p>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="side">
+    <div class="brand"><strong>TALLER DE TESIS</strong><small>Gestión administrativa</small></div>
+    <div class="group">MATRÍCULA</div>
+    <nav class="nav">
+      <button type="button" data-view="inscripciones">▣ &nbsp; Inscripciones</button>
+      <button type="button" data-view="talleres">🎓 &nbsp; Talleres de Tesis</button>
+    </nav>
+    <div class="group">PERSONAL</div>
+    <nav class="nav">
+      <button type="button" data-view="asesores">♟ &nbsp; Asesores</button>
+    </nav>
+    <div class="group">SISTEMA</div>
+    <nav class="nav">
+      <button type="button" data-view="configuracion">⚙ &nbsp; Configuración</button>
+      <button type="button" id="volverDashboard">← &nbsp; Volver al Dashboard</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div id="appMessage"></div>
+    <div class="banner">
+      <h2 id="tituloVista">Inscripciones</h2>
+      <p id="subtituloVista">Revise documentos, asigne taller y valide las inscripciones.</p>
+    </div>
+
+    <div id="stats"></div>
+    <section id="contenido" class="card content-card">
+      <div class="loading"><span class="spinner"></span>Cargando información...</div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-bg" id="modalValidar">
+  <div class="modal">
+    <div class="modal-head"><h3>Validar y matricular</h3><button type="button" class="x" data-close="modalValidar">×</button></div>
+    <div class="modal-body">
+      <div id="validarResumen"></div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="field"><label>CUI</label><input id="valCui"></div>
+        <div class="field"><label>Taller</label><select id="valTaller"></select></div>
+      </div>
+      <div class="field" style="margin-top:12px"><label>Título de tesis</label><textarea id="valTitulo" rows="3"></textarea></div>
+      <div id="validarMsg"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn gray" data-close="modalValidar">CANCELAR</button>
+      <button type="button" class="btn green" id="btnConfirmarValidar">VALIDAR Y MATRICULAR</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalAsesor">
+  <div class="modal">
+    <div class="modal-head"><h3>Nuevo asesor</h3><button type="button" class="x" data-close="modalAsesor">×</button></div>
+    <div class="modal-body grid2">
+      <div class="field"><label>Grado</label><input id="aseGrado" placeholder="Dr., Mg., Ing."></div>
+      <div class="field"><label>DNI</label><input id="aseDni" maxlength="8"></div>
+      <div class="field"><label>Apellidos y nombres</label><input id="aseNombre"></div>
+      <div class="field"><label>Correo</label><input id="aseCorreo" type="email"></div>
+      <div class="field"><label>Teléfono</label><input id="aseTelefono"></div>
+      <div class="field"><label>Usuario</label><input id="aseUsuario"></div>
+      <div class="field"><label>Contraseña</label><input id="asePassword" type="password"></div>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn gray" data-close="modalAsesor">CANCELAR</button><button type="button" class="btn green" id="btnGuardarAsesor">GUARDAR</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalTaller">
+  <div class="modal">
+    <div class="modal-head"><h3>Nuevo taller</h3><button type="button" class="x" data-close="modalTaller">×</button></div>
+    <div class="modal-body grid2">
+      <div class="field"><label>Nombre del taller</label><input id="talNombre"></div>
+      <div class="field"><label>Asesor</label><select id="talAsesor"></select></div>
+      <div class="field"><label>Número de sesiones</label><input id="talSesiones" type="number" min="1" value="8"></div>
+      <div class="field"><label>Fecha de inicio</label><input id="talInicio" type="date"></div>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn gray" data-close="modalTaller">CANCELAR</button><button type="button" class="btn green" id="btnGuardarTaller">GUARDAR</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var STATE = {
+    data:null,
+    view:String('<?!= vistaActual ?>' || 'inscripciones').trim().toLowerCase(),
+    currentIns:null
+  };
+
+  var TITULOS = {
+    inscripciones:['Inscripciones','Revise documentos, asigne taller y valide las inscripciones.'],
+    talleres:['Talleres de Tesis','Administre los talleres y visualice a los alumnos matriculados.'],
+    asesores:['Asesores','Registre y consulte a los asesores del Taller de Tesis.'],
+    configuracion:['Configuración','Configure la carpeta raíz e inicialice las hojas del módulo.']
+  };
+
+  function el(id){return document.getElementById(id);}
+  function esc(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function val(id){var x=el(id);return x?String(x.value||'').trim():'';}
+  function adminNombre(){return sessionStorage.getItem('nombre')||localStorage.getItem('nombre')||sessionStorage.getItem('usuario')||localStorage.getItem('usuario')||'ADMIN';}
+  function adminCorreo(){return sessionStorage.getItem('correo')||localStorage.getItem('correo')||'';}
+  function showMessage(text,type){
+    el('appMessage').innerHTML=text?'<div class="'+(type==='ok'?'success':'error')+'">'+esc(text)+'</div>':'';
+  }
+  function openModal(id){var x=el(id);if(x)x.classList.add('open');}
+  function closeModal(id){var x=el(id);if(x)x.classList.remove('open');}
+  function setLoading(text){el('contenido').innerHTML='<div class="loading"><span class="spinner"></span>'+esc(text||'Cargando...')+'</div>';}
+
+  function callServer(name,args,onOk,onFail){
+    try{
+      var runner=google.script.run
+        .withSuccessHandler(function(r){ if(onOk)onOk(r); })
+        .withFailureHandler(function(err){
+          var msg=(err&&err.message)?err.message:String(err||'Error de servidor');
+          console.error('[Taller Admin]',name,err);
+          if(onFail)onFail(msg); else showMessage(msg,'error');
+        });
+      if(args===undefined) runner[name]();
+      else runner[name](args);
+    }catch(ex){
+      console.error('[Taller Admin]',name,ex);
+      var msg=ex.message||String(ex);
+      if(onFail)onFail(msg); else showMessage(msg,'error');
+    }
+  }
+
+  function load(forzar){
+    showMessage('');
+    setLoading('Cargando información del Taller de Tesis...');
+    callServer('MVC7D_adminBootstrap',!!forzar,function(r){
+      if(!r || r.status!==true){
+        showMessage((r&&r.message)||'No se pudo cargar el módulo.','error');
+        el('contenido').innerHTML='<div class="empty">No se pudo cargar la información.</div>';
+        return;
+      }
+      STATE.data=r;
+      renderStats();
+      render();
+    },function(msg){
+      showMessage(msg,'error');
+      el('contenido').innerHTML='<div class="empty">Error al consultar Google Sheets.</div>';
+    });
+  }
+
+  function renderStats(){
+    var r=(STATE.data&&STATE.data.resumen)||{};
+    el('stats').innerHTML=
+      '<div class="stats">'+
+      stat(r.inscripciones,'Inscripciones')+
+      stat(r.pendientes,'Pendientes')+
+      stat(r.validados,'Validados')+
+      stat(r.talleres,'Talleres')+
+      stat(r.asesores,'Asesores')+
+      '</div>';
+  }
+  function stat(n,t){return '<div class="stat"><b>'+esc(n||0)+'</b><span>'+esc(t)+'</span></div>';}
+
+  function setView(view){
+    if(!TITULOS[view])view='inscripciones';
+    STATE.view=view;
+    document.querySelectorAll('[data-view]').forEach(function(b){b.classList.toggle('active',b.dataset.view===view);});
+    el('tituloVista').textContent=TITULOS[view][0];
+    el('subtituloVista').textContent=TITULOS[view][1];
+    render();
+  }
+
+  function render(){
+    if(!STATE.data){setLoading('Cargando...');return;}
+    if(STATE.view==='talleres') return renderTalleres();
+    if(STATE.view==='asesores') return renderAsesores();
+    if(STATE.view==='configuracion') return renderConfig();
+    renderInscripciones();
+  }
+
+  function renderInscripciones(){
+    var rows=STATE.data.inscripciones||[];
+    var h='<div class="toolbar"><div><h2>Inscripciones</h2><p>La vista usa caché temporal. RECARGAR consulta nuevamente Google Sheets.</p></div><button class="btn blue" data-action="reload">RECARGAR</button></div>';
+    if(!rows.length){
+      h+='<div class="empty">No se encontraron inscripciones.</div>';
+      el('contenido').innerHTML=h; return;
+    }
+    h+='<div class="table-wrap"><table><thead><tr><th>Inscrito</th><th>DNI</th><th>Especialidad</th><th>Año</th><th>Estado</th><th>Expediente</th><th>Acción</th></tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      var validado=!!String(r.expediente||'').trim();
+      h+='<tr>'+
+        '<td><strong>'+esc(r.nombres)+'</strong><br><span class="muted">'+esc(r.correo)+'</span></td>'+
+        '<td>'+esc(r.dni)+'</td>'+
+        '<td>'+esc(r.especialidad)+'</td>'+
+        '<td>'+esc(r.anioEgreso)+'</td>'+
+        '<td><span class="badge '+(validado?'ok':'wait')+'">'+esc(r.estado||'PENDIENTE')+'</span></td>'+
+        '<td>'+esc(r.expediente||'—')+'</td>'+
+        '<td>'+(validado?'<button class="btn gray" disabled>VALIDADO</button>':'<button class="btn green" data-action="validar" data-index="'+i+'">REVISAR / VALIDAR</button>')+'</td>'+
+      '</tr>';
+    });
+    h+='</tbody></table></div>';
+    el('contenido').innerHTML=h;
+  }
+
+  function openValidar(index){
+    var r=(STATE.data.inscripciones||[])[Number(index)];
+    if(!r)return;
+    STATE.currentIns=r;
+    el('validarResumen').innerHTML='<strong>'+esc(r.nombres)+'</strong><br>DNI: '+esc(r.dni)+'<br><span class="muted">'+esc(r.especialidad)+'</span>'+renderDocs(r.docs||{});
+    el('valCui').value=r.cui||'';
+    el('valTitulo').value=r.tituloTesis||'';
+    var ts=STATE.data.talleres||[];
+    el('valTaller').innerHTML='<option value="">Seleccione...</option>'+ts.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.nombre)+' — '+esc(t.asesor)+'</option>';}).join('');
+    el('validarMsg').innerHTML='';
+    openModal('modalValidar');
+  }
+
+  function renderDocs(d){
+    var names={dni:'DNI',adeudo:'No adeudo',cv:'CV',carta:'Compromiso',plan:'Plan de tesis',pago:'Pago'};
+    var h='<div class="docs">';
+    Object.keys(names).forEach(function(k){
+      h+='<div class="doc"><strong>'+names[k]+'</strong><br>'+(d[k]?'<a target="_blank" href="'+esc(d[k])+'">ABRIR</a>':'<span class="muted">Sin archivo</span>')+'</div>';
+    });
+    return h+'</div>';
+  }
+
+  function confirmarValidar(){
+    var r=STATE.currentIns;
+    if(!r)return;
+    var btn=el('btnConfirmarValidar');
+    btn.disabled=true;btn.textContent='VALIDANDO...';el('validarMsg').innerHTML='';
+    var payload={idInscripcion:r.id,idTaller:val('valTaller'),cui:val('valCui'),tituloTesis:val('valTitulo'),admin:adminNombre(),correoAdmin:adminCorreo()};
+    callServer('MVC7D_validarMatricular',payload,function(resp){
+      btn.disabled=false;btn.textContent='VALIDAR Y MATRICULAR';
+      if(!resp||resp.status!==true){
+        el('validarMsg').innerHTML='<div class="error">'+esc((resp&&resp.message)||'No se pudo validar.')+'</div>';return;
+      }
+      el('validarMsg').innerHTML='<div class="success">'+esc(resp.message||'Validado correctamente.')+'</div>';
+      if(resp.expediente && resp.copiaPendiente){
+        iniciarCopia(resp.expediente);
+      }
+      setTimeout(function(){closeModal('modalValidar');load(true);},900);
+    },function(msg){
+      btn.disabled=false;btn.textContent='VALIDAR Y MATRICULAR';
+      el('validarMsg').innerHTML='<div class="error">'+esc(msg)+'</div>';
+    });
+  }
+
+  function iniciarCopia(exp){
+    callServer('MVC7D_iniciarCopiaDocumental',exp,function(r){
+      console.log('[Taller Admin] copia documental',exp,r);
+    },function(msg){
+      console.warn('[Taller Admin] copia documental',exp,msg);
+    });
+  }
+
+  function renderTalleres(){
+    var rows=STATE.data.talleres||[];
+    var h='<div class="toolbar"><div><h2>Talleres de Tesis</h2><p>Listado de talleres registrados.</p></div><button class="btn green" data-action="new-taller">NUEVO TALLER</button></div>';
+    if(!rows.length){h+='<div class="empty">No existen talleres registrados.</div>';el('contenido').innerHTML=h;return;}
+    h+='<div class="table-wrap"><table><thead><tr><th>Taller</th><th>Asesor</th><th>Sesiones</th><th>Estado</th><th>Alumnos</th></tr></thead><tbody>';
+    rows.forEach(function(t){
+      h+='<tr><td><strong>'+esc(t.nombre)+'</strong><br><span class="muted">'+esc(t.id)+'</span></td><td>'+esc(t.asesor)+'</td><td>'+esc(t.nroSesiones)+'</td><td><span class="badge ok">'+esc(t.estado||'ACTIVO')+'</span></td><td><button class="btn blue" data-action="roster" data-id="'+esc(t.id)+'">VER ALUMNOS</button></td></tr>';
+    });
+    h+='</tbody></table></div><div id="rosterBox"></div>';
+    el('contenido').innerHTML=h;
+  }
+
+  function verRoster(id){
+    var box=el('rosterBox');if(box)box.innerHTML='<div class="loading"><span class="spinner"></span>Cargando alumnos...</div>';
+    callServer('MVC7D_rosterTaller',id,function(rows){
+      rows=rows||[];
+      if(!box)return;
+      if(!rows.length){box.innerHTML='<div class="empty">Este taller todavía no tiene alumnos.</div>';return;}
+      var h='<div class="table-wrap" style="margin-top:16px"><table><thead><tr><th>Expediente</th><th>Alumno</th><th>DNI</th><th>Especialidad</th><th>Correo</th></tr></thead><tbody>';
+      rows.forEach(function(r){h+='<tr><td>'+esc(r.expediente)+'</td><td>'+esc(r.nombres)+'</td><td>'+esc(r.dni)+'</td><td>'+esc(r.especialidad)+'</td><td>'+esc(r.correo)+'</td></tr>';});
+      box.innerHTML=h+'</tbody></table></div>';
+    });
+  }
+
+  function renderAsesores(){
+    var rows=STATE.data.asesores||[];
+    var h='<div class="toolbar"><div><h2>Asesores</h2><p>Personal registrado para Taller de Tesis.</p></div><button class="btn green" data-action="new-asesor">NUEVO ASESOR</button></div>';
+    if(!rows.length){h+='<div class="empty">No existen asesores registrados.</div>';el('contenido').innerHTML=h;return;}
+    h+='<div class="table-wrap"><table><thead><tr><th>Asesor</th><th>DNI</th><th>Correo</th><th>Teléfono</th><th>Usuario</th><th>Estado</th></tr></thead><tbody>';
+    rows.forEach(function(a){h+='<tr><td><strong>'+esc((a.grado||'')+' '+(a.nombres||''))+'</strong></td><td>'+esc(a.dni)+'</td><td>'+esc(a.correo)+'</td><td>'+esc(a.telefono)+'</td><td>'+esc(a.usuario)+'</td><td><span class="badge ok">'+esc(a.estado)+'</span></td></tr>';});
+    h+='</tbody></table></div>';
+    el('contenido').innerHTML=h;
+  }
+
+  function guardarAsesor(){
+    var btn=el('btnGuardarAsesor');btn.disabled=true;
+    var d={grado:val('aseGrado'),dni:val('aseDni'),nombres:val('aseNombre'),correo:val('aseCorreo'),telefono:val('aseTelefono'),usuario:val('aseUsuario')||val('aseDni'),password:val('asePassword')};
+    callServer('MVC7D_crearAsesor',d,function(r){
+      btn.disabled=false;alert((r&&r.message)||'Proceso concluido.');
+      if(r&&r.status){closeModal('modalAsesor');load(true);}
+    },function(m){btn.disabled=false;alert(m);});
+  }
+
+  function abrirNuevoTaller(){
+    var as=STATE.data.asesores||[];
+    el('talAsesor').innerHTML='<option value="">Seleccione...</option>'+as.map(function(a){return '<option value="'+esc(a.id)+'">'+esc((a.grado||'')+' '+a.nombres)+'</option>';}).join('');
+    openModal('modalTaller');
+  }
+
+  function guardarTaller(){
+    var btn=el('btnGuardarTaller');btn.disabled=true;
+    var d={nombre:val('talNombre'),idAsesor:val('talAsesor'),nroSesiones:val('talSesiones'),fechaInicio:val('talInicio'),creadoPor:adminNombre()};
+    callServer('MVC7D_crearTaller',d,function(r){
+      btn.disabled=false;alert((r&&r.message)||'Proceso concluido.');
+      if(r&&r.status){closeModal('modalTaller');load(true);}
+    },function(m){btn.disabled=false;alert(m);});
+  }
+
+  function renderConfig(){
+    var c=STATE.data.config||{};
+    el('contenido').innerHTML=
+      '<div class="toolbar"><div><h2>Configuración</h2><p>Carpeta raíz utilizada por el módulo Taller de Tesis.</p></div></div>'+
+      '<div class="grid2">'+
+        '<div class="field"><label>ID o enlace de la carpeta raíz</label><input id="cfgCarpeta" value="'+esc(c.id||'')+'"></div>'+
+        '<div><div class="copybox"><strong>Carpeta actual:</strong><br>'+esc(c.nombre||'No configurada')+(c.url?'<br><a target="_blank" href="'+esc(c.url)+'">ABRIR CARPETA</a>':'')+'</div></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:10px;margin-top:16px"><button class="btn green" data-action="save-config">GUARDAR CARPETA</button><button class="btn blue" data-action="init">INICIALIZAR HOJAS</button></div>';
+  }
+
+  function guardarConfig(){
+    callServer('MVC7D_configCarpeta',val('cfgCarpeta'),function(r){alert((r&&r.message)||'Proceso concluido.');if(r&&r.status)load(true);});
+  }
+  function inicializar(){
+    callServer('MVC7D_inicializarTaller',undefined,function(r){alert((r&&r.message)||'Inicialización completada.');load(true);});
+  }
+
+  document.addEventListener('click',function(ev){
+    var b=ev.target.closest('button');
+    if(!b)return;
+
+    if(b.dataset.close){closeModal(b.dataset.close);return;}
+    if(b.dataset.view){setView(b.dataset.view);return;}
+
+    var action=b.dataset.action||'';
+    if(action==='reload'){load(true);return;}
+    if(action==='validar'){openValidar(b.dataset.index);return;}
+    if(action==='new-asesor'){openModal('modalAsesor');return;}
+    if(action==='new-taller'){abrirNuevoTaller();return;}
+    if(action==='roster'){verRoster(b.dataset.id);return;}
+    if(action==='save-config'){guardarConfig();return;}
+    if(action==='init'){inicializar();return;}
+  });
+
+  el('btnConfirmarValidar').addEventListener('click',confirmarValidar);
+  el('btnGuardarAsesor').addEventListener('click',guardarAsesor);
+  el('btnGuardarTaller').addEventListener('click',guardarTaller);
+  el('volverDashboard').addEventListener('click',function(){
+    var base=String('<?!= appUrl ?>' || '')
+      .trim()
+      .replace(/^['"]+|['"]+$/g,'');
+    if(!base){
+      alert('No se pudo obtener la URL actual del sistema.');
+      return;
+    }
+    window.top.location.href=base+'?page=dashboard';
+  });
+
+  if(!TITULOS[STATE.view])STATE.view='inscripciones';
+  setView(STATE.view);
+  load(false);
+
+})();
+</script>
+</body>
+</html>
+

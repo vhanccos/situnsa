@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pis_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-pis_titulacion}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-pis} -d $${POSTGRES_DB:-pis_titulacion}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: pis-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP para Fastify
+      - "8025:8025" # UI web dev
+
+volumes:
+  pgdata:

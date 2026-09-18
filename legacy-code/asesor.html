@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <?!= include('taller_style'); ?>
+  <style>
+    .loadline{display:flex;gap:10px;align-items:center;padding:14px}
+    .spin{width:22px;height:22px;border:3px solid #dfe5e8;border-top-color:#610617;border-radius:50%;animation:s .7s linear infinite}
+    @keyframes s{to{transform:rotate(360deg)}}
+    .matrix{overflow:auto;border:1px solid #d8e0e5;border-radius:12px}
+    .matrix table{border-collapse:collapse;width:100%;min-width:760px;background:#fff}
+    .matrix th{background:#081F30;color:#fff;padding:11px;white-space:nowrap}
+    .matrix td{padding:10px;border-bottom:1px solid #e8ecef;text-align:center}
+    .matrix td:first-child{text-align:left;position:sticky;left:0;background:#fff;min-width:240px}
+    .ck{width:22px;height:22px;accent-color:#197648;cursor:pointer}
+    .saving{opacity:.45;pointer-events:none}
+    .okdot{font-size:11px;color:#197648}
+    .errdot{font-size:11px;color:#a21d2f}
+    .review-grid-v29{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+    .review-card-v29{border:1px solid #d8e0e5;border-radius:11px;padding:14px;background:#fff}
+    .review-card-v29.ok{background:#eef8f2;border-color:#b8d8c3}
+    .review-card-v29 h4{margin:0 0 8px;color:#081F30}
+    .review-meta-v29{font-size:12px;color:#687680;line-height:1.5}
+    .review-actions-v29{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
+    .review-actions-v29 button,.review-actions-v29 a{min-height:32px;padding:0 9px;border:0;border-radius:7px;font-size:9px;font-weight:900;display:inline-flex;align-items:center;text-decoration:none;cursor:pointer}
+    .rv-ver{background:#081F30;color:#fff}
+    .rv-ok{background:#197648;color:#fff}
+    .rv-reload{background:#610617;color:#fff}
+    .rv-msg{background:#5D6B75;color:#fff}
+    .rv-badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#eceff1;color:#687680;font-size:9px;font-weight:900}
+    .rv-badge.ok{background:#dcefe3;color:#175D39}
+    @media(max-width:700px){.review-grid-v29{grid-template-columns:1fr}}
+  </style>
+<style id="unsa-v25-page">
+/* =========================================================
+   V25 PREMIUM UNSA · CAPA VISUAL UNIFICADA
+   Solo presentación. No modifica lógica, IDs ni eventos.
+========================================================= */
+:root{
+  --unsa-blue-950:#071b2b;--unsa-blue-900:#0b263b;--unsa-blue-800:#123a56;
+  --unsa-blue-700:#17527a;--unsa-blue-600:#1f6fa5;--unsa-wine:#7b1730;
+  --unsa-gold:#c79a3b;--unsa-bg:#f3f6f9;--unsa-surface:#ffffff;
+  --unsa-line:#d8e1e8;--unsa-text:#0a2940;--unsa-muted:#647b8d;
+  --unsa-success:#17865c;--unsa-warning:#d99a21;--unsa-danger:#b63c4b;
+  --unsa-shadow:0 10px 30px rgba(7,27,43,.08);
+}
+html,body{font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif!important;color:var(--unsa-text)!important}
+body{background:var(--unsa-bg)!important}
+button,input,select,textarea{font-family:inherit!important}
+h1,h2,h3,h4,h5,h6,strong{letter-spacing:-.015em}
+.topbar{background:linear-gradient(100deg,var(--unsa-blue-950),var(--unsa-blue-900) 62%,#102f46)!important;border-bottom:3px solid var(--unsa-wine)!important;box-shadow:0 5px 20px rgba(7,27,43,.22)!important}
+.topbar-brand h1{font-size:19px!important;letter-spacing:.02em!important}.topbar-brand span{color:#c9d8e3!important}
+.topbar-logo{width:52px!important;height:52px!important;border-radius:12px!important;background:#fff!important;color:var(--unsa-blue-950)!important;border:1px solid rgba(255,255,255,.3)!important;overflow:hidden!important;box-shadow:0 4px 14px rgba(0,0,0,.2)!important;font-size:0!important}
+.topbar-logo::after{content:"UNSA";display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-family:Georgia,serif;font-weight:800;font-size:15px;letter-spacing:.05em;color:var(--unsa-wine)}
+.dashboard-sidebar{background:linear-gradient(180deg,var(--unsa-blue-950),#0a2233)!important;border-right:1px solid rgba(255,255,255,.08)!important;box-shadow:8px 0 25px rgba(7,27,43,.08)!important}
+.sidebar-titulo{border-bottom:1px solid rgba(255,255,255,.12)!important}.sidebar-titulo strong{color:#fff!important}.sidebar-titulo small,.sidebar-seccion-label{color:#8faabd!important}
+.sidebar-item{color:#dce8ef!important;border-radius:9px!important;margin:3px 0!important;transition:.18s ease!important}.sidebar-item:hover{background:rgba(255,255,255,.075)!important;color:#fff!important;transform:translateX(2px)}
+.sidebar-item.activo{background:linear-gradient(90deg,var(--unsa-blue-700),var(--unsa-blue-800))!important;color:#fff!important;border-left:3px solid #6db7e8!important;box-shadow:0 6px 16px rgba(0,0,0,.16)!important}
+.submenu-tramite-v247{background:rgba(255,255,255,.045)!important;border:1px solid rgba(255,255,255,.1)!important;border-left:2px solid var(--unsa-blue-600)!important;border-radius:9px!important;padding:8px!important;margin:5px 0 12px 16px!important}
+.submenu-tramite-v247 button{background:transparent!important;color:#dce8ef!important;border:0!important;border-radius:7px!important;padding:10px 12px!important;text-align:left!important;width:100%!important;font-weight:650!important}.submenu-tramite-v247 button:hover{background:rgba(31,111,165,.24)!important;color:#fff!important}
+.submenu-exp-v247{color:#91abc0!important;font-size:10px!important;padding:5px 12px!important;letter-spacing:.08em!important}
+.dashboard-main,.main-content{background:var(--unsa-bg)!important}
+.panel,.card,.admin-card,.resumen-card,.modal-content,.modal-contenido,.detalle-card{border:1px solid var(--unsa-line)!important;border-radius:13px!important;background:var(--unsa-surface)!important;box-shadow:var(--unsa-shadow)!important}
+input,select,textarea{border:1px solid #c9d6df!important;border-radius:8px!important;background:#fff!important;color:var(--unsa-text)!important;box-shadow:none!important}
+input:focus,select:focus,textarea:focus{border-color:var(--unsa-blue-600)!important;box-shadow:0 0 0 3px rgba(31,111,165,.12)!important;outline:0!important}
+label{color:#486478!important;font-weight:700!important}
+button,.btn{border-radius:8px!important;font-weight:750!important;transition:.18s ease!important}button:hover,.btn:hover{transform:translateY(-1px)}
+.btn-primary,.btn-principal,.btn-guardar,.btn-ver-documento-admin{background:var(--unsa-blue-800)!important;color:#fff!important;border-color:var(--unsa-blue-800)!important}
+.btn-danger,.btn-eliminar{background:var(--unsa-danger)!important;color:#fff!important}.btn-success{background:var(--unsa-success)!important;color:#fff!important}.btn-warning{background:var(--unsa-warning)!important;color:#132b3b!important}
+table{border-collapse:separate!important;border-spacing:0!important}thead th{background:var(--unsa-blue-900)!important;color:#fff!important;font-size:11px!important;letter-spacing:.025em!important}tbody tr{background:#fff!important}tbody tr:hover{background:#f5f9fc!important}td{border-color:#e1e8ed!important}
+.badge,.estado-badge,.status-badge{border-radius:999px!important;font-weight:800!important}
+.modal,.modal-overlay{backdrop-filter:blur(5px)}
+.modal-header,.modal-cabecera{background:linear-gradient(90deg,var(--unsa-blue-950),var(--unsa-blue-900))!important;color:#fff!important;border-bottom:3px solid var(--unsa-wine)!important}
+/* Portal tesista */
+.tramite-body{background:#eef3f7!important}.tramite-header{background:linear-gradient(100deg,var(--unsa-blue-950),var(--unsa-blue-800))!important;border-bottom:3px solid var(--unsa-wine)!important;box-shadow:0 6px 22px rgba(7,27,43,.2)!important}.tramite-header h1{color:#fff!important}.tramite-header span{color:#c7d7e2!important}
+.tramite-card,.etapa-card,.subetapa-card,.historial-card{border-color:var(--unsa-line)!important;border-radius:12px!important;box-shadow:0 6px 20px rgba(7,27,43,.06)!important}
+/* Scrollbars */
+*{scrollbar-width:thin;scrollbar-color:#9eb1bf #edf2f5}*::-webkit-scrollbar{width:9px;height:9px}*::-webkit-scrollbar-track{background:#edf2f5}*::-webkit-scrollbar-thumb{background:#9eb1bf;border-radius:10px;border:2px solid #edf2f5}
+@media(max-width:800px){.topbar-logo{width:44px!important;height:44px!important}.dashboard-sidebar{box-shadow:none!important}}
+
+</style>
+<style id="unsa-v252-elegant-final">
+/* V25.2 ELEGANT UNSA — SOLO PRESENTACION */
+:root{--u-navy:#0b2d45;--u-navy2:#123e5d;--u-wine:#78152f;--u-gold:#d1a84b;--u-bg:#f3f5f7;--u-card:#fff;--u-soft:#edf1f4;--u-line:#d6dee5;--u-text:#123149;--u-muted:#6c7f8d;--u-green:#16835b;--u-red:#b43a4b;--u-orange:#d98724}
+html,body{font-family:"Segoe UI",Inter,Arial,sans-serif!important;background:var(--u-bg)!important;color:var(--u-text)!important;font-size:13px!important}
+body{letter-spacing:0!important}h1,h2,h3,h4,h5,h6,strong{font-family:"Segoe UI",Inter,Arial,sans-serif!important;letter-spacing:-.012em!important;color:var(--u-text)}
+.topbar{min-height:72px!important;padding:10px 24px!important;background:linear-gradient(100deg,#08263b 0%,#0d334d 72%,#123e5d 100%)!important;border-bottom:3px solid var(--u-wine)!important;box-shadow:0 5px 18px rgba(8,38,59,.16)!important}
+.topbar-logo{width:54px!important;height:54px!important;border-radius:12px!important;background:#fff!important;border:1px solid rgba(255,255,255,.5)!important;box-shadow:0 4px 12px rgba(0,0,0,.14)!important;overflow:hidden!important}
+.topbar-logo img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;padding:4px!important;background:#fff!important}.topbar-logo::after{display:none!important}
+.topbar-brand h1{font-size:20px!important;font-weight:750!important;color:#fff!important}.topbar-brand span{font-size:10.5px!important;color:#d3e0e8!important}.topbar-user{gap:9px!important}.topbar-user button,.btn-notificacion,.btn-logout{min-height:38px!important;border-radius:8px!important;font-size:11px!important}
+.dashboard-sidebar{width:246px!important;padding:12px 12px!important;background:linear-gradient(180deg,#74152f 0%,#651229 58%,#571022 100%)!important;border-right:0!important;box-shadow:5px 0 20px rgba(40,13,24,.08)!important}
+.sidebar-titulo{padding:4px 9px 12px!important}.sidebar-titulo strong{font-size:13px!important;font-weight:750!important;color:#fff!important;letter-spacing:.055em!important}.sidebar-titulo small{font-size:9px!important;color:#efd9df!important}.sidebar-seccion-label{margin:9px 8px 5px!important;font-size:8px!important;letter-spacing:.14em!important;color:#e9c7d0!important}.sidebar-separador{margin:9px 8px!important;border-color:rgba(255,255,255,.12)!important}
+.sidebar-item{min-height:36px!important;margin:2px 0!important;padding:7px 9px!important;border-radius:7px!important;font-size:11px!important;font-weight:650!important;color:#fff!important}.sidebar-item .sidebar-icon{width:24px!important;font-size:12px!important}.sidebar-item:hover{background:rgba(255,255,255,.09)!important;transform:none!important}.sidebar-item.activo{background:#4d0d1e!important;border-left:3px solid var(--u-gold)!important;box-shadow:none!important}
+.submenu-tramite-v247{margin:5px 3px 8px 14px!important;padding:5px!important;border:1px solid rgba(255,255,255,.15)!important;border-left:2px solid var(--u-gold)!important;border-radius:8px!important;background:rgba(255,255,255,.07)!important;box-shadow:none!important}.submenu-exp-v247{padding:5px 8px!important;font-size:8px!important;color:#f2dfe4!important}.submenu-tramite-v247 button{min-height:30px!important;padding:6px 8px!important;font-size:10.5px!important;font-weight:600!important;color:#fff!important;border-radius:6px!important}.submenu-tramite-v247 button:hover{background:rgba(255,255,255,.1)!important}
+.dashboard-main,.main-content{background:var(--u-bg)!important}.dashboard-content{padding:24px 28px!important}.dashboard-content h1,.dashboard-content h2{font-weight:700!important}
+.panel,.card,.admin-card,.resumen-card,.modal-content,.modal-contenido,.detalle-card,.form-card{border:1px solid var(--u-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:0 4px 14px rgba(18,49,73,.045)!important}
+input,select,textarea{border:1px solid #cbd6de!important;border-radius:7px!important;background:#fff!important;color:var(--u-text)!important;box-shadow:none!important;font-size:12px!important}input:focus,select:focus,textarea:focus{outline:0!important;border-color:#4b7897!important;box-shadow:0 0 0 3px rgba(75,120,151,.10)!important}
+label{font-size:10px!important;color:#526c7e!important;font-weight:650!important}button,.btn{font-family:inherit!important;border-radius:7px!important;font-weight:650!important}
+thead th{background:var(--u-navy)!important;color:#fff!important;font-size:9.5px!important;font-weight:700!important}tbody tr{background:#fff!important}tbody tr:hover{background:#f7f9fa!important}td{border-color:#e0e6eb!important}
+.modal-header,.modal-cabecera{background:var(--u-navy)!important;border-bottom:3px solid var(--u-wine)!important;color:#fff!important}
+/* Portal tesista y vistas auxiliares */
+.tramite-body{background:var(--u-bg)!important}.tramite-header{min-height:62px!important;background:linear-gradient(100deg,#08263b,#123e5d)!important;border-bottom:3px solid var(--u-wine)!important}.tramite-container{width:min(94%,1240px)!important;margin:18px auto!important}.tramite-resumen{gap:8px!important}.tramite-resumen .resumen-card,.proceso-completo,.historial-container{border:1px solid var(--u-line)!important;border-radius:9px!important;background:#fff!important;box-shadow:0 4px 14px rgba(18,49,73,.045)!important}.barra-progreso{background:linear-gradient(90deg,var(--u-navy2),#2b6d95)!important}
+@media(max-width:900px){.dashboard-sidebar{width:220px!important}.dashboard-content{padding:16px!important}}
+</style>
+
+</head>
+<body>
+
+<div class="tt-head">
+  <div class="tt-headin">
+    <h1 class="tt-title">ASESORES</h1>
+    <p class="tt-sub">Taller de Tesis · Control de asistencia y revisión documental</p>
+  </div>
+</div>
+
+<div class="tt-shell">
+  <div id="login" style="max-width:440px;margin:30px auto">
+    <div class="tt-card">
+      <h2>Ingreso de asesor</h2>
+      <label class="tt-label">Usuario, DNI o correo</label>
+      <input class="tt-input" id="u">
+      <label class="tt-label" style="margin-top:10px">Contraseña</label>
+      <input class="tt-input" id="p" type="password">
+      <button class="tt-btn g" id="go" style="width:100%;margin-top:12px">INGRESAR</button>
+      <div id="lm"></div>
+    </div>
+  </div>
+
+  <div id="portal" style="display:none">
+    <div class="tt-card">
+      <div class="tt-toolbar">
+        <div>
+          <h2 id="an" style="margin:0"></h2>
+          <div class="tt-help">Marque ✓ únicamente cuando el alumno asistió a la sesión.</div>
+        </div>
+        <button class="tt-btn gray" id="out">SALIR</button>
+      </div>
+    </div>
+    <div id="talls"></div>
+  </div>
+</div>
+
+<div class="tt-modal" id="mg">
+  <div class="tt-modalcard" style="max-width:1250px">
+    <div class="tt-modalhead">
+      <h3 id="gt">TALLER</h3>
+      <button class="tt-x" data-close="mg">×</button>
+    </div>
+    <div class="tt-modalbody" id="matrixBody"></div>
+  </div>
+</div>
+
+<div class="tt-modal" id="ma">
+  <div class="tt-modalcard">
+    <div class="tt-modalhead">
+      <h3 id="at">AVANCE</h3>
+      <button class="tt-x" data-close="ma">×</button>
+    </div>
+    <div class="tt-modalbody" id="ab"></div>
+  </div>
+</div>
+
+<div class="tt-modal" id="mrev">
+  <div class="tt-modalcard" style="max-width:980px">
+    <div class="tt-modalhead">
+      <h3 id="rvt">REVISIÓN DOCUMENTAL</h3>
+      <button class="tt-x" data-close="mrev">×</button>
+    </div>
+    <div class="tt-modalbody" id="rvb"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+var tok='',cur=null;function e(i){return document.getElementById(i)}function v(i){return String(e(i).value||'').trim()}function x(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}function om(i){e(i).className='tt-modal open'}function cm(i){e(i).className='tt-modal'}
+document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){cm(this.getAttribute('data-close'))}});
+e('go').onclick=function(){var b=this;b.disabled=true;e('lm').innerHTML='<div class="loadline"><span class="spin"></span>Ingresando...</div>';google.script.run.withSuccessHandler(function(r){b.disabled=false;e('lm').innerHTML='';if(!r||!r.status){e('lm').innerHTML='<div class="tt-alert err">'+x((r&&r.message)||'No se pudo ingresar')+'</div>';return}tok=r.token;e('login').style.display='none';e('portal').style.display='block';load()}).withFailureHandler(function(er){b.disabled=false;e('lm').innerHTML='<div class="tt-alert err">'+x(er.message)+'</div>'}).MVC7D_loginAsesor(v('u'),v('p'))};
+function load(){e('talls').innerHTML='<div class="tt-card loadline"><span class="spin"></span>Cargando talleres...</div>';google.script.run.withSuccessHandler(function(r){if(!r||!r.status)return;e('an').textContent=(r.asesor.grado||'')+' '+r.asesor.nombres;var h='';(r.talleres||[]).forEach(function(t){h+='<div class="tt-card"><div class="tt-toolbar"><div><h3 style="margin:0 0 5px">'+x(t.nombre)+'</h3><div class="tt-help"><strong>'+x(t.cantidad)+'</strong> alumnos · <strong>'+x(t.nroSesiones)+'</strong> sesiones programadas</div></div><button class="tt-btn ot" data-id="'+x(t.id)+'" data-n="'+x(t.nombre)+'">VER ALUMNOS / ASISTENCIA</button></div></div>'});e('talls').innerHTML=h||'<div class="tt-card">No tiene talleres asignados.</div>';document.querySelectorAll('.ot').forEach(function(b){b.onclick=function(){openG(this.dataset.id,this.dataset.n)}})}).MVC7D_portalAsesorRapido(tok)}
+function openG(id,n){cur={id:id,nombre:n};e('gt').textContent=n;e('matrixBody').innerHTML='<div class="loadline"><span class="spin"></span>Cargando alumnos y sesiones...</div>';om('mg');google.script.run.withSuccessHandler(paintMatrix).withFailureHandler(function(er){e('matrixBody').innerHTML='<div class="tt-alert err">'+x(er.message)+'</div>'}).MVC7D_portalMatrizAsistencia(tok,id)}
+function paintMatrix(r){var a=r.alumnos||[],s=r.sesiones||[],h='<div class="tt-alert info">Total: <strong>'+a.length+'</strong> alumnos · <strong>'+s.length+'</strong> sesiones. Marque el check solo si asistió.</div><div class="matrix"><table><thead><tr><th>Alumno</th><th>Expediente</th>';s.forEach(function(q){h+='<th>Sesión '+x(q.nro)+'</th>'});h+='<th>Etapas</th></tr></thead><tbody>';a.forEach(function(z){h+='<tr><td><strong>'+x(z.nombres)+'</strong><br><small>'+x(z.especialidad)+'</small></td><td>'+x(z.expediente)+'</td>';s.forEach(function(q){var checked=z.sesiones&&z.sesiones[q.id]?' checked':'';h+='<td><input class="ck" type="checkbox"'+checked+' data-e="'+x(z.expediente)+'" data-d="'+x(z.dni)+'" data-n="'+x(z.nombres)+'" data-s="'+x(q.id)+'" data-sn="'+x(q.nro)+'"><div class="st"></div></td>'});h+='<td><button class="tt-btn light va" data-e="'+x(z.expediente)+'" data-n="'+x(z.nombres)+'">VER ETAPAS</button> <button class="tt-btn light rd" data-e="'+x(z.expediente)+'" data-n="'+x(z.nombres)+'">REVISAR DOCS</button></td></tr>'});h+='</tbody></table></div>';e('matrixBody').innerHTML=h;document.querySelectorAll('.ck').forEach(function(c){c.onchange=toggle});document.querySelectorAll('.va').forEach(function(b){b.onclick=function(){verA(this.dataset.e,this.dataset.n)}});document.querySelectorAll('.rd').forEach(function(b){b.onclick=function(){reviewDocs(this.dataset.e,this.dataset.n)}})}
+function toggle(){var c=this,st=c.parentNode.querySelector('.st'),val=c.checked;c.classList.add('saving');st.className='st';st.textContent='Guardando...';google.script.run.withSuccessHandler(function(r){c.classList.remove('saving');if(r&&r.status){st.className='st okdot';st.textContent='Guardado'}else{c.checked=!val;st.className='st errdot';st.textContent=(r&&r.message)||'Error'}}).withFailureHandler(function(){c.classList.remove('saving');c.checked=!val;st.className='st errdot';st.textContent='Error'}).MVC7D_toggleAsistencia(tok,{idTaller:cur.id,idSesion:c.dataset.s,nroSesion:c.dataset.sn,expediente:c.dataset.e,dni:c.dataset.d,nombres:c.dataset.n,presente:val})}
+function verA(exp,n){e('at').textContent=n+' — '+exp;e('ab').innerHTML='<div class="loadline"><span class="spin"></span>Cargando etapas...</div>';om('ma');google.script.run.withSuccessHandler(function(r){var a=r.avance,h='<div class="tt-alert info"><strong>Etapa actual:</strong> '+x(a.etapaActual)+' - '+x(a.nombreEtapa)+'<br><strong>Subetapa actual:</strong> '+x(a.subetapaActual)+' - '+x(a.descripcionSubetapa)+'<br><strong>Avance:</strong> '+x(a.avance)+'%</div>';a.etapas.forEach(function(q){h+='<div class="tt-stage"><div class="tt-stagehead">ETAPA '+x(q.numero)+' — '+x(q.nombre)+' · '+x(q.avance)+'%</div>';q.subs.forEach(function(s){h+='<div class="tt-substage '+(s.estado==='FINALIZADO'?'fin':'other')+'"><strong>'+x(s.sub)+'. '+x(s.desc)+'</strong><br><small>'+x(s.estado)+' · '+x(s.plazo)+'</small></div>'});h+='</div>'});e('ab').innerHTML=h}).MVC7D_portalAvance(tok,cur.id,exp)}
+function reviewDocs(exp,n){e('rvt').textContent=n+' — '+exp;e('rvb').innerHTML='<div class="loadline"><span class="spin"></span>Cargando documentos...</div>';om('mrev');google.script.run.withSuccessHandler(function(r){paintReview(exp,n,r)}).withFailureHandler(function(er){e('rvb').innerHTML='<div class="tt-alert err">'+x(er.message)+'</div>'}).MVC7D_documentosRevisionAsesor(tok,cur.id,exp)}
+function paintReview(exp,n,r){if(!r||!r.status){e('rvb').innerHTML='<div class="tt-alert err">'+x((r&&r.message)||'No se pudo cargar')+'</div>';return}var cards=[['Plan de Tesis / Trabajo Académico',1,r.plan],['Borrador de Tesis',2,r.borrador]],h='<div class="review-grid-v29">';cards.forEach(function(c){var d=c[2]||{},ok=!!d.vistoBueno;h+='<div class="review-card-v29 '+(ok?'ok':'')+'"><h4>'+x(c[0])+'</h4>';if(!d.archivoUrl){h+='<div class="review-meta-v29">El alumno todavía no ha cargado un documento.</div>'}else{h+='<span class="rv-badge '+(ok?'ok':'')+'">'+(ok?'✓ VISTO BUENO':'PENDIENTE DE REVISIÓN')+'</span>';h+='<div class="review-meta-v29" style="margin-top:8px"><strong>'+x(d.archivoNombre||'Documento')+'</strong><br>Versión '+x(d.version||1);if(ok)h+='<br>Validado por '+x(d.asesorValido||'')+' · '+x(d.fechaVisto||'');if(d.observacion)h+='<br>Observación: '+x(d.observacion);h+='</div><div class="review-actions-v29"><a class="rv-ver" target="_blank" href="'+x(d.archivoUrl)+'">VER DOCUMENTO</a>';if(!ok)h+='<button class="rv-ok" onclick="window.__rvValidar('+c[1]+',&quot;'+x(exp)+'&quot;)">✓ VISTO BUENO</button>';h+='<button class="rv-reload" onclick="window.__rvRecarga('+c[1]+',&quot;'+x(exp)+'&quot;)">HABILITAR NUEVA CARGA</button><button class="rv-msg" onclick="window.__rvMensaje('+c[1]+',&quot;'+x(exp)+'&quot;)">MENSAJE</button></div>'}h+='</div>'});h+='</div>';e('rvb').innerHTML=h}
+window.__rvValidar=function(et,exp){if(!confirm('¿Registrar visto bueno del asesor?'))return;e('rvb').innerHTML='<div class="loadline"><span class="spin"></span>Registrando visto bueno...</div>';google.script.run.withSuccessHandler(function(r){if(!r||!r.status){alert((r&&r.message)||'Error');return}reviewDocs(exp,e('rvt').textContent.split(' — ')[0])}).MVC7D_validarDocumentoAsesor(tok,cur.id,exp,et)};
+window.__rvRecarga=function(et,exp){var m=prompt('Observación para el alumno (opcional):','');if(m===null)return;e('rvb').innerHTML='<div class="loadline"><span class="spin"></span>Habilitando nueva carga...</div>';google.script.run.withSuccessHandler(function(r){if(!r||!r.status){alert((r&&r.message)||'Error');return}reviewDocs(exp,e('rvt').textContent.split(' — ')[0])}).MVC7D_habilitarNuevaCargaAsesor(tok,cur.id,exp,et,m)};
+window.__rvMensaje=function(et,exp){var m=prompt('Mensaje para el alumno:','');if(m===null||!String(m).trim())return;google.script.run.withSuccessHandler(function(r){alert((r&&r.message)||'Mensaje enviado')}).MVC7D_mensajeAsesorDocumento(tok,cur.id,exp,et,m)};
+e('out').onclick=function(){tok='';e('portal').style.display='none';e('login').style.display='block';e('p').value=''};
+})();
+</script>
+</body>
+</html>

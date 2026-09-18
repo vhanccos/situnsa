@@ -1,0 +1,1 @@
+Migraciones SQL generadas por `pnpm --filter @pis/db db:generate`.

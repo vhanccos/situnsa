@@ -1,0 +1,1707 @@
+<!-- ======================================================
+     PORTAL DEL ALUMNO / INVITADO
+     SISTEMA DE TITULACIÓN USE FIPS
+     VERSIÓN CONSOLIDADA
+
+     Flujo:
+     DNI -> EXPEDIENTE SETxxx -> SEGUIMIENTO_SUBETAPAS
+
+     Backend utilizado:
+     - obtenerPortalAlumno()
+     - obtenerProcesoAlumno()
+     - obtenerHistorialPorDni()
+     - obtenerMensajesInvitado()
+     - subirArchivoSubetapa()
+======================================================= -->
+<!DOCTYPE html>
+<html>
+<head>
+
+  <base target="_top">
+
+  <?!= include('style'); ?>
+
+<style id="unsa-v252-elegant-final">
+/* V25.2 ELEGANT UNSA — SOLO PRESENTACION */
+:root{--u-navy:#0b2d45;--u-navy2:#123e5d;--u-wine:#78152f;--u-gold:#d1a84b;--u-bg:#f3f5f7;--u-card:#fff;--u-soft:#edf1f4;--u-line:#d6dee5;--u-text:#123149;--u-muted:#6c7f8d;--u-green:#16835b;--u-red:#b43a4b;--u-orange:#d98724}
+html,body{font-family:"Segoe UI",Inter,Arial,sans-serif!important;background:var(--u-bg)!important;color:var(--u-text)!important;font-size:13px!important}
+body{letter-spacing:0!important}h1,h2,h3,h4,h5,h6,strong{font-family:"Segoe UI",Inter,Arial,sans-serif!important;letter-spacing:-.012em!important;color:var(--u-text)}
+.topbar{min-height:72px!important;padding:10px 24px!important;background:linear-gradient(100deg,#08263b 0%,#0d334d 72%,#123e5d 100%)!important;border-bottom:3px solid var(--u-wine)!important;box-shadow:0 5px 18px rgba(8,38,59,.16)!important}
+.topbar-logo{width:54px!important;height:54px!important;border-radius:12px!important;background:#fff!important;border:1px solid rgba(255,255,255,.5)!important;box-shadow:0 4px 12px rgba(0,0,0,.14)!important;overflow:hidden!important}
+.topbar-logo img{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;padding:4px!important;background:#fff!important}.topbar-logo::after{display:none!important}
+.topbar-brand h1{font-size:20px!important;font-weight:750!important;color:#fff!important}.topbar-brand span{font-size:10.5px!important;color:#d3e0e8!important}.topbar-user{gap:9px!important}.topbar-user button,.btn-notificacion,.btn-logout{min-height:38px!important;border-radius:8px!important;font-size:11px!important}
+.dashboard-sidebar{width:246px!important;padding:12px 12px!important;background:linear-gradient(180deg,#74152f 0%,#651229 58%,#571022 100%)!important;border-right:0!important;box-shadow:5px 0 20px rgba(40,13,24,.08)!important}
+.sidebar-titulo{padding:4px 9px 12px!important}.sidebar-titulo strong{font-size:13px!important;font-weight:750!important;color:#fff!important;letter-spacing:.055em!important}.sidebar-titulo small{font-size:9px!important;color:#efd9df!important}.sidebar-seccion-label{margin:9px 8px 5px!important;font-size:8px!important;letter-spacing:.14em!important;color:#e9c7d0!important}.sidebar-separador{margin:9px 8px!important;border-color:rgba(255,255,255,.12)!important}
+.sidebar-item{min-height:36px!important;margin:2px 0!important;padding:7px 9px!important;border-radius:7px!important;font-size:11px!important;font-weight:650!important;color:#fff!important}.sidebar-item .sidebar-icon{width:24px!important;font-size:12px!important}.sidebar-item:hover{background:rgba(255,255,255,.09)!important;transform:none!important}.sidebar-item.activo{background:#4d0d1e!important;border-left:3px solid var(--u-gold)!important;box-shadow:none!important}
+.submenu-tramite-v247{margin:5px 3px 8px 14px!important;padding:5px!important;border:1px solid rgba(255,255,255,.15)!important;border-left:2px solid var(--u-gold)!important;border-radius:8px!important;background:rgba(255,255,255,.07)!important;box-shadow:none!important}.submenu-exp-v247{padding:5px 8px!important;font-size:8px!important;color:#f2dfe4!important}.submenu-tramite-v247 button{min-height:30px!important;padding:6px 8px!important;font-size:10.5px!important;font-weight:600!important;color:#fff!important;border-radius:6px!important}.submenu-tramite-v247 button:hover{background:rgba(255,255,255,.1)!important}
+.dashboard-main,.main-content{background:var(--u-bg)!important}.dashboard-content{padding:24px 28px!important}.dashboard-content h1,.dashboard-content h2{font-weight:700!important}
+.panel,.card,.admin-card,.resumen-card,.modal-content,.modal-contenido,.detalle-card,.form-card{border:1px solid var(--u-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:0 4px 14px rgba(18,49,73,.045)!important}
+input,select,textarea{border:1px solid #cbd6de!important;border-radius:7px!important;background:#fff!important;color:var(--u-text)!important;box-shadow:none!important;font-size:12px!important}input:focus,select:focus,textarea:focus{outline:0!important;border-color:#4b7897!important;box-shadow:0 0 0 3px rgba(75,120,151,.10)!important}
+label{font-size:10px!important;color:#526c7e!important;font-weight:650!important}button,.btn{font-family:inherit!important;border-radius:7px!important;font-weight:650!important}
+thead th{background:var(--u-navy)!important;color:#fff!important;font-size:9.5px!important;font-weight:700!important}tbody tr{background:#fff!important}tbody tr:hover{background:#f7f9fa!important}td{border-color:#e0e6eb!important}
+.modal-header,.modal-cabecera{background:var(--u-navy)!important;border-bottom:3px solid var(--u-wine)!important;color:#fff!important}
+/* Portal tesista y vistas auxiliares */
+.tramite-body{background:var(--u-bg)!important}.tramite-header{min-height:62px!important;background:linear-gradient(100deg,#08263b,#123e5d)!important;border-bottom:3px solid var(--u-wine)!important}.tramite-container{width:min(94%,1240px)!important;margin:18px auto!important}.tramite-resumen{gap:8px!important}.tramite-resumen .resumen-card,.proceso-completo,.historial-container{border:1px solid var(--u-line)!important;border-radius:9px!important;background:#fff!important;box-shadow:0 4px 14px rgba(18,49,73,.045)!important}.barra-progreso{background:linear-gradient(90deg,var(--u-navy2),#2b6d95)!important}
+@media(max-width:900px){.dashboard-sidebar{width:220px!important}.dashboard-content{padding:16px!important}}
+</style>
+
+</head>
+
+<body class="tramite-body">
+
+<!-- =====================================
+     HEADER
+===================================== -->
+
+<div class="tramite-header">
+
+  <div>
+
+    <h1>
+      MI TRÁMITE DE TITULACIÓN
+    </h1>
+
+    <span>
+      Segunda Especialidad - FIPS UNSA
+    </span>
+
+  </div>
+
+
+  <div
+    class="tramite-usuario-menu"
+    onclick="toggleMenuUsuario()"
+  >
+
+    <div class="usuario-avatar">
+      👤
+    </div>
+
+    <div class="usuario-info">
+
+      <strong id="nombreAlumno"></strong>
+
+      <small id="correoAlumno"></small>
+
+      <small id="dniAlumno"></small>
+
+    </div>
+
+
+    <div
+      class="menu-usuario"
+      id="menuUsuario"
+    >
+
+      <div class="menu-header">
+
+        <strong id="menuNombre"></strong>
+
+        <small id="menuCorreo"></small>
+
+      </div>
+
+      <button
+        class="btn-logout"
+        onclick="cerrarSesion(event)"
+      >
+        🚪 Cerrar sesión
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================
+     CONTENIDO
+===================================== -->
+
+<div class="tramite-container">
+
+
+  <!-- RESUMEN -->
+
+  <div class="tramite-resumen">
+
+    <div class="resumen-card">
+
+      <small>
+        EXPEDIENTE
+      </small>
+
+      <h2 id="expediente">
+        ---
+      </h2>
+
+    </div>
+
+
+    <div class="resumen-card">
+
+      <small>
+        ESTADO
+      </small>
+
+      <h2 id="estadoGeneral">
+        ---
+      </h2>
+
+    </div>
+
+
+    <div class="resumen-card">
+
+      <small>
+        ETAPA ACTUAL
+      </small>
+
+      <h2 id="etapaActual">
+        ---
+      </h2>
+
+    </div>
+
+
+    <div class="resumen-card">
+
+      <small>
+        PROGRESO
+      </small>
+
+      <h2 id="porcentaje">
+        0%
+      </h2>
+
+    </div>
+
+  </div>
+
+
+  <!-- BARRA GENERAL -->
+
+  <div class="barra-container">
+
+    <div
+      class="barra-progreso"
+      id="barraProgreso"
+    ></div>
+
+  </div>
+
+
+  <!-- PROCESO -->
+
+  <div class="proceso-completo">
+
+    <h2>
+      AVANCE DEL TRÁMITE
+    </h2>
+
+    <div id="procesoAlumno">
+
+      Cargando proceso...
+
+    </div>
+
+  </div>
+
+
+  <!-- HISTORIAL -->
+
+  <div class="historial-container">
+
+    <h2>
+      HISTORIAL DEL EXPEDIENTE
+    </h2>
+
+    <div id="historialAlumno"></div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   FASE 7 - VALIDACIÓN DE SESIÓN DEL PORTAL DEL ALUMNO
+========================================================= */
+function MVC7_tokenPortal(){
+  return String(
+    sessionStorage.getItem('token') ||
+    localStorage.getItem('token') ||
+    ''
+  ).trim();
+}
+
+function MVC7_cerrarPortalLocal(){
+  sessionStorage.clear();
+  localStorage.clear();
+  window.top.location.href = "<?!= appUrl ?>";
+}
+
+function MVC7_validarSesionPortal(){
+  const token = MVC7_tokenPortal();
+  if(!token){
+    MVC7_cerrarPortalLocal();
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r || r.status !== true || r.valida !== true){
+        MVC7_cerrarPortalLocal();
+        return;
+      }
+
+      const sesion = r.sesion || {};
+      const rol = String(sesion.rol || '').toLowerCase();
+      if(rol !== 'invitado'){
+        MVC7_cerrarPortalLocal();
+        return;
+      }
+
+      ['usuario','dni','nombre','correo','rol','expediente','programa'].forEach(function(k){
+        if(sesion[k] !== undefined && sesion[k] !== null){
+          sessionStorage.setItem(k, String(sesion[k]));
+        }
+      });
+    })
+    .withFailureHandler(MVC7_cerrarPortalLocal)
+    .MVC6_validarSesion(token);
+}
+
+MVC7_validarSesionPortal();
+
+
+
+/* =====================================
+   SESIÓN
+===================================== */
+
+function obtenerDatoSesion(nombre){
+
+  return (
+    sessionStorage.getItem(nombre)
+    ||
+    localStorage.getItem(nombre)
+    ||
+    ''
+  );
+
+}
+
+
+/* =====================================
+   INICIO
+===================================== */
+
+window.onload = function(){
+
+  const dni =
+    obtenerDatoSesion("dni");
+
+  document.getElementById(
+    "menuNombre"
+  ).innerHTML =
+    obtenerDatoSesion("nombre");
+
+
+  document.getElementById(
+    "menuCorreo"
+  ).innerHTML =
+    obtenerDatoSesion("correo");
+
+
+  document.getElementById(
+    "nombreAlumno"
+  ).innerHTML =
+    obtenerDatoSesion("nombre");
+
+
+  document.getElementById(
+    "correoAlumno"
+  ).innerHTML =
+    obtenerDatoSesion("correo");
+
+
+  document.getElementById(
+    "dniAlumno"
+  ).innerHTML =
+    "DNI: " + dni;
+
+
+  cargarTramite();
+
+  cargarHistorial();
+
+  cargarProcesoCompleto();
+
+  cargarMensajesInvitado();
+
+};
+
+
+/* =====================================
+   DATOS GENERALES DEL TRÁMITE
+===================================== */
+
+function cargarTramite(){
+
+  const dni =
+    obtenerDatoSesion("dni")
+    .toString()
+    .trim();
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(data){
+
+        pintarTramite(
+          data
+        );
+
+      }
+    )
+
+    .withFailureHandler(
+      function(error){
+
+        console.log(
+          "ERROR TRÁMITE:",
+          error.message
+        );
+
+      }
+    )
+
+    .BD184_OBTENER_PORTAL_INVITADO(
+      dni
+    );
+
+}
+
+
+/* =====================================
+   PINTAR RESUMEN
+===================================== */
+
+function pintarTramite(data){
+
+  if(
+    !data ||
+    data.status === false
+  ){
+
+    document.getElementById(
+      "expediente"
+    ).innerHTML =
+      "---";
+
+
+    document.getElementById(
+      "estadoGeneral"
+    ).innerHTML =
+      "Sin trámite";
+
+
+    document.getElementById(
+      "etapaActual"
+    ).innerHTML =
+      "---";
+
+
+    document.getElementById(
+      "porcentaje"
+    ).innerHTML =
+      "0%";
+
+
+    document.getElementById(
+      "barraProgreso"
+    ).style.width =
+      "0%";
+
+    return;
+
+  }
+
+
+  document.getElementById(
+    "expediente"
+  ).innerHTML =
+    data.expediente || "---";
+
+
+  document.getElementById(
+    "estadoGeneral"
+  ).innerHTML =
+    data.estadoGeneral || "EN PROCESO";
+  const porcentaje = Number(data.porcentaje || 0);
+  document.getElementById("porcentaje").innerHTML = porcentaje + "%";
+  document.getElementById("barraProgreso").style.width = porcentaje + "%";
+  document.getElementById("etapaActual").innerHTML = data.etapaActual || "---";
+
+}
+
+
+/* =====================================
+   HISTORIAL
+===================================== */
+
+function cargarHistorial(){
+
+  const dni =
+    obtenerDatoSesion("dni")
+    .toString()
+    .trim();
+
+
+  if(!dni){
+
+    pintarHistorial([]);
+
+    return;
+
+  }
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(data){
+
+        pintarHistorial(
+          data || []
+        );
+
+      }
+    )
+
+    .withFailureHandler(
+      function(error){
+
+        console.log(
+          "ERROR HISTORIAL:",
+          error.message
+        );
+
+        pintarHistorial([]);
+
+      }
+    )
+
+    .MVC7D_obtenerHistorialAlumno(
+      dni,
+      true
+    );
+
+}
+
+
+/* =====================================
+   PINTAR HISTORIAL
+===================================== */
+
+function pintarHistorial(data){
+
+  const contenedor =
+    document.getElementById(
+      "historialAlumno"
+    );
+
+
+  if(!contenedor){
+    return;
+  }
+
+
+  if(
+    !data ||
+    !Array.isArray(data) ||
+    data.length == 0
+  ){
+
+    contenedor.innerHTML =
+      `
+        <div class="historial-card">
+          No existen movimientos.
+        </div>
+      `;
+
+    return;
+
+  }
+
+
+  let html = "";
+
+
+  data.forEach(
+    function(item){
+
+      let color =
+        "info";
+
+
+      if(
+        item.estado ==
+        "SUCCESS"
+      ){
+
+        color =
+          "success";
+
+      }
+
+
+      if(
+        item.estado ==
+        "WARNING"
+      ){
+
+        color =
+          "warning";
+
+      }
+
+
+      if(
+        item.estado ==
+        "ERROR"
+      ){
+
+        color =
+          "error";
+
+      }
+
+
+      html += `
+
+        <div
+          class="
+            historial-card
+            ${color}
+          "
+        >
+
+          <div class="historial-fecha">
+
+            ${item.fecha || ""}
+
+            <br>
+
+            ${item.hora || ""}
+
+          </div>
+
+
+          <div class="historial-body">
+
+            <h4>
+              ${item.accion || ""}
+            </h4>
+
+            <p>
+              ${item.descripcion || ""}
+            </p>
+
+            <small>
+
+              Etapa:
+              ${item.etapa || "-"}
+
+              · Responsable:
+              ${item.usuario || "-"}
+
+            </small>
+
+          </div>
+
+        </div>
+
+      `;
+
+    }
+  );
+
+
+  contenedor.innerHTML =
+    html;
+
+}
+
+
+/* =====================================
+   PROCESO COMPLETO
+===================================== */
+
+function cargarProcesoCompleto(){
+
+  const dni =
+    obtenerDatoSesion("dni")
+    .toString()
+    .trim();
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(data){
+
+        pintarProcesoAlumno(
+          data || []
+        );
+
+      }
+    )
+
+    .withFailureHandler(
+      function(error){
+
+        document.getElementById(
+          "procesoAlumno"
+        ).innerHTML =
+          "ERROR: " +
+          error.message;
+
+      }
+    )
+
+    .BD184_OBTENER_PROCESO_INVITADO(
+      dni
+    );
+
+}
+
+
+/* =====================================
+   PINTAR ETAPAS Y SUBETAPAS
+===================================== */
+
+function pintarProcesoAlumno(data){
+
+  const contenedor =
+    document.getElementById(
+      "procesoAlumno"
+    );
+
+
+  if(!contenedor){
+    return;
+  }
+
+
+  if(
+    !data ||
+    data.length == 0
+  ){
+
+    contenedor.innerHTML =
+      `
+        <div class="historial-card">
+
+          No existe información
+          del proceso.
+
+        </div>
+      `;
+
+    return;
+
+  }
+
+
+  let html = "";
+
+
+  data.forEach(
+    function(etapa,index){
+
+      let claseEstado =
+        "alumno-no-iniciado";
+
+
+      if(
+        etapa.estado ==
+        "EN CURSO"
+      ){
+
+        claseEstado =
+          "alumno-en-curso";
+
+      }
+
+
+      if(
+        etapa.estado ==
+        "FINALIZADO"
+      ){
+
+        claseEstado =
+          "alumno-finalizado";
+
+      }
+
+
+      const abrir = true;
+
+
+      html += `
+
+        <div
+          class="
+            etapa-alumno-card
+            ${claseEstado}
+          "
+        >
+
+          <div
+            class="etapa-alumno-header"
+            onclick="
+              toggleEtapaAlumno(
+                ${index}
+              )
+            "
+          >
+
+            <div>
+
+              <span>
+                ETAPA ${etapa.etapa}
+              </span>
+
+              <h3>
+                ${etapa.nombre}
+              </h3>
+
+              <small>
+                ${etapa.estado}
+              </small>
+              <div class="etapa-fechas">
+                <span>Inicio: <b>${etapa.fechaInicio || "Pendiente"}</b></span>
+                <span>Finalización: <b>${etapa.fechaFin || "Pendiente"}</b></span>
+              </div>
+
+            </div>
+
+
+            <div
+              class="etapa-alumno-pct"
+            >
+              ${etapa.porcentaje || 0}%
+            </div>
+
+          </div>
+
+
+          <div
+            class="etapa-alumno-barra"
+          >
+
+            <div
+              style="
+                width:
+                ${etapa.porcentaje || 0}%;
+              "
+            ></div>
+
+          </div>
+
+
+          <div
+            class="etapa-alumno-body"
+            id="etapaAlumnoBody${index}"
+            style="
+              display:
+              ${abrir ? "block" : "none"};
+            "
+          >
+
+      `;
+
+
+      const procesos =
+        etapa.procesos || [];
+
+
+      procesos.forEach(
+        function(p){
+
+          let claseProceso =
+            "proceso-no-iniciado";
+
+
+          let icono =
+            "○";
+
+
+          if(
+            p.estado ==
+            "EN CURSO"
+          ){
+
+            claseProceso =
+              "proceso-en-curso";
+
+            icono =
+              "◉";
+
+          }
+
+
+          if(
+            p.estado ==
+            "FINALIZADO"
+          ){
+
+            claseProceso =
+              "proceso-finalizado";
+
+            icono =
+              "✓";
+
+          }
+
+
+          const permiteArchivo =
+            (
+              Number(etapa.etapa) == 1
+              &&
+              Number(p.subetapa) == 1
+            )
+            ||
+            (
+              Number(etapa.etapa) == 2
+              &&
+              Number(p.subetapa) == 1
+            );
+
+
+          html += `
+
+            <div
+              class="
+                proceso-alumno-row
+                ${claseProceso}
+              "
+            >
+
+              <div
+                class="proceso-alumno-icon"
+              >
+                ${icono}
+              </div>
+
+
+              <div
+                class="proceso-alumno-info"
+              >
+
+                <strong>
+                  ${p.descripcion || ""}
+                </strong>
+
+
+                <span>
+                  Plazo:
+                  ${p.plazo || "-"}
+                </span>
+
+
+                <span>
+                  Estado:
+                  <b>
+                    ${p.estado || "NO INICIADO"}
+                  </b>
+                </span>
+
+
+                ${
+                  p.fechaInicio
+                  ? `
+                    <small>
+                      Inicio:
+                      ${p.fechaInicio}
+                    </small>
+                  `
+                  : ''
+                }
+
+
+                ${
+                  p.fechaFin
+                  ? `
+                    <small>
+                      Finalización:
+                      ${p.fechaFin}
+                    </small>
+                  `
+                  : ''
+                }
+
+
+                ${
+                  p.responsable
+                  ? `
+                    <small>
+                      Responsable:
+                      ${p.responsable}
+                    </small>
+                  `
+                  : ''
+                }
+
+                ${
+                  p.checklist && Array.isArray(p.checklist.requisitos)
+                  ? `
+                    <div class="checklist-invitado">
+                      <div class="checklist-invitado-head">
+                        <div>
+                          <strong>Requisitos de esta subetapa</strong>
+                          <small>
+                            ${p.checklist.marcados || 0} de ${p.checklist.total || 0} completados
+                          </small>
+                        </div>
+                        <span class="checklist-invitado-pct">
+                          ${p.checklist.porcentaje || 0}%
+                        </span>
+                      </div>
+
+                      <div class="checklist-invitado-barra">
+                        <div style="width:${p.checklist.porcentaje || 0}%"></div>
+                      </div>
+
+                      <div class="checklist-invitado-items">
+                        ${p.checklist.requisitos.map(function(r){
+                          return `
+                            <div class="checklist-invitado-item ${r.marcado ? 'ok' : 'pendiente'}">
+                              <span class="checklist-invitado-check">
+                                ${r.marcado ? '✓' : '○'}
+                              </span>
+                              <div>
+                                <b>${r.numero}. ${r.nombre || ''}</b>
+                                <small>
+                                  ${r.marcado
+                                    ? ('Completado' + (r.actualizado ? ' · ' + r.actualizado : ''))
+                                    : 'Pendiente'}
+                                </small>
+                              </div>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </div>
+                  `
+                  : ''
+                }
+
+
+                ${
+                  p.archivoUrl
+                  ? `
+                    <div
+                      class="archivo-subido-alumno"
+                    >
+
+                      <span>
+                        Documento presentado:
+                      </span>
+
+                      <a
+                        href="${p.archivoUrl}"
+                        target="_blank"
+                      >
+                        📄
+                        ${p.archivoNombre || "Abrir documento"}
+                      </a>
+
+                    </div>
+                  `
+                  : ''
+                }
+
+
+                ${
+                  p.mensaje
+                  ? `
+                    <div
+                      class="mensaje-alumno-subetapa"
+                    >
+                      💬
+                      ${p.mensaje}
+                    </div>
+                  `
+                  : ''
+                }
+
+
+                ${
+                  permiteArchivo
+                  &&
+                  p.estado != "FINALIZADO"
+                  ? crearCargaArchivoInvitado(
+                      p,
+                      etapa
+                    )
+                  : ''
+                }
+
+              </div>
+
+            </div>
+
+          `;
+
+        }
+      );
+
+
+      html += `
+
+          </div>
+
+        </div>
+
+      `;
+
+    }
+  );
+
+
+  contenedor.innerHTML =
+    html;
+
+}
+
+
+/* =====================================
+   COMPONENTE CARGA DE ARCHIVO
+===================================== */
+function crearCargaArchivoInvitado(proceso, etapa){
+  return `
+    <div class="carga-archivo-invitado" style="border-style:dashed;">
+      <div class="carga-archivo-info">
+        <strong>Agenda virtual</strong>
+        <small>La carga de documentos está deshabilitada. El avance es registrado por la Unidad mediante el cumplimiento de cada actividad.</small>
+      </div>
+    </div>
+  `;
+}
+
+/* =====================================
+   ESCAPAR TEXTO PARA onclick
+===================================== */
+
+function escaparTextoJs(texto){
+
+  return String(
+    texto || ""
+  )
+  .replace(
+    /\\/g,
+    "\\\\"
+  )
+  .replace(
+    /'/g,
+    "\\'"
+  )
+  .replace(
+    /\r?\n/g,
+    " "
+  );
+
+}
+
+
+/* =====================================
+   SUBIR ARCHIVO
+===================================== */
+
+async function subirArchivoInvitado(
+  subetapaId,
+  etapa,
+  nombreEtapa,
+  descripcion,
+  correoResponsable
+){
+
+  const idInput =
+    "archivoSubetapa_" +
+    subetapaId;
+
+  const input =
+    document.getElementById(
+      idInput
+    );
+
+  console.log(
+    "INPUT ARCHIVO:",
+    idInput,
+    input
+  );
+
+  if(!input){
+
+    alert(
+      "No se encontró el control de carga del documento."
+    );
+
+    return;
+
+  }
+
+  if(
+    !input.files ||
+    input.files.length === 0
+  ){
+
+    alert(
+      "Seleccione un archivo PDF o Word."
+    );
+
+    return;
+
+  }
+
+  const archivo =
+    input.files[0];
+
+  const extensionValida =
+    /\.(pdf|doc|docx)$/i
+      .test(
+        archivo.name
+      );
+
+  if(!extensionValida){
+
+    alert(
+      "Solo se permiten archivos PDF, DOC o DOCX."
+    );
+
+    return;
+
+  }
+
+  // 20 MB
+  const limite =
+    20 *
+    1024 *
+    1024;
+
+  if(
+    archivo.size >
+    limite
+  ){
+
+    alert(
+      "El archivo supera el máximo permitido de 20 MB."
+    );
+
+    return;
+
+  }
+
+  const boton =
+    document.getElementById(
+      "btnArchivoSubetapa_" +
+      subetapaId
+    );
+
+  if(boton){
+
+    boton.disabled =
+      true;
+
+    boton.innerHTML =
+      "SUBIENDO DOCUMENTO...";
+
+  }
+
+  try{
+
+    const base64 =
+      await convertirArchivoBase64(
+        archivo
+      );
+
+    const dni =
+      obtenerDatoSesion(
+        "dni"
+      );
+
+    const nombreInvitado =
+      obtenerDatoSesion(
+        "nombre"
+      );
+
+    const correoInvitado =
+      obtenerDatoSesion(
+        "correo"
+      );
+
+    const expediente =
+      document
+        .getElementById(
+          "expediente"
+        )
+        .innerText
+        .trim();
+
+    google.script.run
+
+      .withSuccessHandler(
+        function(resultado){
+
+          if(boton){
+
+            boton.disabled =
+              false;
+
+            boton.innerHTML =
+              "SUBIR DOCUMENTO";
+
+          }
+
+          console.log(
+            "RESPUESTA SUBIDA:",
+            resultado
+          );
+
+          if(
+            !resultado ||
+            resultado.status !== true
+          ){
+
+            alert(
+              resultado &&
+              resultado.message
+              ?
+              resultado.message
+              :
+              "No se pudo guardar el documento."
+            );
+
+            return;
+
+          }
+
+          alert(
+            "DOCUMENTO CARGADO CORRECTAMENTE"
+          );
+
+          /*
+            ACTUALIZAR LA VISTA
+          */
+
+          cargarProcesoCompleto();
+
+        }
+      )
+
+      .withFailureHandler(
+        function(error){
+
+          if(boton){
+
+            boton.disabled =
+              false;
+
+            boton.innerHTML =
+              "SUBIR DOCUMENTO";
+
+          }
+
+          console.error(
+            "ERROR SUBIDA:",
+            error
+          );
+
+          alert(
+            "ERROR AL SUBIR DOCUMENTO:\n" +
+            error.message
+          );
+
+        }
+      )
+
+      .MVC7D_subirArchivoSubetapa({
+
+        subetapaId:
+          subetapaId,
+
+        dni:
+          dni,
+
+        expediente:
+          expediente,
+
+        nombreInvitado:
+          nombreInvitado,
+
+        correoInvitado:
+          correoInvitado,
+
+        correoResponsable:
+          correoResponsable,
+
+        etapa:
+          Number(etapa),
+
+        nombreEtapa:
+          nombreEtapa,
+
+        descripcion:
+          descripcion,
+
+        nombreArchivo:
+          archivo.name,
+
+        mimeType:
+          archivo.type ||
+          obtenerMimePorNombre(
+            archivo.name
+          ),
+
+        base64:
+          base64
+
+      });
+
+  }
+  catch(error){
+
+    if(boton){
+
+      boton.disabled =
+        false;
+
+      boton.innerHTML =
+        "SUBIR DOCUMENTO";
+
+    }
+
+    console.error(
+      error
+    );
+
+    alert(
+      "No se pudo procesar el documento:\n" +
+      error.message
+    );
+
+  }
+
+}
+
+
+
+function obtenerMimePorNombre(
+  nombre
+){
+
+  const extension =
+    nombre
+      .split(".")
+      .pop()
+      .toLowerCase();
+
+  if(extension === "pdf"){
+
+    return "application/pdf";
+
+  }
+
+  if(extension === "doc"){
+
+    return "application/msword";
+
+  }
+
+  if(extension === "docx"){
+
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+  }
+
+  return "application/octet-stream";
+
+}
+
+/* =====================================
+   CONVERTIR ARCHIVO A BASE64
+===================================== */
+
+function convertirArchivoBase64(
+  file
+){
+
+  return new Promise(
+    function(resolve,reject){
+
+      const reader =
+        new FileReader();
+
+      reader.onload =
+        function(){
+
+          const resultado =
+            reader.result || "";
+
+          resolve(
+            resultado
+              .split(",")[1]
+          );
+
+        };
+
+      reader.onerror =
+        function(){
+
+          reject(
+            new Error(
+              "No se pudo leer el archivo."
+            )
+          );
+
+        };
+
+      reader.readAsDataURL(
+        file
+      );
+
+    }
+  );
+
+}
+
+
+/* =====================================
+   ACORDEÓN
+===================================== */
+
+function toggleEtapaAlumno(
+  index
+){
+
+  const body =
+    document.getElementById(
+      "etapaAlumnoBody" +
+      index
+    );
+
+
+  if(!body){
+    return;
+  }
+
+
+  body.style.display =
+    body.style.display ==
+    "none"
+    ?
+    "block"
+    :
+    "none";
+
+}
+
+
+/* =====================================
+   MENÚ USUARIO
+===================================== */
+
+function toggleMenuUsuario(){
+
+  const menu =
+    document.getElementById(
+      "menuUsuario"
+    );
+
+
+  if(menu){
+
+    menu.classList.toggle(
+      "active"
+    );
+
+  }
+
+}
+
+
+/* =====================================
+   CERRAR SESIÓN
+===================================== */
+
+function cerrarSesion(e){
+
+  if(e){ e.stopPropagation(); }
+
+  const token = MVC7_tokenPortal();
+
+  const finalizar = function(){
+    sessionStorage.clear();
+    localStorage.clear();
+    window.top.location.href = "<?!= appUrl ?>";
+  };
+
+  if(!token){
+    finalizar();
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(finalizar)
+    .withFailureHandler(finalizar)
+    .MVC6_cerrarSesion(token);
+}
+
+
+/* =====================================
+   MENSAJES INVITADO
+===================================== */
+
+function cargarMensajesInvitado(){
+
+  const dni =
+    obtenerDatoSesion(
+      "dni"
+    );
+
+
+  if(!dni){
+    return;
+  }
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(lista){
+
+        if(
+          !lista ||
+          lista.length == 0
+        ){
+
+          return;
+
+        }
+
+
+        mostrarAvisoFlotanteAlumno(
+          lista[0]
+        );
+
+      }
+    )
+
+    .withFailureHandler(
+      function(error){
+
+        console.log(
+          "ERROR MENSAJES:",
+          error.message
+        );
+
+      }
+    )
+
+    .MVC7D_obtenerMensajesInvitado(
+      dni
+    );
+
+}
+
+
+/* =====================================
+   AVISO FLOTANTE
+===================================== */
+
+function mostrarAvisoFlotanteAlumno(
+  mensaje
+){
+
+  const anterior =
+    document.getElementById(
+      "avisoTramiteAlumno"
+    );
+
+
+  if(anterior){
+
+    anterior.remove();
+
+  }
+
+
+  const html = `
+
+    <div
+      id="avisoTramiteAlumno"
+      class="aviso-tramite-alumno"
+    >
+
+      <button
+        onclick="
+          document
+          .getElementById(
+            'avisoTramiteAlumno'
+          )
+          .remove()
+        "
+      >
+        ×
+      </button>
+
+
+      <span>
+        ACTUALIZACIÓN DEL TRÁMITE
+      </span>
+
+
+      <strong>
+
+        Etapa
+        ${mensaje.etapa || "-"}
+
+        ·
+
+        ${mensaje.nombreEtapa || ""}
+
+      </strong>
+
+
+      <p>
+        ${mensaje.mensaje || ""}
+      </p>
+
+
+      <small>
+        ${mensaje.fecha || ""}
+      </small>
+
+    </div>
+
+  `;
+
+
+  document.body
+    .insertAdjacentHTML(
+      "beforeend",
+      html
+    );
+
+}
+
+</script>
+
+</body>
+</html>
