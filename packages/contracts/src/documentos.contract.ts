@@ -5,9 +5,19 @@ export const DocumentoMetadataSchema = z.object({
   id: z.string().uuid(),
   expedienteId: z.string().uuid(),
   tipo: z.string(),
+  etapa: z.string(),
   version: z.number(),
   sha256: z.string().length(64),
   estado: z.enum(["PENDIENTE", "CARGADO", "OBSERVADO", "APROBADO", "RECHAZADO"]),
+});
+
+/** Respuesta del upload multipart (ruta nativa Fastify, ver documentos.routes). */
+export const SubirDocumentoResponseSchema = z.object({
+  id: z.string().uuid(),
+  tipo: z.string(),
+  version: z.number(),
+  sha256: z.string(),
+  estado: z.string(),
 });
 
 const c = initContract();

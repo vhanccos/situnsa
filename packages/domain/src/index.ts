@@ -1,4 +1,5 @@
 export * from "./audit/cryptographic-trail.js";
+export * from "./expediente/checklist-catalogo.js";
 export * from "./expediente/dias-habiles.js";
 export * from "./expediente/expediente.aggregate.js";
 export * from "./expediente/fsm.js";

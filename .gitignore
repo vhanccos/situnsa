@@ -8,9 +8,8 @@ coverage/
 .env
 .env.local
 .env.*.local
-# Drizzle
-packages/db/drizzle/*.sql
-!packages/db/drizzle/.gitkeep
+# Drizzle (las migraciones SQL SÍ se versionan: AGENTS.md lo exige)
+packages/db/drizzle/*.log
 # Uploads locales (volumen documental)
 var/data/
 # Playwright
@@ -22,3 +21,6 @@ playwright/.cache/
 .vscode/*
 !.vscode/extensions.json
 *.log
+# Uploads dev (volumen documental)
+var/
+apps/api/var/

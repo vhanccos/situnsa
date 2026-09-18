@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createRootRoute, createRoute, createRouter, RouterProvider } from "@tanstack/react-router";
+import { ExpedienteDetallePage } from "./routes/expedientes.$id.js";
 import { HomePage } from "./routes/index.js";
 import { LoginPage } from "./routes/login.js";
 
@@ -10,7 +11,12 @@ const loginRoute = createRoute({
   path: "/login",
   component: LoginPage,
 });
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute]);
+const detalleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/expedientes/$id",
+  component: ExpedienteDetallePage,
+});
+const routeTree = rootRoute.addChildren([indexRoute, loginRoute, detalleRoute]);
 
 const router = createRouter({ routeTree });
 declare module "@tanstack/react-router" {

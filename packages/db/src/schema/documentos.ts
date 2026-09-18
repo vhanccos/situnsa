@@ -8,6 +8,7 @@ export const documentos = pgTable("documentos", {
     .notNull()
     .references(() => expedientes.id),
   tipo: varchar("tipo", { length: 64 }).notNull(),
+  etapa: varchar("etapa", { length: 8 }).notNull().default("E1"),
   ruta: text("ruta").notNull(),
   version: integer("version").notNull().default(1),
   sha256: varchar("sha256", { length: 64 }).notNull(),

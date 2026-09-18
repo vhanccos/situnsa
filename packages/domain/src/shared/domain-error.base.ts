@@ -5,6 +5,7 @@ export type DomainErrorCode =
   | "DOCUMENTO_INVALIDO"
   | "TURNITIN_NO_CONFORME"
   | "JURADO_NO_ASIGNADO"
+  | "CONFLICTO_CONCURRENCIA"
   | "VALIDACION_FALLIDA";
 
 export class DomainError extends Error {

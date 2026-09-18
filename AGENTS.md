@@ -46,3 +46,9 @@ await uow.run(async (db) => { /* update + auditoría hash + enqueue pg-boss */ }
   `require()` plano. `db:push`/`db:generate` compilan primero (`tsc → dist/`)
   y apuntan al schema compilado (`DRIZZLE_SCHEMA`, ver `drizzle.config.ts`).
   No cambiar este flujo sin verificar `db:push` contra Postgres local.
+- Web usa `fetch` + `Schema.parse()` de `@pis/contracts` (no `@ts-rest/react-query`:
+  su API de cliente cambió entre versiones y rompe el typecheck). Los paths
+  deben coincidir con `packages/contracts/src/*.contract.ts`.
+- Upload multipart es ruta nativa Fastify (`documentos.routes.ts`), no ts-rest
+  (`@ts-rest/fastify` no maneja multipart fiable). El use-case sí usa Result.
+  Autenticación actual = stub `x-user-dni` (`middleware/stub-auth.ts`).

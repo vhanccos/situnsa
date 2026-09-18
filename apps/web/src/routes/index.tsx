@@ -13,8 +13,14 @@ export function HomePage() {
       </p>
       <TimelineFsm actual="EN_PLAN" />
       <SemaforoBadge estado={estado} dias={4} />
-      <div>
+      <div className="flex gap-2">
         <Button>Inscribir plan (RF-01)</Button>
+        <a
+          className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-medium hover:bg-slate-100"
+          href="/expedientes/33333333-3333-4333-8333-333333333333"
+        >
+          Ver expediente SET005 (demo)
+        </a>
       </div>
     </main>
   );
