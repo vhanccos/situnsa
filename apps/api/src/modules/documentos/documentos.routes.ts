@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import { db, documentos } from "@pis/db";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { autorizar } from "../../infra/auth/autorizacion.js";
 import { errorEnvelope } from "../../infra/http/errores.js";
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
 import { requireAuth } from "../../middleware/require-auth.js";
@@ -19,6 +20,14 @@ export async function downloadAccelQuery(
   const doc = rows[0];
   if (!doc) {
     reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
+    return;
+  }
+  const a = await autorizar(req.actor, {
+    permiso: ["documentos", "ver"],
+    expedienteId: doc.expedienteId,
+  });
+  if (!a.ok) {
+    reply.status(a.status).send(a.body);
     return;
   }
   reply.header("X-Accel-Redirect", `/protected-files/${doc.expedienteId}/${basename(doc.ruta)}`);
@@ -49,9 +58,17 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
           .send(errorEnvelope("VALIDACION_FALLIDA", "Se requiere expedienteId, tipo y file (PDF)"));
         return;
       }
+      const a = await autorizar(req.actor, {
+        permiso: ["documentos", "crear"],
+        expedienteId,
+      });
+      if (!a.ok) {
+        reply.status(a.status).send(a.body);
+        return;
+      }
       const bytes = new Uint8Array(await data.toBuffer());
       const uc = new SubirDocumentoUseCase(new LocalStorageService());
-      const actor = req.actor ?? { id: "", dni: "desconocido" };
+      const actor = req.actor ?? { id: "", dni: "desconocido" }; // requireAuth+autorizar garantizan actor
       const r = await uc.execute({ expedienteId, tipo, filename: data.filename, bytes, actor });
       if (!r.ok) {
         reply.status(400).send(errorEnvelope(r.error.code, r.error.message));
@@ -63,6 +80,7 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
 
   app.get(
     "/api/documentos/:id",
+    { preHandler: async (req, reply) => requireAuth(req, reply) },
     async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
       const rows = await db
         .select()
@@ -72,6 +90,14 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
       const doc = rows[0];
       if (!doc) {
         reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
+        return;
+      }
+      const a = await autorizar(req.actor, {
+        permiso: ["documentos", "ver"],
+        expedienteId: doc.expedienteId,
+      });
+      if (!a.ok) {
+        reply.status(a.status).send(a.body);
         return;
       }
       reply.send({
@@ -86,5 +112,9 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
     },
   );
 
-  app.get("/api/documentos/:id/descargar", downloadAccelQuery);
+  app.get(
+    "/api/documentos/:id/descargar",
+    { preHandler: async (req, reply) => requireAuth(req, reply) },
+    downloadAccelQuery,
+  );
 }

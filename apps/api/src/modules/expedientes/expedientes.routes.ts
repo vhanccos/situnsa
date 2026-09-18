@@ -2,6 +2,7 @@ import { ExpedienteDetalleDTOSchema, expedientesContract } from "@pis/contracts"
 import { db } from "@pis/db";
 import { initServer } from "@ts-rest/fastify";
 import type { FastifyInstance } from "fastify";
+import { autorizar, denegado } from "../../infra/auth/autorizacion.js";
 import { errorEnvelope } from "../../infra/http/errores.js";
 import { buscarRespuesta, guardarRespuesta, leerClave } from "../../infra/http/idempotencia.js";
 import { requireAuth } from "../../middleware/require-auth.js";
@@ -14,9 +15,19 @@ import { ValidarInscripcionUseCase } from "./use-cases/validar-inscripcion/valid
 
 const s = initServer();
 
+/** Roles legacy sin alcance global: el listado se fuerza a `vista=mis`. */
+function esAlcancePropio(rol: string | undefined): boolean {
+  return rol === "TESISTA" || rol === "ASESOR" || rol === "JURADO";
+}
+
 export function registerExpedientesRoutes(app: FastifyInstance): void {
   const router = s.router(expedientesContract, {
     inscribirPlan: async ({ body, request }) => {
+      const a = await autorizar(request.actor, { permiso: ["expedientes", "crear"] });
+      if (!a.ok) {
+        if (a.status === 401) return { status: 401 as const, body: a.body };
+        return { status: 403 as const, body: a.body };
+      }
       const clave = leerClave(request.headers);
       if (clave) {
         const previa = await buscarRespuesta(clave);
@@ -37,6 +48,11 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
       return { status: 201 as const, body: r.value };
     },
     validar: async ({ params, request }) => {
+      const a = await autorizar(request.actor, {
+        permiso: ["inscripciones", "aprobar"],
+        expedienteId: params.id,
+      });
+      if (!a.ok) return denegado(a);
       const actor = request.actor ?? { id: "", dni: "desconocido" };
       const uc = new ValidarInscripcionUseCase();
       const r = await uc.execute(params.id, actor);
@@ -49,6 +65,11 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
       return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(r.value.detalle) };
     },
     publicarMensaje: async ({ params, body, request }) => {
+      const a = await autorizar(request.actor, {
+        permiso: ["notificaciones", "crear"],
+        expedienteId: params.id,
+      });
+      if (!a.ok) return denegado(a);
       const actor = request.actor ?? { id: "", dni: "desconocido" };
       const uc = new PublicarMensajeUseCase();
       const r = await uc.execute(params.id, body.texto, actor);
@@ -57,6 +78,11 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
       return { status: 201 as const, body: r.value };
     },
     anular: async ({ params, body, request }) => {
+      const a = await autorizar(request.actor, {
+        permiso: ["expedientes", "eliminar"],
+        expedienteId: params.id,
+      });
+      if (!a.ok) return denegado(a);
       const actor = request.actor ?? { id: "", dni: "desconocido" };
       const uc = new AnularExpedienteUseCase();
       const r = await uc.execute(params.id, body.motivo, actor);
@@ -67,7 +93,12 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
         return { status: 404 as const, body: errorEnvelope("NO_ENCONTRADO", r.error.message) };
       return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(r.value) };
     },
-    getById: async ({ params }) => {
+    getById: async ({ params, request }) => {
+      const a = await autorizar(request.actor, {
+        permiso: ["expedientes", "ver"],
+        expedienteId: params.id,
+      });
+      if (!a.ok) return denegado(a);
       const detalle = await getDetalleById(db, params.id);
       if (!detalle)
         return {
@@ -77,6 +108,11 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
       return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(detalle) };
     },
     actualizarDatos: async ({ params, body, request }) => {
+      const a = await autorizar(request.actor, {
+        permiso: ["expedientes", "editar"],
+        expedienteId: params.id,
+      });
+      if (!a.ok) return denegado(a);
       const actor = request.actor ?? { id: "", dni: "desconocido" };
       const uc = new ActualizarDatosUseCase();
       const r = await uc.execute(params.id, body, actor);
@@ -98,11 +134,16 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
       return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(r.value) };
     },
     listar: async ({ query, request }) => {
+      const a = await autorizar(request.actor, { permiso: ["expedientes", "ver"] });
+      if (!a.ok) {
+        if (a.status === 401) return { status: 401 as const, body: a.body };
+        return { status: 403 as const, body: a.body };
+      }
       const r = await listarExpedientes(db, {
         q: query.q,
         estado: query.estado,
         orden: query.orden,
-        vista: query.vista,
+        vista: esAlcancePropio(request.actor?.rol) ? "mis" : query.vista,
         page: query.page,
         limit: query.limit,
         actorDni: request.actor?.dni,

@@ -4,6 +4,7 @@ import { DomainError } from "@pis/domain";
 import { initServer } from "@ts-rest/fastify";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
+import { autorizar } from "../../infra/auth/autorizacion.js";
 import { errorEnvelope } from "../../infra/http/errores.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 
@@ -11,7 +12,12 @@ const s = initServer();
 
 export function registerTalleresRoutes(app: FastifyInstance): void {
   const router = s.router(talleresContract, {
-    listar: async () => {
+    listar: async ({ request }) => {
+      const a = await autorizar(request.actor, { permiso: ["taller", "ver"] });
+      if (!a.ok) {
+        if (a.status === 401) return { status: 401 as const, body: a.body };
+        return { status: 403 as const, body: a.body };
+      }
       const rows = await db.select().from(talleres);
       const gente = await db.select().from(usuarios);
       const porId = new Map(gente.map((u) => [u.id, `${u.nombres} ${u.apellidos}`]));
@@ -29,7 +35,12 @@ export function registerTalleresRoutes(app: FastifyInstance): void {
         },
       };
     },
-    crear: async ({ body }) => {
+    crear: async ({ body, request }) => {
+      const a = await autorizar(request.actor, { permiso: ["taller", "crear"] });
+      if (!a.ok) {
+        if (a.status === 401) return { status: 401 as const, body: a.body };
+        return { status: 403 as const, body: a.body };
+      }
       let asesorId: string | null = null;
       if (body.asesorDni) {
         const rows = await db
@@ -75,7 +86,12 @@ export function registerTalleresRoutes(app: FastifyInstance): void {
 
 export function registerAsesoresRoutes(app: FastifyInstance): void {
   const router = s.router(asesoresContract, {
-    listar: async () => {
+    listar: async ({ request }) => {
+      const a = await autorizar(request.actor, { permiso: ["taller", "ver"] });
+      if (!a.ok) {
+        if (a.status === 401) return { status: 401 as const, body: a.body };
+        return { status: 403 as const, body: a.body };
+      }
       const rows = await db.select().from(usuarios).where(eq(usuarios.rol, "ASESOR"));
       const talls = await db.select().from(talleres);
       return {
@@ -95,7 +111,12 @@ export function registerAsesoresRoutes(app: FastifyInstance): void {
         },
       };
     },
-    crear: async ({ body }) => {
+    crear: async ({ body, request }) => {
+      const a = await autorizar(request.actor, { permiso: ["taller", "crear"] });
+      if (!a.ok) {
+        if (a.status === 401) return { status: 401 as const, body: a.body };
+        return { status: 403 as const, body: a.body };
+      }
       try {
         const inserted = await db
           .insert(usuarios)
@@ -130,7 +151,12 @@ export function registerAsesoresRoutes(app: FastifyInstance): void {
         throw new DomainError("VALIDACION_FALLIDA", "DNI o correo duplicado");
       }
     },
-    cambiarEstado: async ({ params, body }) => {
+    cambiarEstado: async ({ params, body, request }) => {
+      const a = await autorizar(request.actor, { permiso: ["taller", "editar"] });
+      if (!a.ok) {
+        if (a.status === 401) return { status: 401 as const, body: a.body };
+        return { status: 403 as const, body: a.body };
+      }
       await db.update(usuarios).set({ activo: body.activo }).where(eq(usuarios.id, params.id));
       const rows = await db.select().from(usuarios).where(eq(usuarios.id, params.id)).limit(1);
       const u = rows[0];

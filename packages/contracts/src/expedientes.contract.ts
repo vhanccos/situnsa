@@ -239,6 +239,8 @@ export const expedientesContract = c.router({
     responses: {
       201: z.object({ id: z.string().uuid(), codigo: z.string() }),
       400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
     },
     summary: "§10 Registro de Nuevo Expediente (crea REGISTRADO; admite Idempotency-Key)",
   },
@@ -250,6 +252,8 @@ export const expedientesContract = c.router({
     responses: {
       200: ExpedienteDetalleDTOSchema,
       400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
       404: ErrorEnvelopeSchema,
     },
     summary: "§12 Validar inscripción → EN_PLAN + genera seguimiento",
@@ -261,6 +265,8 @@ export const expedientesContract = c.router({
     body: z.object({ texto: z.string().min(2).max(2000) }),
     responses: {
       201: MensajeDTOSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
       404: ErrorEnvelopeSchema,
     },
     summary: "Mensaje administrativo (§5 Historial de mensajes)",
@@ -269,7 +275,12 @@ export const expedientesContract = c.router({
     method: "GET",
     path: "/api/expedientes/:id",
     pathParams: z.object({ id: z.string().uuid() }),
-    responses: { 200: ExpedienteDetalleDTOSchema, 404: ErrorEnvelopeSchema },
+    responses: {
+      200: ExpedienteDetalleDTOSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
     summary: "Detalle del expediente (pestañas Datos/Documentos/Resumen)",
   },
   anular: {
@@ -280,6 +291,8 @@ export const expedientesContract = c.router({
     responses: {
       200: ExpedienteDetalleDTOSchema,
       400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
       404: ErrorEnvelopeSchema,
     },
     summary: "ELIMINAR REGISTRO: borrado lógico → ANULADO",
@@ -292,6 +305,8 @@ export const expedientesContract = c.router({
     responses: {
       200: ExpedienteDetalleDTOSchema,
       400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
       404: ErrorEnvelopeSchema,
       409: ErrorEnvelopeSchema.extend({ updatedAt: z.string() }),
     },
@@ -302,6 +317,8 @@ export const expedientesContract = c.router({
     path: "/api/expedientes",
     query: FiltrosExpedienteSchema,
     responses: {
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
       200: PaginacionMetaSchema.extend({
         items: z.array(ExpedienteResumenDTOSchema),
         resumen: z.object({

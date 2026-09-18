@@ -4,6 +4,7 @@ import { authContract } from "./auth.contract.js";
 import { documentosContract } from "./documentos.contract.js";
 import { expedientesContract } from "./expedientes.contract.js";
 import { programasContract } from "./programas.contract.js";
+import { seguridadContract } from "./seguridad.contract.js";
 import { asesoresContract, talleresContract } from "./talleres.contract.js";
 
 const c = initContract();
@@ -14,6 +15,7 @@ export const appContract = c.router({
   documentos: documentosContract,
   talleres: talleresContract,
   asesores: asesoresContract,
+  seguridad: seguridadContract,
   programas: programasContract,
   health: {
     method: "GET",
@@ -29,4 +31,5 @@ export * from "./documentos.contract.js";
 export * from "./enums.js";
 export * from "./expedientes.contract.js";
 export * from "./programas.contract.js";
+export * from "./seguridad.contract.js";
 export * from "./talleres.contract.js";

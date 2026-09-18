@@ -1,3 +1,4 @@
+import rateLimit from "@fastify/rate-limit";
 import { authContract } from "@pis/contracts";
 import { initServer } from "@ts-rest/fastify";
 import type { FastifyInstance } from "fastify";
@@ -111,5 +112,10 @@ export function registerAuthRoutes(app: FastifyInstance): void {
       };
     },
   });
-  app.register(s.plugin(router));
+  // Auth bajo tope propio (60/min por IP): el bloqueo 5×15min cubre fuerza bruta,
+  // el rate-limit cubre ráfagas. Encapsulado: no afecta al resto de la API.
+  void app.register(async (scoped) => {
+    await scoped.register(rateLimit, { max: 60, timeWindow: "1 minute" });
+    scoped.register(s.plugin(router));
+  });
 }

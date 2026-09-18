@@ -7,6 +7,14 @@ import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
 
 const MAX_BYTES = 50 * 1024 * 1024; // R2: tesis de 20–50MB
 
+/** Magic bytes PDF: el archivo debe empezar con `%PDF-` (no basta la extensión). */
+const CABECERA_PDF = [0x25, 0x50, 0x44, 0x46, 0x2d] as const;
+
+export function esPdfReal(bytes: Uint8Array): boolean {
+  if (bytes.length < CABECERA_PDF.length) return false;
+  return CABECERA_PDF.every((b, i) => bytes[i] === b);
+}
+
 export interface SubirDocumentoInput {
   expedienteId: string;
   tipo: string;
@@ -32,6 +40,11 @@ export class SubirDocumentoUseCase {
     if (!def) return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
     if (!input.filename.toLowerCase().endsWith(".pdf")) {
       return fail(new DomainError("DOCUMENTO_INVALIDO", "Solo se admiten archivos PDF"));
+    }
+    if (!esPdfReal(input.bytes)) {
+      return fail(
+        new DomainError("DOCUMENTO_INVALIDO", "El archivo no es un PDF válido (cabecera)"),
+      );
     }
     if (input.bytes.length === 0 || input.bytes.length > MAX_BYTES) {
       return fail(new DomainError("DOCUMENTO_INVALIDO", "El archivo debe pesar entre 1B y 50MB"));

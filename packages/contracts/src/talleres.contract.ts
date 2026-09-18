@@ -44,7 +44,11 @@ export const talleresContract = c.router({
   listar: {
     method: "GET",
     path: "/api/talleres",
-    responses: { 200: z.object({ items: z.array(TallerDTOSchema) }) },
+    responses: {
+      200: z.object({ items: z.array(TallerDTOSchema) }),
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+    },
     summary: "§12 Talleres de Tesis",
   },
   crear: {
@@ -54,6 +58,8 @@ export const talleresContract = c.router({
     responses: {
       201: TallerDTOSchema,
       400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
     },
     summary: "Nuevo taller",
   },
@@ -63,7 +69,11 @@ export const asesoresContract = c.router({
   listar: {
     method: "GET",
     path: "/api/asesores",
-    responses: { 200: z.object({ items: z.array(AsesorDTOSchema) }) },
+    responses: {
+      200: z.object({ items: z.array(AsesorDTOSchema) }),
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+    },
     summary: "§13 Catálogo de asesores",
   },
   crear: {
@@ -73,6 +83,8 @@ export const asesoresContract = c.router({
     responses: {
       201: AsesorDTOSchema,
       400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
     },
     summary: "Nuevo asesor",
   },
@@ -83,6 +95,8 @@ export const asesoresContract = c.router({
     body: z.object({ activo: z.boolean() }),
     responses: {
       200: AsesorDTOSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
       404: ErrorEnvelopeSchema,
     },
     summary: "Activar/desactivar sin borrar historial",
