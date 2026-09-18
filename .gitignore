@@ -24,3 +24,12 @@ playwright/.cache/
 # Uploads dev (volumen documental)
 var/
 apps/api/var/
+
+# Solo local: TODO operativo, PDFs fuente e insumos de entrevista (no versionar).
+# Las especificaciones procesadas viven en docs/ (eso sí se versiona).
+/TODO.md
+3EB06D7AA67FA1C8FE66BF-Historias de usuario_1.pdf
+3EB08E014CAB3BC9961B96-TALLER TITULACION USE FIPS.pdf
+3EB0EC327469963279D237-INTERFACES (1)_1.pdf
+Entrevista 1 Sep 8, 14.17.docx.md
+RESUMEN_Entrevista 1 Sep 8, 14.17.docx.md
