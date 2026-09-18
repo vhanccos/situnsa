@@ -9,7 +9,15 @@ import pg from "pg";
  */
 async function main(): Promise<void> {
   const url = process.env.DATABASE_URL ?? "postgres://pis:pis_dev@localhost:5432/pis_titulacion";
-  const pool = new pg.Pool({ connectionString: url });
+  const useSsl =
+    process.env.DATABASE_SSL === "true" ||
+    url.includes("sslmode=require") ||
+    url.includes("render.com");
+
+  const pool = new pg.Pool({
+    connectionString: url,
+    ssl: useSsl ? { rejectUnauthorized: false } : undefined,
+  });
   const db = drizzle(pool);
   await migrate(db, { migrationsFolder: "./drizzle" });
   console.log("Migraciones aplicadas OK");

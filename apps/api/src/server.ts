@@ -32,7 +32,7 @@ export async function buildServer() {
   return app;
 }
 
-const isMain = process.argv[1]?.endsWith("server.ts") ?? false;
+const isMain = process.argv[1]?.match(/server\.[tj]s$/) !== null;
 if (isMain) {
   buildServer()
     .then((app) => app.listen({ port: PORT, host: "0.0.0.0" }))
