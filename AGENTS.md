@@ -11,9 +11,10 @@
 Reglas de importación: `apps/*` puede importar `packages/*`; `packages/*` NUNCA importa `apps/*`; `domain` no importa `db` ni `contracts`.
 
 ## 2. Flujo obligatorio
-1. `make dev` para codificar (Postgres/Mailpit en Docker, apps en host).
-2. `make check` antes de cada commit (Biome + typecheck + Vitest).
-3. `make prod-local` antes de abrir PR (gate de paridad Nginx X-Accel en puerto 80).
+1. `make setup` una vez (o tras `down -v`): infra + migraciones + seed.
+2. `make dev` para codificar (Postgres/Mailpit en Docker, apps en host).
+3. `make check` antes de cada commit (Biome + typecheck + Vitest).
+4. `make prod-local` antes de abrir PR (gate de paridad Nginx X-Accel en puerto 80).
 
 ## 3. Patrón obligatorio — Use Cases
 ```ts
@@ -26,7 +27,8 @@ await uow.run(async (db) => { /* update + auditoría hash + enqueue pg-boss */ }
 ## 4. Prohibiciones explícitas
 - ❌ `any` (Biome lo bloquea). Usa `unknown` + narrowing o Zod.
 - ❌ `throw` para errores de negocio (usa `Result<T, DomainError>`).
-- ❌ Modificar tablas sin migración Drizzle (`pnpm --filter @pis/db db:generate`).
+- ❌ Modificar tablas sin migración Drizzle (`db:generate` + `db:migrate`; `db:push` no vale).
+- ❌ Seed demo en prod (`db:seed:base` sí; `db:seed` solo dev).
 - ❌ Redis, MinIO o cualquier servicio extra (Lean: Postgres + disco + Nginx).
 - ❌ Buffers de PDF en memoria Node (usa `X-Accel-Redirect`).
 - ❌ Cambiar contratos sin actualizar web Y api en el mismo PR.

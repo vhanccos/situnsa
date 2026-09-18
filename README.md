@@ -33,13 +33,20 @@ make install            # pnpm install
 # 2. Variables de entorno
 cp .env.example .env    # ajustar POSTGRES_* si hace falta
 
-# 3. Levantar entorno dev (Postgres + Mailpit en Docker, apps en host con HMR)
-make dev
+# 3. Fresh setup reproducible (infra + migraciones + seed; idempotente,
+#    seguro repetirlo: en un volumen vacío crea todo desde cero)
+make setup
 
-# 4. En otra terminal: esquema + datos base (13 programas, usuarios demo, SET005)
-make db-push            # pnpm --filter @pis/db db:push
-make db-seed            # pnpm --filter @pis/db db:seed
+# 4. Levantar entorno dev (Postgres + Mailpit en Docker, apps en host con HMR)
+make dev
 ```
+
+> **Persistencia de datos:** el volumen `pgdata` sobrevive a `down` y
+> reinicios; solo `down -v` lo borra. En un setup fresco (volumen vacío)
+> `make setup` aplica las migraciones versionadas de `packages/db/drizzle/`
+> y el seed (`db:seed:base` = solo catálogos, apto para prod;
+> `db:seed` = base + demo SET005, solo dev). `db:push` es solo un atajo de
+> prototipado: no usar en CI/prod.
 
 ### Servicios en dev
 

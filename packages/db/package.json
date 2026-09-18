@@ -11,7 +11,9 @@
     "test": "vitest run",
     "db:generate": "tsc -p tsconfig.json && drizzle-kit generate",
     "db:push": "tsc -p tsconfig.json && drizzle-kit push",
+    "db:migrate": "tsx src/migrate.ts",
     "db:seed": "tsx src/seed.ts",
+    "db:seed:base": "tsx src/seed-base.ts",
     "dev": "echo \"@pis/db: no dev server\""
   },
   "dependencies": {

@@ -1,11 +1,9 @@
 import { db } from "./client.js";
 import { seedBase } from "./seed/base.js";
-import { seedDemo } from "./seed/demo.js";
 
-/** Orquestador dev/e2e: base (catálogos) + demo (ficticios). Idempotente. */
+/** Solo catálogos (seguro en prod). Uso: pnpm --filter @pis/db db:seed:base */
 async function main(): Promise<void> {
   await seedBase(db);
-  await seedDemo(db);
   process.exit(0);
 }
 

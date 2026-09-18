@@ -1,0 +1,11 @@
+import { PROGRAMAS_OFICIALES } from "@pis/domain";
+import type { Db } from "../client.js";
+import { programas } from "../schema/programas.js";
+
+/** Seed BASE (idempotente, seguro en prod): catálogos requeridos por RN-L04/L14. */
+export async function seedBase(db: Db): Promise<void> {
+  for (const p of PROGRAMAS_OFICIALES) {
+    await db.insert(programas).values(p).onConflictDoNothing({ target: programas.codigo });
+  }
+  console.log(`Programas oficiales FIPS (${PROGRAMAS_OFICIALES.length})`);
+}
