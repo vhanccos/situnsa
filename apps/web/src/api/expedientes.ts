@@ -81,6 +81,10 @@ export function useActualizarDatos(id: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
+      if (res.status === 400) {
+        const body = (await res.json()) as { message: string };
+        throw new Error(body.message);
+      }
       if (res.status === 409) {
         const body = (await res.json()) as { message: string; updatedAt: string };
         const err = new Error(body.message) as Error & { conflicto: boolean; updatedAt: string };
@@ -168,6 +172,30 @@ export interface SubirResult {
 }
 
 /** Upload multipart real (ruta nativa Fastify, ver documentos.routes). */
+/** ELIMINAR REGISTRO: borrado lógico → ANULADO. */
+export function useAnular(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (motivo?: string): Promise<ExpedienteDetalleDTO> => {
+      const res = await apiFetch(`${apiBaseUrl}/api/expedientes/${id}/anular`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motivo: motivo ?? "" }),
+      });
+      if (!res.ok) {
+        const b = (await res.json().catch(() => ({ message: "No se pudo anular" }))) as {
+          message?: string;
+        };
+        throw new Error(b.message ?? "No se pudo anular");
+      }
+      const data = ExpedienteDetalleDTOSchema.parse(await res.json());
+      qc.setQueryData(expedienteKey(id), data);
+      qc.invalidateQueries({ queryKey: expedientesKey });
+      return data;
+    },
+  });
+}
+
 export function useSubirDocumento(id: string) {
   const qc = useQueryClient();
   return useMutation({

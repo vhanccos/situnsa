@@ -15,6 +15,13 @@
       "when": 1789723221484,
       "tag": "0001_fine_eternity",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789725490849,
+      "tag": "0002_rainy_guardsmen",
+      "breakpoints": true
     }
   ]
 }

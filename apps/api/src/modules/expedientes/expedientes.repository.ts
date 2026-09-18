@@ -91,6 +91,10 @@ export interface DetalleRow {
 }
 
 const CAMPOS_ADMIN = [
+  "modalidad02",
+  "modalidadFinal",
+  "titulo02",
+  "asesorNombre",
   "nroDecreto",
   "recomendacion",
   "presidente",

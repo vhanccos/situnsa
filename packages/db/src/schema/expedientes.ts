@@ -12,6 +12,12 @@ export const expedientes = pgTable("expedientes", {
   participante1Id: uuid("participante1_id").references(() => usuarios.id),
   participante2Id: uuid("participante2_id").references(() => usuarios.id),
   asesorId: uuid("asesor_id").references(() => usuarios.id),
+  // RN-L15: TESIS_02, MODALIDAD_02 por participante; MODALIDAD_FINAL (E2, no se recalcula)
+  titulo02: text("titulo02"),
+  modalidad02: varchar("modalidad02", { length: 64 }),
+  modalidadFinal: varchar("modalidad_final", { length: 64 }),
+  // RN-L08/L15: ASESOR como texto (formato profesional contra grado SUNEDU)
+  asesorNombre: varchar("asesor_nombre", { length: 160 }),
   // ETAPA 01 · administrativos (labels exactos del formulario legacy)
   nroDecreto: varchar("nro_decreto", { length: 64 }),
   recomendacion: text("recomendacion"),

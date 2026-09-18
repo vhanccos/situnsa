@@ -1,12 +1,14 @@
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
-import { type GuardadoEstado, useExpedienteDetalle } from "../api/expedientes.js";
+import { type GuardadoEstado, useAnular, useExpedienteDetalle } from "../api/expedientes.js";
 import { DatosForm } from "../components/domain/datos-form.js";
 import { DocumentoCard } from "../components/domain/documento-card.js";
 import { ResumenTab } from "../components/domain/resumen-tab.js";
 import { AppShell } from "../components/layout/app-shell.js";
+import { ConfirmDialog } from "../components/ui/confirm-dialog.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
+import { useToast } from "../components/ui/toast.js";
 import { cn } from "../utils/cn.js";
 
 type Tab = "datos" | "e1" | "e2" | "resumen";
@@ -18,12 +20,13 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "resumen", label: "Resumen del Trámite" },
 ];
 
+/** Estados del legacy (activarAutoguardadoAdminV4). */
 const indicador: Record<GuardadoEstado, string> = {
-  sincronizado: "",
-  editando: "Editando…",
-  guardando: "Guardando…",
-  guardado: "Guardado ✓",
-  error: "Error al guardar",
+  sincronizado: "✓ AUTOGUARDADO ACTIVO",
+  editando: "CAMBIOS PENDIENTES…",
+  guardando: "GUARDANDO Y SINCRONIZANDO…",
+  guardado: "✓ GUARDADO · DOCUMENTOS SINCRONIZADOS",
+  error: "ERROR AL GUARDAR",
   conflicto: "Conflicto de versión",
 };
 
@@ -33,7 +36,11 @@ export function ExpedienteDetallePage() {
   const [tab, setTab] = useState<Tab>("datos");
   const [guardado, setGuardado] = useState<GuardadoEstado>("sincronizado");
   const [conflicto, setConflicto] = useState<string | null>(null);
+  const [eliminar, setEliminar] = useState(false);
   const query = useExpedienteDetalle(id);
+  const anular = useAnular(id);
+  const avisar = useToast();
+  const navigate = useNavigate();
 
   if (query.isPending) {
     return (
@@ -117,9 +124,49 @@ export function ExpedienteDetallePage() {
           </button>
         ))}
       </nav>
+      {eliminar && (
+        <ConfirmDialog
+          titulo="Eliminar registro"
+          mensaje={`Se dará de baja lógica al expediente ${d.codigo} (ANULADO). Se conserva el historial.`}
+          confirmar="Eliminar"
+          peligroso
+          onConfirmar={() => {
+            setEliminar(false);
+            anular.mutate(undefined, {
+              onSuccess: () => {
+                avisar("Expediente anulado");
+                void navigate({ to: "/admin" });
+              },
+              onError: (e) => avisar(e instanceof Error ? e.message : "No se pudo anular", "error"),
+            });
+          }}
+          onCancelar={() => setEliminar(false)}
+        />
+      )}
       <div className="rounded-lg border bg-slate-50 p-4">
         {tab === "datos" && (
-          <DatosForm detalle={d} setEstado={setGuardado} onConflicto={setConflicto} />
+          <>
+            <DatosForm detalle={d} setEstado={setGuardado} onConflicto={setConflicto} />
+            <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+              <button
+                className="rounded bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800"
+                onClick={() => setEliminar(true)}
+                type="button"
+              >
+                ELIMINAR REGISTRO
+              </button>
+              <section className="rounded-lg border bg-white p-4">
+                <h2 className="text-sm font-bold">ESTADO DEL EXPEDIENTE</h2>
+                <p className="mt-1 text-sm">
+                  <StatusBadge estado={d.estado} /> {d.avance.marcados}/{d.avance.total} ·{" "}
+                  {d.avance.pct}%
+                </p>
+                <p className="text-xs text-grafito-600">
+                  {d.avance.subetapaActual ?? "Sin seguimiento"}
+                </p>
+              </section>
+            </div>
+          </>
         )}
         {(tab === "e1" || tab === "e2") && (
           <DocumentosTab

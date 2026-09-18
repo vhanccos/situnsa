@@ -3,6 +3,7 @@ export * from "./expediente/checklist-catalogo.js";
 export * from "./expediente/dias-habiles.js";
 export * from "./expediente/expediente.aggregate.js";
 export * from "./expediente/fsm.js";
+export * from "./expediente/modalidades.js";
 export * from "./expediente/seguimiento-catalogo.js";
 export * from "./expediente/specifications/expedito-para-sustentar.specification.js";
 export * from "./shared/domain-error.base.js";

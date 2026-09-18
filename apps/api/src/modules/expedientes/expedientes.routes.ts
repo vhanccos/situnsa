@@ -5,6 +5,7 @@ import type { FastifyInstance } from "fastify";
 import { stubAuth } from "../../middleware/stub-auth.js";
 import { getDetalleById, listarExpedientes } from "./expedientes.repository.js";
 import { ActualizarDatosUseCase } from "./use-cases/actualizar-datos/actualizar-datos.use-case.js";
+import { AnularExpedienteUseCase } from "./use-cases/anular-expediente/anular-expediente.use-case.js";
 import { InscribirPlanUseCase } from "./use-cases/inscribir-plan/inscribir-plan.use-case.js";
 import { PublicarMensajeUseCase } from "./use-cases/publicar-mensaje/publicar-mensaje.use-case.js";
 import { ValidarInscripcionUseCase } from "./use-cases/validar-inscripcion/validar-inscripcion.use-case.js";
@@ -39,6 +40,16 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
       if (!r.ok) return { status: 404 as const, body: { message: r.error.message } };
       return { status: 201 as const, body: r.value };
     },
+    anular: async ({ params, body, request }) => {
+      const actor = request.actor ?? { id: "", dni: "desconocido" };
+      const uc = new AnularExpedienteUseCase();
+      const r = await uc.execute(params.id, body.motivo, actor);
+      if (!r.ok && r.error.code === "TRANSICION_INVALIDA") {
+        return { status: 400 as const, body: { message: r.error.message, code: r.error.code } };
+      }
+      if (!r.ok) return { status: 404 as const, body: { message: r.error.message } };
+      return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(r.value) };
+    },
     getById: async ({ params }) => {
       const detalle = await getDetalleById(db, params.id);
       if (!detalle) return { status: 404 as const, body: { message: "Expediente no encontrado" } };
@@ -58,7 +69,11 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
           },
         };
       }
-      if (!r.ok) return { status: 404 as const, body: { message: r.error.message } };
+      if (!r.ok && r.error.message === "Expediente no encontrado") {
+        return { status: 404 as const, body: { message: r.error.message } };
+      }
+      if (!r.ok)
+        return { status: 400 as const, body: { message: r.error.message, code: r.error.code } };
       return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(r.value) };
     },
     listar: async ({ query }) => {

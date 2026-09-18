@@ -59,8 +59,24 @@ export const PersonaDTOSchema = z.object({
   rol: z.string(),
 });
 
+/** Etiquetas del ComboBox legacy (RN-L10, HU-0069 catálogos). */
+export const EtiquetaModalidadSchema = z.enum([
+  "Plan de Tesis",
+  "Plan de Trabajo Académico",
+  "Plan de Tesis Formato Artículo",
+]);
+export const EtiquetaModalidadFinalSchema = z.enum([
+  "La Tesis",
+  "El Trabajo Académico",
+  "La Tesis Formato Artículo",
+]);
+
 /** Administrativos ETAPA 01 + sustentación ETAPA 02 (labels legacy exactos). */
 export const DatosAdminDTOSchema = z.object({
+  modalidad02: z.string().nullable(),
+  modalidadFinal: z.string().nullable(),
+  titulo02: z.string().nullable(),
+  asesorNombre: z.string().nullable(),
   nroDecreto: z.string().nullable(),
   recomendacion: z.string().nullable(),
   presidente: z.string().nullable(),
@@ -158,7 +174,13 @@ export const ExpedienteResumenDTOSchema = z.object({
 
 const patchBase = {
   titulo: z.string().min(10).max(500).optional(),
+  titulo02: z.string().max(500).optional(),
   programa: z.string().min(3).max(160).optional(),
+  /** RN-L10: etiqueta del ComboBox; el backend deriva el enum canónico. */
+  modalidad: EtiquetaModalidadSchema.optional(),
+  modalidad02: EtiquetaModalidadSchema.optional(),
+  modalidadFinal: EtiquetaModalidadFinalSchema.optional(),
+  asesorNombre: z.string().max(160).optional(),
   participante1Email: z.string().email().optional(),
   participante1Telefono: z.string().max(20).optional(),
   participante1Cui: z.string().max(16).optional(),
@@ -242,6 +264,18 @@ export const expedientesContract = c.router({
     responses: { 200: ExpedienteDetalleDTOSchema, 404: z.object({ message: z.string() }) },
     summary: "Detalle del expediente (pestañas Datos/Documentos/Resumen)",
   },
+  anular: {
+    method: "POST",
+    path: "/api/expedientes/:id/anular",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: z.object({ motivo: z.string().max(500).optional() }),
+    responses: {
+      200: ExpedienteDetalleDTOSchema,
+      400: z.object({ message: z.string(), code: z.string() }),
+      404: z.object({ message: z.string() }),
+    },
+    summary: "ELIMINAR REGISTRO: borrado lógico → ANULADO",
+  },
   actualizarDatos: {
     method: "PATCH",
     path: "/api/expedientes/:id",
@@ -249,6 +283,7 @@ export const expedientesContract = c.router({
     body: ActualizarDatosSchema,
     responses: {
       200: ExpedienteDetalleDTOSchema,
+      400: z.object({ message: z.string(), code: z.string() }),
       404: z.object({ message: z.string() }),
       409: z.object({ message: z.string(), updatedAt: z.string() }),
     },

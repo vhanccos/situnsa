@@ -39,6 +39,17 @@ test("corrección: login por rol lleva al dashboard", async ({ page }) => {
   await expect(page.getByText("SET005")).toBeVisible();
 });
 
+test("corrección2: datos legacy-exactos (selects + documentos)", async ({ page }) => {
+  await entrarComo(page, "00000001");
+  await page.goto("/expedientes/33333333-3333-4333-8333-333333333333");
+  await expect(page.getByText("DATOS DE DOCUMENTOS")).toBeVisible();
+  await expect(page.getByText("ELIMINAR REGISTRO")).toBeVisible();
+  await expect(page.getByText("ESTADO DEL EXPEDIENTE")).toBeVisible();
+  const modalidad = page.getByLabel("MODALIDAD", { exact: true });
+  await expect(modalidad).toBeVisible();
+  await expect(modalidad).toHaveValue("Plan de Tesis");
+});
+
 test("corrección: resumen muestra 7 etapas e historial", async ({ page }) => {
   await entrarComo(page, "00000001");
   await page.goto("/expedientes/33333333-3333-4333-8333-333333333333");
