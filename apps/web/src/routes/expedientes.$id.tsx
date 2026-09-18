@@ -22,7 +22,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
 
 /** Estados del legacy (activarAutoguardadoAdminV4). */
 const indicador: Record<GuardadoEstado, string> = {
-  sincronizado: "✓ AUTOGUARDADO ACTIVO",
+  sincronizado: "",
   editando: "CAMBIOS PENDIENTES…",
   guardando: "GUARDANDO Y SINCRONIZANDO…",
   guardado: "✓ GUARDADO · DOCUMENTOS SINCRONIZADOS",
