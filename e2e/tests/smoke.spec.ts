@@ -36,7 +36,10 @@ test("corrección: login por rol lleva al dashboard", async ({ page }) => {
   await page.getByPlaceholder("Ingrese su contraseña").fill("x");
   await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page.getByText("Panel de administración")).toBeVisible();
-  await expect(page.getByText("SET005")).toBeVisible();
+  for (const cod of ["SET004", "SET005", "SET007"]) {
+    await expect(page.getByText(cod).first()).toBeVisible();
+  }
+  await expect(page.getByText("100%").first()).toBeVisible();
 });
 
 test("corrección2: datos legacy-exactos (selects + documentos)", async ({ page }) => {

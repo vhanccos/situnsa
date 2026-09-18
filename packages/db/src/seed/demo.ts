@@ -1,6 +1,7 @@
-import { FLUJO_TITULACION } from "@pis/domain";
-import { eq } from "drizzle-orm";
+import { FLUJO_TITULACION, hashTransicion } from "@pis/domain";
+import { desc, eq } from "drizzle-orm";
 import type { Db } from "../client.js";
+import { auditoriaTransiciones } from "../schema/auditoria-transiciones.js";
 import { expedientes } from "../schema/expedientes.js";
 import { mensajes } from "../schema/mensajes.js";
 import { subetapas } from "../schema/subetapas.js";
@@ -12,9 +13,100 @@ export const ASESOR_ID = "22222222-2222-4222-8222-222222222222";
 export const ADMIN_ID = "44444444-4444-4444-8444-444444444444";
 export const EXPEDIENTE_ID = "33333333-3333-4333-8333-333333333333";
 
+const TESISTA2_ID = "66666666-6666-4666-8666-666666666666";
+const P2A_ID = "88888888-8888-4888-8888-888888888888";
+const P2B_ID = "99999999-9999-4999-8999-999999999999";
+const SET004_ID = "55555555-5555-4555-8555-555555555555";
+const SET007_ID = "77777777-7777-4777-8777-777777777777";
+
+type EstadoSub = "NO_INICIADO" | "EN_CURSO" | "FINALIZADO";
+
+async function auditar(
+  db: Db,
+  input: {
+    expedienteId: string;
+    actorId: string | null;
+    actorDni: string;
+    anterior: string | null;
+    nuevo: string;
+    detalle: string;
+    at: Date;
+  },
+): Promise<void> {
+  const prev = await db
+    .select({ hash: auditoriaTransiciones.hash })
+    .from(auditoriaTransiciones)
+    .where(eq(auditoriaTransiciones.expedienteId, input.expedienteId))
+    .orderBy(desc(auditoriaTransiciones.createdAt))
+    .limit(1);
+  const hashPrevio = prev[0]?.hash ?? null;
+  await db.insert(auditoriaTransiciones).values({
+    expedienteId: input.expedienteId,
+    actorId: input.actorId,
+    estadoAnterior: input.anterior,
+    estadoNuevo: input.nuevo,
+    hashPrevio,
+    hash: hashTransicion({
+      hashPrevio,
+      expedienteId: input.expedienteId,
+      actor: input.actorDni,
+      nuevoEstado: input.nuevo,
+      timestamp: input.at.toISOString(),
+    }),
+    detalle: input.detalle,
+    createdAt: input.at,
+  });
+}
+
+async function tieneSeguimiento(db: Db, expedienteId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: subetapas.id })
+    .from(subetapas)
+    .where(eq(subetapas.expedienteId, expedienteId))
+    .limit(1);
+  return rows.length > 0;
+}
+
+async function tieneMensajes(db: Db, expedienteId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: mensajes.id })
+    .from(mensajes)
+    .where(eq(mensajes.expedienteId, expedienteId))
+    .limit(1);
+  return rows.length > 0;
+}
+
+async function generarSeguimiento(
+  db: Db,
+  expedienteId: string,
+  plan: (
+    etapa: number,
+    orden: number,
+  ) => { estado: EstadoSub; inicio: Date | null; fin: Date | null },
+): Promise<void> {
+  if (await tieneSeguimiento(db, expedienteId)) return;
+  for (const etapa of FLUJO_TITULACION) {
+    for (const s of etapa.subetapas) {
+      const p = plan(etapa.numero, s.orden);
+      await db.insert(subetapas).values({
+        expedienteId,
+        etapa: etapa.numero,
+        orden: s.orden,
+        nombre: s.nombre,
+        plazo: s.plazo,
+        estado: p.estado,
+        responsable: etapa.responsable,
+        inicio: p.inicio,
+        fin: p.fin,
+      });
+    }
+  }
+}
+
 /**
- * Seed DEMO (idempotente, SOLO dev/e2e): usuarios de prueba, SET005 con sus
- * 38 subetapas, 1 mensaje y 3 talleres. Nunca en prod (datos ficticios).
+ * Seed DEMO (idempotente, SOLO dev/e2e): usuarios de prueba y 3 fixtures:
+ * SET004 completado (grupo 2, 38/38), SET005 en plan y SET007 en dictamen.
+ * Nunca en prod (datos ficticios).
  */
 export async function seedDemo(db: Db): Promise<void> {
   await db
@@ -57,6 +149,34 @@ export async function seedDemo(db: Db): Promise<void> {
         telefono: "999111222",
         rol: "ASESOR",
       },
+      {
+        id: TESISTA2_ID,
+        dni: "11223344",
+        cui: "2021122334",
+        email: "maria.torres@unsa.edu.pe",
+        nombres: "María",
+        apellidos: "Torres Flores",
+        telefono: "999333444",
+        nacionalidad: "Peruana",
+        ciudad: "Arequipa",
+        rol: "TESISTA",
+      },
+      {
+        id: P2A_ID,
+        dni: "22334455",
+        email: "carlos.quispe@unsa.edu.pe",
+        nombres: "Carlos",
+        apellidos: "Quispe Huamán",
+        rol: "TESISTA",
+      },
+      {
+        id: P2B_ID,
+        dni: "33445566",
+        email: "lucia.mamani@unsa.edu.pe",
+        nombres: "Lucía",
+        apellidos: "Mamani Condori",
+        rol: "TESISTA",
+      },
     ])
     .onConflictDoNothing({ target: usuarios.dni });
   await db.update(usuarios).set({ id: TESISTA_ID }).where(eq(usuarios.dni, "12345678"));
@@ -65,7 +185,11 @@ export async function seedDemo(db: Db): Promise<void> {
     .set({ id: ASESOR_ID, grado: "Dr.", telefono: "999111222" })
     .where(eq(usuarios.dni, "87654321"));
   await db.update(usuarios).set({ id: ADMIN_ID }).where(eq(usuarios.dni, "00000001"));
+  await db.update(usuarios).set({ id: TESISTA2_ID }).where(eq(usuarios.dni, "11223344"));
+  await db.update(usuarios).set({ id: P2A_ID }).where(eq(usuarios.dni, "22334455"));
+  await db.update(usuarios).set({ id: P2B_ID }).where(eq(usuarios.dni, "33445566"));
 
+  // ---- SET005 (en plan, grupo 1) ----
   await db
     .insert(expedientes)
     .values([
@@ -87,34 +211,173 @@ export async function seedDemo(db: Db): Promise<void> {
       },
     ])
     .onConflictDoNothing({ target: expedientes.codigo });
-
-  const existentes = await db.select({ id: subetapas.id }).from(subetapas);
-  if (existentes.length === 0) {
-    for (const etapa of FLUJO_TITULACION) {
-      for (const s of etapa.subetapas) {
-        const primera = etapa.numero === 1 && s.orden === 1;
-        await db.insert(subetapas).values({
-          expedienteId: EXPEDIENTE_ID,
-          etapa: etapa.numero,
-          orden: s.orden,
-          nombre: s.nombre,
-          plazo: s.plazo,
-          estado: primera ? "EN_CURSO" : "NO_INICIADO",
-          responsable: etapa.responsable,
-          inicio: primera ? new Date() : null,
-        });
-      }
-    }
-    console.log("Seguimiento SET005: 38 subetapas (E1.1 en curso)");
-  }
-
-  const msgs = await db.select({ id: mensajes.id }).from(mensajes);
-  if (msgs.length === 0) {
+  await generarSeguimiento(db, EXPEDIENTE_ID, (etapa, orden) => ({
+    estado: etapa === 1 && orden === 1 ? "EN_CURSO" : "NO_INICIADO",
+    inicio: etapa === 1 && orden === 1 ? new Date() : null,
+    fin: null,
+  }));
+  if (!(await tieneMensajes(db, EXPEDIENTE_ID))) {
     await db.insert(mensajes).values({
       expedienteId: EXPEDIENTE_ID,
       autorId: ADMIN_ID,
       texto: "FALTA CORREGIR LOS OBJETIVOS ESPECÍFICOS",
     });
+  }
+
+  // ---- SET004 (completado, grupo 2, 38/38) ----
+  await db
+    .insert(expedientes)
+    .values([
+      {
+        id: SET004_ID,
+        codigo: "SET004",
+        estado: "TITULO_EMITIDO",
+        modalidad: "TRABAJO_ACADEMICO",
+        modalidad02: "Plan de Trabajo Académico",
+        modalidadFinal: "El Trabajo Académico",
+        programa: "SEGUNDA ESPECIALIDAD EN INGENIERÍA DE PRODUCCIÓN",
+        titulo: "optimización del proceso de envasado en planta de alimentos",
+        titulo02: "optimización del proceso de envasado en planta de alimentos",
+        participante1Id: P2A_ID,
+        participante2Id: P2B_ID,
+        asesorId: ASESOR_ID,
+        asesorNombre: "DR. ASESOR PRUEBA",
+        nroDecreto: "003",
+        presidente: "DR. PRESIDENTE TERNA",
+        secretario: "MG. SECRETARIO TERNA",
+        coAsesor: "ING. COASESOR INVITADO",
+        fechaApertura: "2025-03-01",
+        fechaPresentacion: "2025-03-20",
+        nroOficio: "OF-2025-011",
+        integrante: "PLANTA DE ALIMENTOS S.A.",
+        presidenteE2: "DR. PRESIDENTE JURADO",
+        secretarioE2: "MG. SECRETARIO JURADO",
+        suplenteE2: "MG. SUPLENTE JURADO",
+        decanal: "RESOLUCIÓN DECANAL 042-2025",
+        fechaSustentacion: "2025-11-20",
+        horaSustentacion: "10:00",
+        lugarSustentacion: "AUDITORIO FIPS",
+        modalidadVirtual: "El Trabajo Académico",
+      },
+    ])
+    .onConflictDoNothing({ target: expedientes.codigo });
+  const base2025 = new Date("2025-03-03T09:00:00-05:00").getTime();
+  await generarSeguimiento(db, SET004_ID, (etapa, orden) => {
+    const idx =
+      FLUJO_TITULACION.slice(0, etapa - 1).reduce((n, e) => n + e.subetapas.length, 0) +
+      (orden - 1);
+    const inicio = new Date(base2025 + idx * 3 * 86400000);
+    return { estado: "FINALIZADO", inicio, fin: new Date(inicio.getTime() + 2 * 86400000) };
+  });
+  if (!(await tieneMensajes(db, SET004_ID))) {
+    await db.insert(mensajes).values({
+      expedienteId: SET004_ID,
+      autorId: ADMIN_ID,
+      texto: "SUSTENTACIÓN APROBADA POR UNANIMIDAD. FELICITACIONES.",
+      createdAt: new Date("2025-11-20T14:00:00-05:00"),
+    });
+  }
+  const cadena004: Array<[string | null, string, string]> = [
+    [null, "REGISTRADO", "Registro de expediente SET004"],
+    ["REGISTRADO", "EN_PLAN", "Validación de inscripción"],
+    ["EN_PLAN", "PLAN_APROBADO", "Decreto de aprobación"],
+    ["PLAN_APROBADO", "EN_BORRADOR", "Conformidad del asesor"],
+    ["EN_BORRADOR", "EN_DICTAMEN", "Sorteo de jurados"],
+    ["EN_DICTAMEN", "APTO_SUSTENTACION", "Conformidad final"],
+    ["APTO_SUSTENTACION", "SUSTENTADO", "Acta de sustentación"],
+    ["SUSTENTADO", "EN_VALIDACION", "Envío a Turnitin"],
+    ["EN_VALIDACION", "EN_APROBACION", "Informe de similitud conforme"],
+    ["EN_APROBACION", "TITULO_EMITIDO", "Registro SUNEDU"],
+  ];
+  const audit004 = await db
+    .select({ id: auditoriaTransiciones.id })
+    .from(auditoriaTransiciones)
+    .where(eq(auditoriaTransiciones.expedienteId, SET004_ID))
+    .limit(1);
+  if (audit004.length === 0) {
+    let at = new Date("2025-03-01T09:00:00-05:00").getTime();
+    for (const [anterior, nuevo, detalle] of cadena004) {
+      at += 12 * 86400000;
+      await auditar(db, {
+        expedienteId: SET004_ID,
+        actorId: ADMIN_ID,
+        actorDni: "00000001",
+        anterior,
+        nuevo,
+        detalle,
+        at: new Date(at),
+      });
+    }
+  }
+
+  // ---- SET007 (en dictamen, 12/38 = 32 %) ----
+  await db
+    .insert(expedientes)
+    .values([
+      {
+        id: SET007_ID,
+        codigo: "SET007",
+        estado: "EN_DICTAMEN",
+        modalidad: "TESIS",
+        programa: "SEGUNDA ESPECIALIDAD EN INGENIERÍA DE SISTEMAS",
+        titulo: "detección de similitud en documentos académicos con ia",
+        participante1Id: TESISTA2_ID,
+        asesorId: ASESOR_ID,
+        asesorNombre: "DR. ASESOR PRUEBA",
+        nroDecreto: "009",
+        fechaApertura: "2026-06-01",
+        fechaPresentacion: "2026-06-15",
+      },
+    ])
+    .onConflictDoNothing({ target: expedientes.codigo });
+  await generarSeguimiento(db, SET007_ID, (etapa, orden) => {
+    if (etapa <= 2)
+      return {
+        estado: "FINALIZADO",
+        inicio: new Date("2026-06-02T09:00:00-05:00"),
+        fin: new Date("2026-07-10T09:00:00-05:00"),
+      };
+    if (etapa === 3 && orden <= 3) {
+      return {
+        estado: "FINALIZADO",
+        inicio: new Date("2026-08-01T09:00:00-05:00"),
+        fin: new Date("2026-08-20T09:00:00-05:00"),
+      };
+    }
+    if (etapa === 3 && orden === 4) return { estado: "EN_CURSO", inicio: new Date(), fin: null };
+    return { estado: "NO_INICIADO", inicio: null, fin: null };
+  });
+  if (!(await tieneMensajes(db, SET007_ID))) {
+    await db.insert(mensajes).values({
+      expedienteId: SET007_ID,
+      autorId: ADMIN_ID,
+      texto: "LEVANTAR LAS OBSERVACIONES DEL JURADO ANTES DEL VIERNES",
+    });
+  }
+  const audit007 = await db
+    .select({ id: auditoriaTransiciones.id })
+    .from(auditoriaTransiciones)
+    .where(eq(auditoriaTransiciones.expedienteId, SET007_ID))
+    .limit(1);
+  if (audit007.length === 0) {
+    const cadena007: Array<[string | null, string, string, string]> = [
+      [null, "REGISTRADO", "Registro de expediente SET007", "2026-06-01T09:00:00-05:00"],
+      ["REGISTRADO", "EN_PLAN", "Validación de inscripción", "2026-06-05T09:00:00-05:00"],
+      ["EN_PLAN", "PLAN_APROBADO", "Decreto de aprobación", "2026-07-01T09:00:00-05:00"],
+      ["PLAN_APROBADO", "EN_BORRADOR", "Conformidad del asesor", "2026-07-15T09:00:00-05:00"],
+      ["EN_BORRADOR", "EN_DICTAMEN", "Sorteo de jurados", "2026-08-01T09:00:00-05:00"],
+    ];
+    for (const [anterior, nuevo, detalle, at] of cadena007) {
+      await auditar(db, {
+        expedienteId: SET007_ID,
+        actorId: ADMIN_ID,
+        actorDni: "00000001",
+        anterior,
+        nuevo,
+        detalle,
+        at: new Date(at),
+      });
+    }
   }
 
   const tall = await db.select({ id: talleres.id }).from(talleres);

@@ -45,7 +45,8 @@ make dev
 > reinicios; solo `down -v` lo borra. En un setup fresco (volumen vacío)
 > `make setup` aplica las migraciones versionadas de `packages/db/drizzle/`
 > y el seed (`db:seed:base` = solo catálogos, apto para prod;
-> `db:seed` = base + demo SET005, solo dev). `db:push` es solo un atajo de
+> `db:seed` = base + demo (SET004 completado 38/38, SET005 en plan,
+> SET007 en dictamen 12/38), solo dev. `db:push` es solo un atajo de
 > prototipado: no usar en CI/prod.
 
 ### Servicios en dev
