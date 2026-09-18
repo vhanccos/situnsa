@@ -11,6 +11,10 @@ import { registerExpedientesRoutes } from "./modules/expedientes/expedientes.rou
 import { registerSeguimientoRoutes } from "./modules/seguimiento/seguimiento.routes.js";
 import { registerSeguridadRoutes } from "./modules/seguridad/seguridad.routes.js";
 import {
+  registerGruposRoutes,
+  registerReportesRoutes,
+} from "./modules/talleres/grupos-pagos.routes.js";
+import {
   registerAsesoresRoutes,
   registerTalleresRoutes,
 } from "./modules/talleres/talleres.routes.js";
@@ -37,6 +41,8 @@ export async function buildServer() {
   registerDocumentosRoutes(app);
   registerTalleresRoutes(app);
   registerAsesoresRoutes(app);
+  registerGruposRoutes(app);
+  registerReportesRoutes(app);
 
   return app;
 }

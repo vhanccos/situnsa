@@ -75,3 +75,16 @@ export type EstadoSubetapa = "NO_INICIADO" | "EN_CURSO" | "FINALIZADO";
 export const estadoTallerEnum = pgEnum("estado_taller", ["ACTIVO", "CERRADO"]);
 
 export type EstadoTaller = "ACTIVO" | "CERRADO";
+
+export const estadoGrupoEnum = pgEnum("estado_grupo", ["PLANIFICADO", "ACTIVO", "CONCLUIDO"]);
+
+export type EstadoGrupo = "PLANIFICADO" | "ACTIVO" | "CONCLUIDO";
+
+export const estadoCuotaEnum = pgEnum("estado_cuota", [
+  "PENDIENTE",
+  "PAGADA",
+  "VENCIDA",
+  "EXONERADA",
+]);
+
+export type EstadoCuota = "PENDIENTE" | "PAGADA" | "VENCIDA" | "EXONERADA";

@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { AlmacenamientoPort } from "./almacenamiento.port.js";
 
 /** Almacenamiento local Lean: /var/data/titulacion-docs (volumen Docker en prod). */
-export class LocalStorageService {
+export class LocalStorageService implements AlmacenamientoPort {
   constructor(
     private readonly baseDir = process.env.DOCS_VOLUME_PATH ?? "./var/data/titulacion-docs",
   ) {}

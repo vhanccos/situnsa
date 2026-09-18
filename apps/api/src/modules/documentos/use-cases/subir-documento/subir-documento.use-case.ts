@@ -2,6 +2,7 @@ import { db, documentos, expedientes } from "@pis/db";
 import { CHECKLIST_COMPLETO, DomainError, fail, ok, type Result } from "@pis/domain";
 import { and, eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
+import type { AlmacenamientoPort } from "../../../../infra/storage/almacenamiento.port.js";
 import { LocalStorageService } from "../../../../infra/storage/local-storage.service.js";
 import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
 
@@ -33,7 +34,7 @@ export interface DocumentoSubido {
 
 /** Upload real: valida → disco → versionado → auditoría hash (un COMMIT). */
 export class SubirDocumentoUseCase {
-  constructor(private readonly storage = new LocalStorageService()) {}
+  constructor(private readonly storage: AlmacenamientoPort = new LocalStorageService()) {}
 
   async execute(input: SubirDocumentoInput): Promise<Result<DocumentoSubido, DomainError>> {
     const def = CHECKLIST_COMPLETO.find((d) => d.tipo === input.tipo);

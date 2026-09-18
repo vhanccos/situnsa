@@ -3,6 +3,7 @@ export * from "./catalogo-proceso.js";
 export * from "./documentos.js";
 export * from "./enums.js";
 export * from "./expedientes.js";
+export * from "./grupos-pagos.js";
 export * from "./idempotencia.js";
 export * from "./mensajes.js";
 export * from "./programas.js";

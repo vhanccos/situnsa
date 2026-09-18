@@ -43,6 +43,13 @@
       "when": 1789754975034,
       "tag": "0005_closed_lilandra",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789755708128,
+      "tag": "0006_smooth_virginia_dare",
+      "breakpoints": true
     }
   ]
 }

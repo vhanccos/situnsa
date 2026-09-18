@@ -116,6 +116,163 @@ export function useCrearAsesor() {
   });
 }
 
+export interface Grupo {
+  id: string;
+  tallerId: string;
+  tallerNombre: string;
+  nombre: string;
+  asesorNombre: string | null;
+  estado: string;
+  miembros: number;
+  cuotasPendientes: number;
+}
+
+export interface Cuota {
+  id: string;
+  usuarioDni: string;
+  nombres: string;
+  nroCuota: number;
+  monto: number;
+  vencimiento: string;
+  estado: string;
+}
+
+export interface Deudor {
+  usuarioId: string;
+  dni: string;
+  nombres: string;
+  grupoId: string;
+  grupoNombre: string;
+  cuotasVencidas: number;
+  deudaTotal: number;
+}
+
+/** Grupos del taller (Oleada C). */
+export function useGrupos() {
+  return useQuery({
+    queryKey: ["grupos"],
+    queryFn: async (): Promise<Grupo[]> => {
+      const res = await apiFetch(`${apiBaseUrl}/api/grupos`);
+      if (!res.ok) throw new Error("No se pudieron cargar los grupos");
+      return ((await res.json()) as { items: Grupo[] }).items;
+    },
+  });
+}
+
+async function mutar<T>(path: string, method: string, body: unknown): Promise<T> {
+  const res = await apiFetch(`${apiBaseUrl}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const b = (await res.json().catch(() => null)) as unknown;
+    const env = (b as { error?: { mensaje?: unknown } })?.error;
+    const legacy = (b as { message?: unknown })?.message;
+    const msg =
+      (typeof env?.mensaje === "string" && env.mensaje) ||
+      (typeof legacy === "string" && legacy) ||
+      "Operación fallida";
+    throw new Error(msg);
+  }
+  return (await res.json()) as T;
+}
+
+export function useCrearGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      tallerId: string;
+      nombre: string;
+      asesorDni?: string;
+    }): Promise<Grupo> => {
+      const out = await mutar<Grupo>("/api/grupos", "POST", input);
+      qc.invalidateQueries({ queryKey: ["grupos"] });
+      return out;
+    },
+  });
+}
+
+export function useAgregarMiembro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ grupoId, usuarioDni }: { grupoId: string; usuarioDni: string }) => {
+      const out = await mutar<{ grupoId: string; usuarioId: string }>(
+        `/api/grupos/${grupoId}/miembros`,
+        "POST",
+        { usuarioDni },
+      );
+      qc.invalidateQueries({ queryKey: ["grupos"] });
+      return out;
+    },
+  });
+}
+
+export function useProgramarPensiones() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      grupoId: string;
+      nroCuotas: number;
+      monto: number;
+      primerVencimiento: string;
+    }) => {
+      const out = await mutar<{ grupoId: string; cuotas: number; miembros: number }>(
+        `/api/grupos/${input.grupoId}/pensiones`,
+        "POST",
+        {
+          nroCuotas: input.nroCuotas,
+          monto: input.monto,
+          primerVencimiento: input.primerVencimiento,
+        },
+      );
+      qc.invalidateQueries({ queryKey: ["grupos"] });
+      qc.invalidateQueries({ queryKey: ["cuotas", input.grupoId] });
+      return out;
+    },
+  });
+}
+
+export function useCuotas(grupoId: string | null) {
+  return useQuery({
+    queryKey: ["cuotas", grupoId ?? ""],
+    enabled: !!grupoId,
+    queryFn: async (): Promise<Cuota[]> => {
+      const res = await apiFetch(`${apiBaseUrl}/api/grupos/${grupoId}/cuotas`);
+      if (!res.ok) throw new Error("No se pudieron cargar las cuotas");
+      return ((await res.json()) as { items: Cuota[] }).items;
+    },
+  });
+}
+
+export function useRegistrarPago() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      cronogramaId: string;
+      monto: number;
+      medio: string;
+    }): Promise<unknown> => {
+      const out = await mutar("/api/pagos", "POST", input);
+      qc.invalidateQueries({ queryKey: ["cuotas"] });
+      qc.invalidateQueries({ queryKey: ["deudores"] });
+      qc.invalidateQueries({ queryKey: ["grupos"] });
+      return out;
+    },
+  });
+}
+
+export function useDeudores() {
+  return useQuery({
+    queryKey: ["deudores"],
+    queryFn: async (): Promise<Deudor[]> => {
+      const res = await apiFetch(`${apiBaseUrl}/api/reportes/deudores`);
+      if (!res.ok) throw new Error("No se pudo cargar el reporte");
+      return ((await res.json()) as { items: Deudor[] }).items;
+    },
+  });
+}
+
 export function useToggleAsesor() {
   const qc = useQueryClient();
   return useMutation({
