@@ -50,6 +50,8 @@ if [ -n "$DATABASE_URL" ]; then
 
   echo "Ejecutando seed de datos demo..."
   node packages/db/dist/seed.js || pnpm --filter @pis/db db:seed || true
+else
+  echo "ADVERTENCIA: DATABASE_URL no definida: se omite migrate/seed y la API no tendra DB (login dara 500)."
 fi
 
 # 4. Arrancar Fastify API en background
