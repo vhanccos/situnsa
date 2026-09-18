@@ -1,3 +1,4 @@
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
@@ -17,6 +18,7 @@ export async function buildServer() {
   const app = Fastify({ logger: true });
   await app.register(cors);
   await app.register(helmet);
+  await app.register(cookie);
   await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
 
   app.get("/health", async () => ({ ok: true, version: "0.1.0" }));

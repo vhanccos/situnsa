@@ -6,7 +6,17 @@ export type DomainErrorCode =
   | "TURNITIN_NO_CONFORME"
   | "JURADO_NO_ASIGNADO"
   | "CONFLICTO_CONCURRENCIA"
-  | "VALIDACION_FALLIDA";
+  | "VALIDACION_FALLIDA"
+  | "CREDENCIALES_INVALIDAS"
+  | "CUENTA_BLOQUEADA"
+  | "CUENTA_INACTIVA"
+  | "SIN_CLAVE"
+  | "GOOGLE_INVALIDO"
+  | "SIN_CUENTA"
+  | "SESION_INVALIDA"
+  | "SIN_PERMISO"
+  | "FUERA_DE_ALCANCE"
+  | "NO_ENCONTRADO";
 
 export class DomainError extends Error {
   readonly code: DomainErrorCode;

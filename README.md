@@ -58,6 +58,19 @@ make dev
 | Postgres 16 | localhost:5432 | `DATABASE_URL` en `.env` |
 | Mailpit UI / SMTP | http://localhost:8025 / :1025 | Correos de dev, sin envío real |
 
+### Credenciales dev (seed demo, `DEMO_PASSWORD`, solo local)
+
+| Rol | Usuario (DNI) | Clave |
+|---|---|---|
+| Admin | `00000001` | `demo-2026` |
+| Secretaría | `00000002` | `demo-2026` |
+| Tesista | `12345678` / `11223344` | `demo-2026` |
+| Asesor | `87654321` | `demo-2026` |
+
+Auth real: acceso JWT 15 min (Bearer) + refresh rotativo HttpOnly 8 h,
+bloqueo 5 intentos × 15 min, Google OIDC solo para usuarios existentes
+(sin autocreación). Permisos `modulo.accion` en `roles`/`permisos`.
+
 Login dev (stub `x-user-dni`, Fase 2: Better-Auth): tesista `12345678`,
 admin `00000001`, asesor `87654321` (cualquier contraseña no vacía).
 

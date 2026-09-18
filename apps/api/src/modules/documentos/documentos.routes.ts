@@ -2,8 +2,9 @@ import { basename } from "node:path";
 import { db, documentos } from "@pis/db";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { errorEnvelope } from "../../infra/http/errores.js";
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
-import { stubAuth } from "../../middleware/stub-auth.js";
+import { requireAuth } from "../../middleware/require-auth.js";
 import { SubirDocumentoUseCase } from "./use-cases/subir-documento/subir-documento.use-case.js";
 
 /**
@@ -17,7 +18,7 @@ export async function downloadAccelQuery(
   const rows = await db.select().from(documentos).where(eq(documentos.id, req.params.id)).limit(1);
   const doc = rows[0];
   if (!doc) {
-    reply.status(404).send({ message: "Documento no encontrado" });
+    reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
     return;
   }
   reply.header("X-Accel-Redirect", `/protected-files/${doc.expedienteId}/${basename(doc.ruta)}`);
@@ -34,7 +35,7 @@ export async function downloadAccelQuery(
 export function registerDocumentosRoutes(app: FastifyInstance): void {
   app.post(
     "/api/documentos/upload",
-    { preHandler: stubAuth },
+    { preHandler: requireAuth },
     async (req: FastifyRequest, reply: FastifyReply) => {
       const data = await req.file();
       const fields = data?.fields as unknown as
@@ -43,7 +44,9 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
       const expedienteId = fields?.expedienteId?.value;
       const tipo = fields?.tipo?.value;
       if (!data || !expedienteId || !tipo) {
-        reply.status(400).send({ message: "Se requiere expedienteId, tipo y file (PDF)" });
+        reply
+          .status(400)
+          .send(errorEnvelope("VALIDACION_FALLIDA", "Se requiere expedienteId, tipo y file (PDF)"));
         return;
       }
       const bytes = new Uint8Array(await data.toBuffer());
@@ -51,7 +54,7 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
       const actor = req.actor ?? { id: "", dni: "desconocido" };
       const r = await uc.execute({ expedienteId, tipo, filename: data.filename, bytes, actor });
       if (!r.ok) {
-        reply.status(400).send({ message: r.error.message, code: r.error.code });
+        reply.status(400).send(errorEnvelope(r.error.code, r.error.message));
         return;
       }
       reply.status(201).send(r.value);
@@ -68,7 +71,7 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
         .limit(1);
       const doc = rows[0];
       if (!doc) {
-        reply.status(404).send({ message: "Documento no encontrado" });
+        reply.status(404).send(errorEnvelope("NO_ENCONTRADO", "Documento no encontrado"));
         return;
       }
       reply.send({

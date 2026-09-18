@@ -274,12 +274,17 @@ export async function listarExpedientes(
     estado?: string | undefined;
     orden?: string | undefined;
     vista?: string | undefined;
+    page?: number | undefined;
+    limit?: number | undefined;
     actorDni?: string | undefined;
     actorRol?: string | undefined;
   },
 ): Promise<{
   items: ResumenRow[];
   resumen: { total: number; enCurso: number; finalizados: number; sinIniciar: number };
+  total: number;
+  page: number;
+  limit: number;
 }> {
   const exps = await db.select().from(expedientes).orderBy(asc(expedientes.codigo));
   const personas = await db.select().from(usuarios);
@@ -341,10 +346,18 @@ export async function listarExpedientes(
       items.sort((a, b) => (a.updatedAt > b.updatedAt ? -1 : 1));
   }
 
+  const page = Math.max(filtros.page ?? 1, 1);
+  const limit = Math.min(Math.max(filtros.limit ?? 20, 1), 100);
+  const total = items.length;
+  const pagina = items.slice((page - 1) * limit, page * limit);
+
   const es = (e: string): "curso" | "fin" | "sin" =>
     e === "TITULO_EMITIDO" ? "fin" : e === "REGISTRADO" ? "sin" : "curso";
   return {
-    items,
+    items: pagina,
+    total,
+    page,
+    limit,
     resumen: {
       total: exps.length,
       enCurso: exps.filter((e) => es(e.estado) === "curso").length,

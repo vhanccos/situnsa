@@ -4,7 +4,8 @@ import { DomainError } from "@pis/domain";
 import { initServer } from "@ts-rest/fastify";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import { stubAuth } from "../../middleware/stub-auth.js";
+import { errorEnvelope } from "../../infra/http/errores.js";
+import { requireAuth } from "../../middleware/require-auth.js";
 
 const s = initServer();
 
@@ -39,7 +40,7 @@ export function registerTalleresRoutes(app: FastifyInstance): void {
         if (!rows[0])
           return {
             status: 400 as const,
-            body: { message: `Asesor DNI ${body.asesorDni} no existe` },
+            body: errorEnvelope("VALIDACION_FALLIDA", `Asesor DNI ${body.asesorDni} no existe`),
           };
         asesorId = rows[0].id;
       }
@@ -48,7 +49,11 @@ export function registerTalleresRoutes(app: FastifyInstance): void {
         .values({ nombre: body.nombre, asesorId, periodo: body.periodo ?? null })
         .returning();
       const t = inserted[0];
-      if (!t) return { status: 400 as const, body: { message: "No se pudo crear el taller" } };
+      if (!t)
+        return {
+          status: 400 as const,
+          body: errorEnvelope("VALIDACION_FALLIDA", "No se pudo crear el taller"),
+        };
       return {
         status: 201 as const,
         body: {
@@ -63,7 +68,7 @@ export function registerTalleresRoutes(app: FastifyInstance): void {
     },
   });
   void app.register(async (scoped) => {
-    scoped.addHook("preHandler", stubAuth);
+    scoped.addHook("preHandler", requireAuth);
     scoped.register(s.plugin(router));
   });
 }
@@ -102,7 +107,11 @@ export function registerAsesoresRoutes(app: FastifyInstance): void {
           })
           .returning();
         const u = inserted[0];
-        if (!u) return { status: 400 as const, body: { message: "No se pudo crear el asesor" } };
+        if (!u)
+          return {
+            status: 400 as const,
+            body: errorEnvelope("VALIDACION_FALLIDA", "No se pudo crear el asesor"),
+          };
         return {
           status: 201 as const,
           body: {
@@ -125,7 +134,11 @@ export function registerAsesoresRoutes(app: FastifyInstance): void {
       await db.update(usuarios).set({ activo: body.activo }).where(eq(usuarios.id, params.id));
       const rows = await db.select().from(usuarios).where(eq(usuarios.id, params.id)).limit(1);
       const u = rows[0];
-      if (!u) return { status: 404 as const, body: { message: "Asesor no encontrado" } };
+      if (!u)
+        return {
+          status: 404 as const,
+          body: errorEnvelope("NO_ENCONTRADO", "Asesor no encontrado"),
+        };
       const talls = await db.select().from(talleres);
       return {
         status: 200 as const,
@@ -144,7 +157,7 @@ export function registerAsesoresRoutes(app: FastifyInstance): void {
     },
   });
   void app.register(async (scoped) => {
-    scoped.addHook("preHandler", stubAuth);
+    scoped.addHook("preHandler", requireAuth);
     scoped.register(s.plugin(router));
   });
 }

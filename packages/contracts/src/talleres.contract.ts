@@ -1,5 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
+import { ErrorEnvelopeSchema } from "./api-conventions.js";
 
 export const TallerDTOSchema = z.object({
   id: z.string().uuid(),
@@ -52,7 +53,7 @@ export const talleresContract = c.router({
     body: CrearTallerSchema,
     responses: {
       201: TallerDTOSchema,
-      400: z.object({ message: z.string() }),
+      400: ErrorEnvelopeSchema,
     },
     summary: "Nuevo taller",
   },
@@ -71,7 +72,7 @@ export const asesoresContract = c.router({
     body: CrearAsesorSchema,
     responses: {
       201: AsesorDTOSchema,
-      400: z.object({ message: z.string() }),
+      400: ErrorEnvelopeSchema,
     },
     summary: "Nuevo asesor",
   },
@@ -82,7 +83,7 @@ export const asesoresContract = c.router({
     body: z.object({ activo: z.boolean() }),
     responses: {
       200: AsesorDTOSchema,
-      404: z.object({ message: z.string() }),
+      404: ErrorEnvelopeSchema,
     },
     summary: "Activar/desactivar sin borrar historial",
   },

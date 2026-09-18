@@ -8,16 +8,10 @@ export interface StubActor {
   rol: string;
 }
 
-declare module "fastify" {
-  interface FastifyRequest {
-    actor?: StubActor;
-  }
-}
-
 /**
- * Stub de autenticación para dev (Fase 1).
+ * Stub de autenticación SOLO dev (AUTH_STUB=1).
  * Lee `x-user-dni` (default: tesista de prueba 12345678) y adjunta el actor.
- * Fase 2: reemplazar por Better-Auth (DNI + Google @unsa.edu.pe).
+ * Producción: requireAuth con Bearer JWT (middleware/require-auth.ts).
  */
 export async function stubAuth(req: FastifyRequest, reply: FastifyReply): Promise<void> {
   const header = req.headers["x-user-dni"];

@@ -1,5 +1,6 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
+import { ErrorEnvelopeSchema } from "./api-conventions.js";
 
 export const DocumentoMetadataSchema = z.object({
   id: z.string().uuid(),
@@ -27,14 +28,14 @@ export const documentosContract = c.router({
     method: "GET",
     path: "/api/documentos/:id",
     pathParams: z.object({ id: z.string().uuid() }),
-    responses: { 200: DocumentoMetadataSchema, 404: z.object({ message: z.string() }) },
+    responses: { 200: DocumentoMetadataSchema, 404: ErrorEnvelopeSchema },
     summary: "Metadatos de documento",
   },
   descargar: {
     method: "GET",
     path: "/api/documentos/:id/descargar",
     pathParams: z.object({ id: z.string().uuid() }),
-    responses: { 302: z.void(), 404: z.object({ message: z.string() }) },
+    responses: { 302: z.void(), 404: ErrorEnvelopeSchema },
     summary: "Descarga protegida vía X-Accel-Redirect (Nginx)",
   },
 });

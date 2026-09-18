@@ -1,64 +1,112 @@
 import { authContract } from "@pis/contracts";
-import { db, usuarios } from "@pis/db";
 import { initServer } from "@ts-rest/fastify";
-import { eq, or } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
+import { errorEnvelope } from "../../infra/http/errores.js";
+import { NOMBRE_COOKIE_REFRESH, opcionesCookieRefresh, verificarAcceso } from "./sesiones.js";
+import { LoginGoogleUseCase } from "./use-cases/login-google/login-google.use-case.js";
+import { LoginLocalUseCase } from "./use-cases/login-local/login-local.use-case.js";
+import {
+  LogoutUseCase,
+  RefreshSesionUseCase,
+} from "./use-cases/refresh-sesion/refresh-sesion.use-case.js";
+import { repositorioCuentasDb } from "./use-cases/repositorios.js";
 
 const s = initServer();
 
-/**
- * §3 Login (stub dev): verifica identidad por DNI/CUI/correo.
- * Fase 2: Better-Auth con hash + Google @unsa.edu.pe.
- */
+function contexto(req: { ip: string; headers: Record<string, string | string[] | undefined> }): {
+  ip: string | null;
+  agente: string | null;
+} {
+  const agente = req.headers["user-agent"];
+  return {
+    ip: req.ip ?? null,
+    agente: Array.isArray(agente) ? (agente[0] ?? null) : (agente ?? null),
+  };
+}
+
+/** Auth real (A2): login local + Google OIDC + refresh rotativo + logout. */
 export function registerAuthRoutes(app: FastifyInstance): void {
   const router = s.router(authContract, {
-    loginLocal: async ({ body }) => {
-      if (!body.password)
-        return { status: 401 as const, body: { message: "Credenciales inválidas" } };
-      const rows = await db
-        .select()
-        .from(usuarios)
-        .where(
-          or(
-            eq(usuarios.dni, body.identificador),
-            eq(usuarios.cui, body.identificador),
-            eq(usuarios.email, body.identificador),
-          ),
-        )
-        .limit(1);
-      const u = rows[0];
-      if (!u || !u.activo) {
+    loginLocal: async ({ body, request, reply }) => {
+      const uc = new LoginLocalUseCase();
+      const r = await uc.execute({ ...body, ...contexto(request) });
+      if (!r.ok)
+        return { status: 401 as const, body: errorEnvelope(r.error.code, r.error.message) };
+      reply.setCookie(NOMBRE_COOKIE_REFRESH, r.value.refreshToken, opcionesCookieRefresh());
+      return {
+        status: 200 as const,
+        body: {
+          usuario: r.value.usuario,
+          accessToken: r.value.accessToken,
+          expiraEn: r.value.expiraEn,
+        },
+      };
+    },
+    loginGoogle: async ({ body, request, reply }) => {
+      if (!process.env.GOOGLE_CLIENT_ID) {
+        return {
+          status: 501 as const,
+          body: errorEnvelope("SIN_CONFIGURACION", "Login con Google no configurado"),
+        };
+      }
+      const uc = new LoginGoogleUseCase();
+      const r = await uc.execute(body.idToken, contexto(request));
+      if (!r.ok)
+        return { status: 401 as const, body: errorEnvelope(r.error.code, r.error.message) };
+      reply.setCookie(NOMBRE_COOKIE_REFRESH, r.value.refreshToken, opcionesCookieRefresh());
+      return {
+        status: 200 as const,
+        body: {
+          usuario: r.value.usuario,
+          accessToken: r.value.accessToken,
+          expiraEn: r.value.expiraEn,
+        },
+      };
+    },
+    refresh: async ({ request, reply }) => {
+      const token = request.cookies?.[NOMBRE_COOKIE_REFRESH];
+      if (!token) {
+        return { status: 401 as const, body: errorEnvelope("SESION_INVALIDA", "Sin sesión") };
+      }
+      const uc = new RefreshSesionUseCase();
+      const r = await uc.execute(token, contexto(request));
+      if (!r.ok)
+        return { status: 401 as const, body: errorEnvelope(r.error.code, r.error.message) };
+      reply.setCookie(NOMBRE_COOKIE_REFRESH, r.value.refreshToken, opcionesCookieRefresh());
+      return {
+        status: 200 as const,
+        body: { accessToken: r.value.accessToken, expiraEn: r.value.expiraEn },
+      };
+    },
+    logout: async ({ request, reply }) => {
+      const token = request.cookies?.[NOMBRE_COOKIE_REFRESH] ?? null;
+      await new LogoutUseCase().execute(token);
+      reply.clearCookie(NOMBRE_COOKIE_REFRESH, { path: "/api/auth" });
+      return { status: 200 as const, body: { ok: true as const } };
+    },
+    sesion: async ({ request }) => {
+      const auth = request.headers.authorization;
+      const token =
+        typeof auth === "string" && auth.startsWith("Bearer ") ? auth.slice(7).trim() : null;
+      if (!token) return { status: 401 as const, body: errorEnvelope("SIN_SESION", "Sin sesión") };
+      const p = verificarAcceso(token);
+      if (!p)
         return {
           status: 401 as const,
-          body: { message: "Credenciales inválidas o usuario inactivo" },
+          body: errorEnvelope("SESION_INVALIDA", "Sesión expirada o inválida"),
         };
+      const cuenta = await repositorioCuentasDb.buscarPorId(p.sub);
+      if (!cuenta || !cuenta.activo) {
+        return { status: 401 as const, body: errorEnvelope("SIN_SESION", "Sin sesión") };
       }
       return {
         status: 200 as const,
         body: {
-          userId: u.id,
-          dni: u.dni,
-          nombres: `${u.nombres} ${u.apellidos}`,
-          email: u.email,
-          rol: u.rol,
-        },
-      };
-    },
-    sesion: async ({ request }) => {
-      const header = request.headers["x-user-dni"];
-      const dni = (Array.isArray(header) ? header[0] : header) ?? null;
-      if (!dni) return { status: 401 as const, body: { message: "Sin sesión" } };
-      const rows = await db.select().from(usuarios).where(eq(usuarios.dni, dni)).limit(1);
-      const u = rows[0];
-      if (!u) return { status: 401 as const, body: { message: "Sin sesión" } };
-      return {
-        status: 200 as const,
-        body: {
-          userId: u.id,
-          dni: u.dni,
-          nombres: `${u.nombres} ${u.apellidos}`,
-          email: u.email,
-          rol: u.rol,
+          userId: cuenta.id,
+          dni: cuenta.dni,
+          nombres: `${cuenta.nombres} ${cuenta.apellidos}`,
+          email: cuenta.email,
+          rol: cuenta.rol,
         },
       };
     },

@@ -7,6 +7,7 @@ import { mensajes } from "../schema/mensajes.js";
 import { subetapas } from "../schema/subetapas.js";
 import { talleres } from "../schema/talleres.js";
 import { usuarios } from "../schema/usuarios.js";
+import { asignarRolesLegacy, fijarClavesDemo } from "./roles-permisos.js";
 
 export const TESISTA_ID = "11111111-1111-4111-8111-111111111111";
 export const ASESOR_ID = "22222222-2222-4222-8222-222222222222";
@@ -388,6 +389,19 @@ export async function seedDemo(db: Db): Promise<void> {
       { nombre: "TALLER 07", asesorId: ASESOR_ID, periodo: "2026-I", inscritos: 24 },
     ]);
   }
+
+  // Claves demo (bcrypt coste 12) + roles nuevos según rol legacy.
+  await fijarClavesDemo(db, [
+    "00000001",
+    "00000002",
+    "12345678",
+    "87654321",
+    "11223344",
+    "22334455",
+    "33445566",
+    "99990001",
+  ]);
+  await asignarRolesLegacy(db);
 
   const rows = await db.select({ codigo: expedientes.codigo }).from(expedientes);
   console.log(`Seed demo OK. Expedientes: ${rows.map((r) => r.codigo).join(", ")}`);

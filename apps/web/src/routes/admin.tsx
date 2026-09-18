@@ -47,19 +47,32 @@ export function AdminPage() {
   const [etapa, setEtapa] = useState("");
   const [estado, setEstado] = useState("");
   const [orden, setOrden] = useState("recientes");
-  const query = useListarExpedientes({ q, estado, orden });
+  const [page, setPage] = useState(1);
+  const query = useListarExpedientes({ q, estado, orden, page, limit: 20 });
 
   const items = (query.data?.items ?? []).filter((i) => !etapa || i.etapaActual === Number(etapa));
   const r = query.data?.resumen;
   const total = r?.total ?? 0;
   const pct = (n: number): string => (total > 0 ? `${Math.round((n / total) * 100)}%` : "—");
   const hayFiltros = q !== "" || etapa !== "" || estado !== "" || orden !== "recientes";
+  const totalPag = query.data?.total ?? 0;
+  const limit = query.data?.limit ?? 20;
+  const paginas = Math.max(Math.ceil(totalPag / limit), 1);
+
+  /** Cambiar un filtro vuelve a la primera página. */
+  function conPagina1(fn: (v: string) => void): (v: string) => void {
+    return (v: string) => {
+      setPage(1);
+      fn(v);
+    };
+  }
 
   function limpiar(): void {
     setQ("");
     setEtapa("");
     setEstado("");
     setOrden("recientes");
+    setPage(1);
   }
 
   return (
@@ -126,10 +139,13 @@ export function AdminPage() {
                 className={cn(controlClase, "h-9 pl-9")}
                 placeholder="Nombre, DNI o expediente…"
                 value={q}
-                onChange={(e) => setQ(e.target.value)}
+                onChange={(e) => {
+                  setPage(1);
+                  setQ(e.target.value);
+                }}
               />
             </div>
-            <Select ariaLabel="Etapa" value={etapa} onChange={setEtapa}>
+            <Select ariaLabel="Etapa" value={etapa} onChange={conPagina1(setEtapa)}>
               <option value="">Todas las etapas</option>
               {ETAPAS.filter(Boolean).map((e) => (
                 <option key={e} value={e}>
@@ -137,7 +153,7 @@ export function AdminPage() {
                 </option>
               ))}
             </Select>
-            <Select ariaLabel="Estado" value={estado} onChange={setEstado}>
+            <Select ariaLabel="Estado" value={estado} onChange={conPagina1(setEstado)}>
               <option value="">Todos los estados</option>
               {ESTADOS.filter(Boolean).map((e) => (
                 <option key={e} value={e}>
@@ -145,7 +161,7 @@ export function AdminPage() {
                 </option>
               ))}
             </Select>
-            <Select ariaLabel="Orden" value={orden} onChange={setOrden}>
+            <Select ariaLabel="Orden" value={orden} onChange={conPagina1(setOrden)}>
               {ORDENES.map((o) => (
                 <option key={o.v} value={o.v}>
                   {o.l}
@@ -259,6 +275,34 @@ export function AdminPage() {
             ]}
             filas={items}
           />
+          {paginas > 1 && (
+            <nav
+              className="flex items-center justify-between gap-2 pt-1 text-sm"
+              aria-label="Paginación"
+            >
+              <p className="text-xs text-grafito-600">
+                Página {page} de {paginas} · {totalPag} expedientes
+              </p>
+              <span className="flex gap-2">
+                <button
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                  type="button"
+                >
+                  ← Anterior
+                </button>
+                <button
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                  disabled={page >= paginas}
+                  onClick={() => setPage((p) => Math.min(p + 1, paginas))}
+                  type="button"
+                >
+                  Siguiente →
+                </button>
+              </span>
+            </nav>
+          )}
         </div>
       </Card>
     </AppShell>

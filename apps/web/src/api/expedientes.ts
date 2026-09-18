@@ -12,6 +12,16 @@ import { apiFetch } from "./session.js";
 export const expedienteKey = (id: string) => ["expediente", id] as const;
 export const expedientesKey = ["expedientes"] as const;
 
+/** Lee el mensaje legible de un error API (envelope nuevo `{error.mensaje}` o legacy `{message}`). */
+export function leerMensajeError(body: unknown, respaldo: string): string {
+  if (typeof body !== "object" || body === null) return respaldo;
+  const env = (body as { error?: { mensaje?: unknown } }).error;
+  if (typeof env?.mensaje === "string" && env.mensaje) return env.mensaje;
+  const legacy = (body as { message?: unknown }).message;
+  if (typeof legacy === "string" && legacy) return legacy;
+  return respaldo;
+}
+
 async function leerDetalle(res: Response): Promise<ExpedienteDetalleDTO> {
   if (res.status === 404) throw new Error("Expediente no encontrado");
   if (!res.ok) throw new Error("No se pudo cargar el expediente");
@@ -33,34 +43,45 @@ export interface FiltrosDashboard {
   estado: string;
   orden: string;
   vista?: string;
+  page?: number;
+  limit?: number;
 }
 
-/** Dashboard §4: tabla + indicadores en una sola lectura (§17 Optimización). */
+export interface ItemExpediente {
+  id: string;
+  codigo: string;
+  tesista: string;
+  dni: string;
+  programa: string;
+  etapaActual: number;
+  subetapaActual: string | null;
+  estado: string;
+  avancePct: number;
+  updatedAt: string;
+}
+
+/** Dashboard §4: tabla + indicadores en una sola lectura (paginado page/limit). */
 export function useListarExpedientes(f: FiltrosDashboard) {
+  const page = f.page ?? 1;
+  const limit = f.limit ?? 20;
   const params = new URLSearchParams();
   if (f.q) params.set("q", f.q);
   if (f.estado) params.set("estado", f.estado);
   if (f.orden) params.set("orden", f.orden);
   if (f.vista) params.set("vista", f.vista);
+  params.set("page", String(page));
+  params.set("limit", String(limit));
   return useQuery({
-    queryKey: [...expedientesKey, f.q, f.estado, f.orden, f.vista ?? ""],
+    queryKey: [...expedientesKey, f.q, f.estado, f.orden, f.vista ?? "", page, limit],
     queryFn: async () => {
       const res = await apiFetch(`${apiBaseUrl}/api/expedientes?${params}`);
       if (!res.ok) throw new Error("No se pudo cargar el listado");
       return (await res.json()) as {
-        items: Array<{
-          id: string;
-          codigo: string;
-          tesista: string;
-          dni: string;
-          programa: string;
-          etapaActual: number;
-          subetapaActual: string | null;
-          estado: string;
-          avancePct: number;
-          updatedAt: string;
-        }>;
+        items: ItemExpediente[];
         resumen: { total: number; enCurso: number; finalizados: number; sinIniciar: number };
+        total: number;
+        page: number;
+        limit: number;
       };
     },
   });
@@ -85,14 +106,17 @@ export function useActualizarDatos(id: string) {
         body: JSON.stringify(input),
       });
       if (res.status === 400) {
-        const body = (await res.json()) as { message: string };
-        throw new Error(body.message);
+        const body = (await res.json().catch(() => null)) as unknown;
+        throw new Error(leerMensajeError(body, "No se pudo guardar"));
       }
       if (res.status === 409) {
-        const body = (await res.json()) as { message: string; updatedAt: string };
-        const err = new Error(body.message) as Error & { conflicto: boolean; updatedAt: string };
+        const body = (await res.json().catch(() => null)) as unknown;
+        const err = new Error(leerMensajeError(body, "Conflicto de versión")) as Error & {
+          conflicto: boolean;
+          updatedAt: string;
+        };
         err.conflicto = true;
-        err.updatedAt = body.updatedAt;
+        err.updatedAt = (body as { updatedAt?: string })?.updatedAt ?? "";
         throw err;
       }
       return leerDetalle(res);
@@ -116,10 +140,8 @@ export function useInscribir() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const b = (await res.json().catch(() => ({ message: "No se pudo registrar" }))) as {
-          message?: string;
-        };
-        throw new Error(b.message ?? "No se pudo registrar");
+        const b = (await res.json().catch(() => null)) as unknown;
+        throw new Error(leerMensajeError(b, "No se pudo registrar"));
       }
       const out = (await res.json()) as { id: string; codigo: string };
       qc.invalidateQueries({ queryKey: expedientesKey });
@@ -139,10 +161,8 @@ export function useValidar() {
         body: "{}",
       });
       if (!res.ok) {
-        const b = (await res.json().catch(() => ({ message: "No se pudo validar" }))) as {
-          message?: string;
-        };
-        throw new Error(b.message ?? "No se pudo validar");
+        const b = (await res.json().catch(() => null)) as unknown;
+        throw new Error(leerMensajeError(b, "No se pudo validar"));
       }
       const data = ExpedienteDetalleDTOSchema.parse(await res.json());
       qc.setQueryData(expedienteKey(id), data);
@@ -186,10 +206,8 @@ export function useAnular(id: string) {
         body: JSON.stringify({ motivo: motivo ?? "" }),
       });
       if (!res.ok) {
-        const b = (await res.json().catch(() => ({ message: "No se pudo anular" }))) as {
-          message?: string;
-        };
-        throw new Error(b.message ?? "No se pudo anular");
+        const b = (await res.json().catch(() => null)) as unknown;
+        throw new Error(leerMensajeError(b, "No se pudo anular"));
       }
       const data = ExpedienteDetalleDTOSchema.parse(await res.json());
       qc.setQueryData(expedienteKey(id), data);
@@ -212,10 +230,8 @@ export function useSubirDocumento(id: string) {
         body: form,
       });
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({ message: "Error al subir" }))) as {
-          message?: string;
-        };
-        throw new Error(body.message ?? "Error al subir");
+        const body = (await res.json().catch(() => null)) as unknown;
+        throw new Error(leerMensajeError(body, "Error al subir"));
       }
       return (await res.json()) as SubirResult;
     },

@@ -23,6 +23,7 @@ export const appContract = c.router({
   },
 });
 
+export * from "./api-conventions.js";
 export * from "./auth.contract.js";
 export * from "./documentos.contract.js";
 export * from "./enums.js";

@@ -1,0 +1,903 @@
+{
+  "id": "29cfb0de-5beb-4c6c-86c6-799b95a27611",
+  "prevId": "afa13503-44db-480f-a73a-c422a072f476",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.auditoria_transiciones": {
+      "name": "auditoria_transiciones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "expediente_id": {
+          "name": "expediente_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado_anterior": {
+          "name": "estado_anterior",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado_nuevo": {
+          "name": "estado_nuevo",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hash_previo": {
+          "name": "hash_previo",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hash": {
+          "name": "hash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "detalle": {
+          "name": "detalle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "auditoria_transiciones_expediente_id_expedientes_id_fk": {
+          "name": "auditoria_transiciones_expediente_id_expedientes_id_fk",
+          "tableFrom": "auditoria_transiciones",
+          "tableTo": "expedientes",
+          "columnsFrom": ["expediente_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.documentos": {
+      "name": "documentos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "expediente_id": {
+          "name": "expediente_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "etapa": {
+          "name": "etapa",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'E1'"
+        },
+        "ruta": {
+          "name": "ruta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_documento",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'CARGADO'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "documentos_expediente_id_expedientes_id_fk": {
+          "name": "documentos_expediente_id_expedientes_id_fk",
+          "tableFrom": "documentos",
+          "tableTo": "expedientes",
+          "columnsFrom": ["expediente_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.expedientes": {
+      "name": "expedientes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_expediente",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'REGISTRADO'"
+        },
+        "modalidad": {
+          "name": "modalidad",
+          "type": "modalidad",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "programa": {
+          "name": "programa",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "participante1_id": {
+          "name": "participante1_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "participante2_id": {
+          "name": "participante2_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "asesor_id": {
+          "name": "asesor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "titulo02": {
+          "name": "titulo02",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "modalidad02": {
+          "name": "modalidad02",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "modalidad_final": {
+          "name": "modalidad_final",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "asesor_nombre": {
+          "name": "asesor_nombre",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nro_decreto": {
+          "name": "nro_decreto",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recomendacion": {
+          "name": "recomendacion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "presidente": {
+          "name": "presidente",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "secretario": {
+          "name": "secretario",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "co_asesor": {
+          "name": "co_asesor",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_apertura": {
+          "name": "fecha_apertura",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_presentacion": {
+          "name": "fecha_presentacion",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nro_oficio": {
+          "name": "nro_oficio",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "integrante": {
+          "name": "integrante",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "presidente_e2": {
+          "name": "presidente_e2",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "secretario_e2": {
+          "name": "secretario_e2",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suplente_e2": {
+          "name": "suplente_e2",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decanal": {
+          "name": "decanal",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_sustentacion": {
+          "name": "fecha_sustentacion",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hora_sustentacion": {
+          "name": "hora_sustentacion",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lugar_sustentacion": {
+          "name": "lugar_sustentacion",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "modalidad_virtual": {
+          "name": "modalidad_virtual",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "expedientes_participante1_id_usuarios_id_fk": {
+          "name": "expedientes_participante1_id_usuarios_id_fk",
+          "tableFrom": "expedientes",
+          "tableTo": "usuarios",
+          "columnsFrom": ["participante1_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "expedientes_participante2_id_usuarios_id_fk": {
+          "name": "expedientes_participante2_id_usuarios_id_fk",
+          "tableFrom": "expedientes",
+          "tableTo": "usuarios",
+          "columnsFrom": ["participante2_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "expedientes_asesor_id_usuarios_id_fk": {
+          "name": "expedientes_asesor_id_usuarios_id_fk",
+          "tableFrom": "expedientes",
+          "tableTo": "usuarios",
+          "columnsFrom": ["asesor_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "expedientes_codigo_unique": {
+          "name": "expedientes_codigo_unique",
+          "nullsNotDistinct": false,
+          "columns": ["codigo"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.idempotency_keys": {
+      "name": "idempotency_keys",
+      "schema": "",
+      "columns": {
+        "clave": {
+          "name": "clave",
+          "type": "varchar(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "metodo": {
+          "name": "metodo",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ruta": {
+          "name": "ruta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "respuesta": {
+          "name": "respuesta",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expira_at": {
+          "name": "expira_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.mensajes": {
+      "name": "mensajes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "expediente_id": {
+          "name": "expediente_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "autor_id": {
+          "name": "autor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "texto": {
+          "name": "texto",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "mensajes_expediente_id_expedientes_id_fk": {
+          "name": "mensajes_expediente_id_expedientes_id_fk",
+          "tableFrom": "mensajes",
+          "tableTo": "expedientes",
+          "columnsFrom": ["expediente_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "mensajes_autor_id_usuarios_id_fk": {
+          "name": "mensajes_autor_id_usuarios_id_fk",
+          "tableFrom": "mensajes",
+          "tableTo": "usuarios",
+          "columnsFrom": ["autor_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.programas": {
+      "name": "programas",
+      "schema": "",
+      "columns": {
+        "codigo": {
+          "name": "codigo",
+          "type": "varchar(16)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.subetapas": {
+      "name": "subetapas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "expediente_id": {
+          "name": "expediente_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "etapa": {
+          "name": "etapa",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "orden": {
+          "name": "orden",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plazo": {
+          "name": "plazo",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_subetapa",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'NO_INICIADO'"
+        },
+        "responsable": {
+          "name": "responsable",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inicio": {
+          "name": "inicio",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fin": {
+          "name": "fin",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "subetapas_expediente_id_expedientes_id_fk": {
+          "name": "subetapas_expediente_id_expedientes_id_fk",
+          "tableFrom": "subetapas",
+          "tableTo": "expedientes",
+          "columnsFrom": ["expediente_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.talleres": {
+      "name": "talleres",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asesor_id": {
+          "name": "asesor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "periodo": {
+          "name": "periodo",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_taller",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ACTIVO'"
+        },
+        "inscritos": {
+          "name": "inscritos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "talleres_asesor_id_usuarios_id_fk": {
+          "name": "talleres_asesor_id_usuarios_id_fk",
+          "tableFrom": "talleres",
+          "tableTo": "usuarios",
+          "columnsFrom": ["asesor_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.usuarios": {
+      "name": "usuarios",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "dni": {
+          "name": "dni",
+          "type": "varchar(8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cui": {
+          "name": "cui",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombres": {
+          "name": "nombres",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "apellidos": {
+          "name": "apellidos",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rol": {
+          "name": "rol",
+          "type": "rol_usuario",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nacionalidad": {
+          "name": "nacionalidad",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ciudad": {
+          "name": "ciudad",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direccion": {
+          "name": "direccion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "grado": {
+          "name": "grado",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_sub": {
+          "name": "google_sub",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "usuarios_dni_unique": {
+          "name": "usuarios_dni_unique",
+          "nullsNotDistinct": false,
+          "columns": ["dni"]
+        },
+        "usuarios_email_unique": {
+          "name": "usuarios_email_unique",
+          "nullsNotDistinct": false,
+          "columns": ["email"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.estado_documento": {
+      "name": "estado_documento",
+      "schema": "public",
+      "values": ["PENDIENTE", "CARGADO", "OBSERVADO", "APROBADO", "RECHAZADO"]
+    },
+    "public.estado_expediente": {
+      "name": "estado_expediente",
+      "schema": "public",
+      "values": [
+        "REGISTRADO",
+        "EN_PLAN",
+        "PLAN_APROBADO",
+        "EN_BORRADOR",
+        "EN_DICTAMEN",
+        "APTO_SUSTENTACION",
+        "SUSTENTADO",
+        "EN_VALIDACION",
+        "EN_APROBACION",
+        "TITULO_EMITIDO",
+        "OBSERVADO",
+        "DESAPROBADO_TRUNCO",
+        "ANULADO"
+      ]
+    },
+    "public.estado_subetapa": {
+      "name": "estado_subetapa",
+      "schema": "public",
+      "values": ["NO_INICIADO", "EN_CURSO", "FINALIZADO"]
+    },
+    "public.estado_taller": {
+      "name": "estado_taller",
+      "schema": "public",
+      "values": ["ACTIVO", "CERRADO"]
+    },
+    "public.modalidad": {
+      "name": "modalidad",
+      "schema": "public",
+      "values": ["TESIS", "TRABAJO_ACADEMICO", "ARTICULO"]
+    },
+    "public.rol_usuario": {
+      "name": "rol_usuario",
+      "schema": "public",
+      "values": ["TESISTA", "ASESOR", "JURADO", "ADMIN_FIPS", "SECRETARIA", "DECANO", "INVITADO"]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -1,5 +1,10 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
+import {
+  ErrorEnvelopeSchema,
+  PaginacionMetaSchema,
+  PaginacionQuerySchema,
+} from "./api-conventions.js";
 import { EstadoExpedienteSchema, ModalidadSchema } from "./enums.js";
 
 /** Registro de Nuevo Expediente §10: 1–2 participantes + validaciones RN-01.1. */
@@ -35,7 +40,7 @@ export const ExpedienteDTOSchema = z.object({
   titulo: z.string(),
 });
 
-export const FiltrosExpedienteSchema = z.object({
+export const FiltrosExpedienteSchema = PaginacionQuerySchema.extend({
   estado: EstadoExpedienteSchema.optional(),
   programa: z.string().optional(),
   q: z.string().optional(),
@@ -233,9 +238,9 @@ export const expedientesContract = c.router({
     body: InscribirPlanSchema,
     responses: {
       201: z.object({ id: z.string().uuid(), codigo: z.string() }),
-      400: z.object({ message: z.string(), code: z.string() }),
+      400: ErrorEnvelopeSchema,
     },
-    summary: "§10 Registro de Nuevo Expediente (crea REGISTRADO)",
+    summary: "§10 Registro de Nuevo Expediente (crea REGISTRADO; admite Idempotency-Key)",
   },
   validar: {
     method: "POST",
@@ -244,8 +249,8 @@ export const expedientesContract = c.router({
     body: z.object({}),
     responses: {
       200: ExpedienteDetalleDTOSchema,
-      400: z.object({ message: z.string(), code: z.string() }),
-      404: z.object({ message: z.string() }),
+      400: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
     },
     summary: "§12 Validar inscripción → EN_PLAN + genera seguimiento",
   },
@@ -256,7 +261,7 @@ export const expedientesContract = c.router({
     body: z.object({ texto: z.string().min(2).max(2000) }),
     responses: {
       201: MensajeDTOSchema,
-      404: z.object({ message: z.string() }),
+      404: ErrorEnvelopeSchema,
     },
     summary: "Mensaje administrativo (§5 Historial de mensajes)",
   },
@@ -264,7 +269,7 @@ export const expedientesContract = c.router({
     method: "GET",
     path: "/api/expedientes/:id",
     pathParams: z.object({ id: z.string().uuid() }),
-    responses: { 200: ExpedienteDetalleDTOSchema, 404: z.object({ message: z.string() }) },
+    responses: { 200: ExpedienteDetalleDTOSchema, 404: ErrorEnvelopeSchema },
     summary: "Detalle del expediente (pestañas Datos/Documentos/Resumen)",
   },
   anular: {
@@ -274,8 +279,8 @@ export const expedientesContract = c.router({
     body: z.object({ motivo: z.string().max(500).optional() }),
     responses: {
       200: ExpedienteDetalleDTOSchema,
-      400: z.object({ message: z.string(), code: z.string() }),
-      404: z.object({ message: z.string() }),
+      400: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
     },
     summary: "ELIMINAR REGISTRO: borrado lógico → ANULADO",
   },
@@ -286,9 +291,9 @@ export const expedientesContract = c.router({
     body: ActualizarDatosSchema,
     responses: {
       200: ExpedienteDetalleDTOSchema,
-      400: z.object({ message: z.string(), code: z.string() }),
-      404: z.object({ message: z.string() }),
-      409: z.object({ message: z.string(), updatedAt: z.string() }),
+      400: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+      409: ErrorEnvelopeSchema.extend({ updatedAt: z.string() }),
     },
     summary: "Autoguardado de Datos (§6 INTERFACES)",
   },
@@ -297,7 +302,7 @@ export const expedientesContract = c.router({
     path: "/api/expedientes",
     query: FiltrosExpedienteSchema,
     responses: {
-      200: z.object({
+      200: PaginacionMetaSchema.extend({
         items: z.array(ExpedienteResumenDTOSchema),
         resumen: z.object({
           total: z.number(),
@@ -307,7 +312,7 @@ export const expedientesContract = c.router({
         }),
       }),
     },
-    summary: "Dashboard §4: tabla + indicadores",
+    summary: "Dashboard §4: tabla + indicadores (paginado page/limit)",
   },
 });
 

@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { rolUsuarioEnum } from "./enums.js";
 
 export const usuarios = pgTable("usuarios", {
@@ -17,6 +17,8 @@ export const usuarios = pgTable("usuarios", {
   activo: boolean("activo").notNull().default(true),
   passwordHash: text("password_hash"),
   googleSub: text("google_sub"),
+  intentosFallidos: integer("intentos_fallidos").notNull().default(0),
+  bloqueadoHasta: timestamp("bloqueado_hasta", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
