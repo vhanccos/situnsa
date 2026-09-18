@@ -62,3 +62,16 @@ export const estadoDocumentoEnum = pgEnum("estado_documento", [
   "APROBADO",
   "RECHAZADO",
 ]);
+
+/** Seguimiento de subetapas (legacy FLUJO_TITULACION, INTERFACES §9). */
+export const estadoSubetapaEnum = pgEnum("estado_subetapa", [
+  "NO_INICIADO",
+  "EN_CURSO",
+  "FINALIZADO",
+]);
+
+export type EstadoSubetapa = "NO_INICIADO" | "EN_CURSO" | "FINALIZADO";
+
+export const estadoTallerEnum = pgEnum("estado_taller", ["ACTIVO", "CERRADO"]);
+
+export type EstadoTaller = "ACTIVO" | "CERRADO";

@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { documentoDescargaUrl, useSubirDocumento } from "../../api/expedientes.js";
 import { cn } from "../../utils/cn.js";
+import { ConfirmDialog } from "../ui/confirm-dialog.js";
 
 interface Props {
   expedienteId: string;
@@ -26,22 +27,24 @@ export function DocumentoCard(p: Props) {
   const subir = useSubirDocumento(p.expedienteId);
   const [error, setError] = useState<string | null>(null);
 
-  async function onFile(file: File | undefined): Promise<void> {
-    if (!file) return;
+  const [pendiente, setPendiente] = useState<File | null>(null);
+
+  async function ejecutar(file: File): Promise<void> {
     setError(null);
-    if (
-      p.version !== null &&
-      !window.confirm(
-        `Reemplazar ${p.nombre} (v${p.version}) por ${file.name}? Se creará la v${p.version + 1}.`,
-      )
-    ) {
-      return;
-    }
     try {
       await subir.mutateAsync({ tipo: p.tipo, file });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al subir");
     }
+  }
+
+  function onFile(file: File | undefined): void {
+    if (!file) return;
+    if (p.version !== null) {
+      setPendiente(file);
+      return;
+    }
+    void ejecutar(file);
   }
 
   return (
@@ -94,11 +97,24 @@ export function DocumentoCard(p: Props) {
           ref={inputRef}
           type="file"
           onChange={(e) => {
-            void onFile(e.target.files?.[0]);
+            onFile(e.target.files?.[0]);
             e.target.value = "";
           }}
         />
       </div>
+      {pendiente && (
+        <ConfirmDialog
+          titulo="Reemplazar documento"
+          mensaje={`Reemplazar ${p.nombre} (v${p.version}) por ${pendiente.name}? Se creará la v${(p.version ?? 0) + 1}.`}
+          confirmar="Reemplazar"
+          onConfirmar={() => {
+            const f = pendiente;
+            setPendiente(null);
+            void ejecutar(f);
+          }}
+          onCancelar={() => setPendiente(null)}
+        />
+      )}
     </div>
   );
 }

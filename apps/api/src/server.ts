@@ -2,8 +2,13 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import Fastify from "fastify";
+import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
 import { registerDocumentosRoutes } from "./modules/documentos/documentos.routes.js";
 import { registerExpedientesRoutes } from "./modules/expedientes/expedientes.routes.js";
+import {
+  registerAsesoresRoutes,
+  registerTalleresRoutes,
+} from "./modules/talleres/talleres.routes.js";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -16,8 +21,11 @@ export async function buildServer() {
   app.get("/health", async () => ({ ok: true, version: "0.1.0" }));
   app.get("/docs", async () => ({ contract: "pis @ts-rest", version: "0.1.0" }));
 
+  registerAuthRoutes(app);
   registerExpedientesRoutes(app);
   registerDocumentosRoutes(app);
+  registerTalleresRoutes(app);
+  registerAsesoresRoutes(app);
 
   return app;
 }

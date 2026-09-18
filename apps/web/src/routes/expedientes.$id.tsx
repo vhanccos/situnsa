@@ -1,11 +1,12 @@
-import { semaforoPlazo } from "@pis/domain/dist/expediente/dias-habiles.js";
 import { Link, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import { type GuardadoEstado, useExpedienteDetalle } from "../api/expedientes.js";
 import { DatosForm } from "../components/domain/datos-form.js";
 import { DocumentoCard } from "../components/domain/documento-card.js";
-import { SemaforoBadge } from "../components/domain/semaforo-badge.js";
-import { TimelineFsm } from "../components/domain/timeline-fsm.js";
+import { ResumenTab } from "../components/domain/resumen-tab.js";
+import { AppShell } from "../components/layout/app-shell.js";
+import { PageHeader } from "../components/ui/page-header.js";
+import { StatusBadge } from "../components/ui/status-badge.js";
 import { cn } from "../utils/cn.js";
 
 type Tab = "datos" | "e1" | "e2" | "resumen";
@@ -17,29 +18,16 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: "resumen", label: "Resumen del Trámite" },
 ];
 
-const ETAPAS_FSM = [
-  "REGISTRADO",
-  "EN_PLAN",
-  "PLAN_APROBADO",
-  "EN_BORRADOR",
-  "EN_DICTAMEN",
-  "APTO_SUSTENTACION",
-  "SUSTENTADO",
-  "EN_VALIDACION",
-  "EN_APROBACION",
-  "TITULO_EMITIDO",
-] as const;
-
-const indicador: Record<GuardadoEstado, { texto: string; clase: string }> = {
-  sincronizado: { texto: "", clase: "" },
-  editando: { texto: "Editando…", clase: "text-slate-500" },
-  guardando: { texto: "Guardando…", clase: "text-blue-700" },
-  guardado: { texto: "Guardado ✓", clase: "text-green-700" },
-  error: { texto: "Error al guardar", clase: "text-red-700" },
-  conflicto: { texto: "Conflicto de versión", clase: "text-red-700" },
+const indicador: Record<GuardadoEstado, string> = {
+  sincronizado: "",
+  editando: "Editando…",
+  guardando: "Guardando…",
+  guardado: "Guardado ✓",
+  error: "Error al guardar",
+  conflicto: "Conflicto de versión",
 };
 
-/** Detalle del Expediente — INTERFACES §6 (Datos), §7–§8 (Documentos), dashboard tesista §5. */
+/** Detalle del Expediente — INTERFACES §§6–9. */
 export function ExpedienteDetallePage() {
   const { id } = useParams({ strict: false }) as { id: string };
   const [tab, setTab] = useState<Tab>("datos");
@@ -47,43 +35,55 @@ export function ExpedienteDetallePage() {
   const [conflicto, setConflicto] = useState<string | null>(null);
   const query = useExpedienteDetalle(id);
 
-  if (query.isPending) return <main className="p-8">Cargando expediente…</main>;
-  if (query.isError)
+  if (query.isPending) {
     return (
-      <main className="mx-auto max-w-3xl space-y-4 p-8">
-        <p className="text-red-700">No se pudo cargar el expediente.</p>
-        <Link className="text-sm underline" to="/">
-          Volver al inicio
-        </Link>
-      </main>
+      <AppShell activo="">
+        <output className="space-y-2" aria-label="Cargando">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-14 animate-pulse rounded bg-white" />
+          ))}
+        </output>
+      </AppShell>
     );
+  }
+  if (query.isError) {
+    return (
+      <AppShell activo="">
+        <p className="rounded border bg-white p-6 text-sm text-red-700">
+          No se pudo cargar el expediente.{" "}
+          <button className="underline" onClick={() => void query.refetch()} type="button">
+            Reintentar
+          </button>{" "}
+          <Link className="underline" to="/admin">
+            Volver al listado
+          </Link>
+        </p>
+      </AppShell>
+    );
+  }
 
   const d = query.data;
-  const ind = indicador[guardado];
 
   return (
-    <main className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
-      <Link className="text-sm text-slate-600 underline" to="/">
-        ← Volver al inicio
+    <AppShell activo="">
+      <Link className="text-sm text-navy-800 underline" to="/admin">
+        ← Volver al listado
       </Link>
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">Detalle del Expediente</h1>
-          <p className="text-sm text-slate-600">
-            Información, documentos y seguimiento del trámite de titulación.
-          </p>
-          {ind.texto && <p className={cn("mt-1 text-xs font-semibold", ind.clase)}>{ind.texto}</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded border px-2 py-1 text-xs">
-            N° de Expediente <strong>{d.codigo}</strong>
-          </span>
-          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-            {d.estado.replace("_", " ")}
-          </span>
-        </div>
-      </header>
-
+      <PageHeader
+        titulo="Detalle del Expediente"
+        descripcion="Información, documentos y seguimiento del trámite de titulación."
+        insignia={
+          <>
+            <span className="rounded border border-slate-300 bg-white px-2 py-1 text-xs">
+              N° de Expediente <strong>{d.codigo}</strong>
+            </span>
+            <StatusBadge estado={d.estado} />
+            {indicador[guardado] && (
+              <span className="text-xs font-semibold text-navy-800">{indicador[guardado]}</span>
+            )}
+          </>
+        }
+      />
       {conflicto && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900">
           {conflicto}{" "}
@@ -100,16 +100,15 @@ export function ExpedienteDetallePage() {
           </button>
         </div>
       )}
-
-      <nav className="flex flex-wrap gap-2">
+      <nav className="flex flex-wrap gap-2" aria-label="Pestañas del expediente">
         {TABS.map((t) => (
           <button
             key={t.id}
             className={cn(
               "rounded-t border-b-2 px-4 py-2 text-sm",
               tab === t.id
-                ? "border-slate-900 bg-white font-semibold"
-                : "border-transparent text-slate-500 hover:bg-slate-100",
+                ? "border-guinda-800 bg-white font-semibold"
+                : "border-transparent text-grafito-600 hover:bg-white",
             )}
             onClick={() => setTab(t.id)}
             type="button"
@@ -118,7 +117,6 @@ export function ExpedienteDetallePage() {
           </button>
         ))}
       </nav>
-
       <div className="rounded-lg border bg-slate-50 p-4">
         {tab === "datos" && (
           <DatosForm detalle={d} setEstado={setGuardado} onConflicto={setConflicto} />
@@ -130,36 +128,9 @@ export function ExpedienteDetallePage() {
             items={d.checklist.filter((c) => c.etapa === (tab === "e1" ? "E1" : "E2"))}
           />
         )}
-        {tab === "resumen" && (
-          <div className="space-y-4">
-            <TimelineFsm
-              actual={
-                ETAPAS_FSM.includes(d.estado as (typeof ETAPAS_FSM)[number])
-                  ? (d.estado as (typeof ETAPAS_FSM)[number])
-                  : "EN_PLAN"
-              }
-            />
-            <SemaforoBadge estado={semaforoPlazo(4)} dias={4} />
-            <h2 className="text-sm font-bold">Historial (cadena de custodia)</h2>
-            {d.historial.length === 0 && (
-              <p className="text-sm text-slate-500">Sin movimientos registrados.</p>
-            )}
-            <ol className="space-y-1">
-              {d.historial.map((h, i) => (
-                <li className="text-sm" key={`${h.createdAt}-${i}`}>
-                  <span className="text-slate-500">
-                    {new Date(h.createdAt).toLocaleString("es-PE")}
-                  </span>{" "}
-                  — {h.estadoAnterior ? `${h.estadoAnterior} → ` : ""}
-                  <strong>{h.estadoNuevo}</strong>
-                  {h.actorDni ? ` (DNI ${h.actorDni})` : ""}
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
+        {tab === "resumen" && <ResumenTab detalle={d} />}
       </div>
-    </main>
+    </AppShell>
   );
 }
 
@@ -184,10 +155,10 @@ function DocumentosTab({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-bold">DOCUMENTOS - ETAPA {etapa === "E1" ? "01" : "02"}</h2>
-          <p className="text-xs text-slate-500">Inserción automática de datos</p>
+          <p className="text-xs text-grafito-600">Inserción automática de datos</p>
         </div>
         <button
-          className="rounded bg-red-900 px-3 py-1.5 text-xs font-semibold text-white opacity-50"
+          className="rounded bg-guinda-800 px-3 py-1.5 text-xs font-semibold text-white opacity-50"
           disabled
           title="Disponible en Fase 2 (generador documental)"
           type="button"

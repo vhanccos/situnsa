@@ -2,4 +2,8 @@ export * from "./auditoria-transiciones.js";
 export * from "./documentos.js";
 export * from "./enums.js";
 export * from "./expedientes.js";
+export * from "./mensajes.js";
+export * from "./programas.js";
+export * from "./subetapas.js";
+export * from "./talleres.js";
 export * from "./usuarios.js";

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authContract } from "./auth.contract.js";
 import { documentosContract } from "./documentos.contract.js";
 import { expedientesContract } from "./expedientes.contract.js";
+import { asesoresContract, talleresContract } from "./talleres.contract.js";
 
 const c = initContract();
 
@@ -10,6 +11,8 @@ export const appContract = c.router({
   expedientes: expedientesContract,
   auth: authContract,
   documentos: documentosContract,
+  talleres: talleresContract,
+  asesores: asesoresContract,
   health: {
     method: "GET",
     path: "/api/health",
@@ -22,3 +25,4 @@ export * from "./auth.contract.js";
 export * from "./documentos.contract.js";
 export * from "./enums.js";
 export * from "./expedientes.contract.js";
+export * from "./talleres.contract.js";

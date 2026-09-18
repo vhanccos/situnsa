@@ -1,11 +1,13 @@
-import { expedientesContract } from "@pis/contracts";
+import { ExpedienteDetalleDTOSchema, expedientesContract } from "@pis/contracts";
 import { db } from "@pis/db";
 import { initServer } from "@ts-rest/fastify";
 import type { FastifyInstance } from "fastify";
 import { stubAuth } from "../../middleware/stub-auth.js";
-import { getDetalleById } from "./expedientes.repository.js";
+import { getDetalleById, listarExpedientes } from "./expedientes.repository.js";
 import { ActualizarDatosUseCase } from "./use-cases/actualizar-datos/actualizar-datos.use-case.js";
 import { InscribirPlanUseCase } from "./use-cases/inscribir-plan/inscribir-plan.use-case.js";
+import { PublicarMensajeUseCase } from "./use-cases/publicar-mensaje/publicar-mensaje.use-case.js";
+import { ValidarInscripcionUseCase } from "./use-cases/validar-inscripcion/validar-inscripcion.use-case.js";
 
 const s = initServer();
 
@@ -16,22 +18,31 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
       const r = await uc.execute(body);
       if (!r.ok)
         return { status: 400 as const, body: { message: r.error.message, code: r.error.code } };
-      return {
-        status: 201 as const,
-        body: {
-          id: r.value.id,
-          codigo: r.value.codigo,
-          estado: "REGISTRADO" as const,
-          modalidad: body.modalidad,
-          programa: body.programa,
-          titulo: "Expediente creado (skeleton)",
-        },
-      };
+      return { status: 201 as const, body: r.value };
+    },
+    validar: async ({ params, request }) => {
+      const actor = request.actor ?? { id: "", dni: "desconocido" };
+      const uc = new ValidarInscripcionUseCase();
+      const r = await uc.execute(params.id, actor);
+      if (!r.ok) {
+        const code = r.error.code === "TRANSICION_INVALIDA" ? (400 as const) : (404 as const);
+        if (code === 400)
+          return { status: code, body: { message: r.error.message, code: r.error.code } };
+        return { status: code, body: { message: r.error.message } };
+      }
+      return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(r.value.detalle) };
+    },
+    publicarMensaje: async ({ params, body, request }) => {
+      const actor = request.actor ?? { id: "", dni: "desconocido" };
+      const uc = new PublicarMensajeUseCase();
+      const r = await uc.execute(params.id, body.texto, actor);
+      if (!r.ok) return { status: 404 as const, body: { message: r.error.message } };
+      return { status: 201 as const, body: r.value };
     },
     getById: async ({ params }) => {
       const detalle = await getDetalleById(db, params.id);
       if (!detalle) return { status: 404 as const, body: { message: "Expediente no encontrado" } };
-      return { status: 200 as const, body: detalle };
+      return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(detalle) };
     },
     actualizarDatos: async ({ params, body, request }) => {
       const actor = request.actor ?? { id: "", dni: "desconocido" };
@@ -48,11 +59,17 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
         };
       }
       if (!r.ok) return { status: 404 as const, body: { message: r.error.message } };
-      return { status: 200 as const, body: r.value };
+      return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(r.value) };
     },
-    listar: async () => ({ status: 200 as const, body: { items: [], total: 0 } }),
+    listar: async ({ query }) => {
+      const r = await listarExpedientes(db, {
+        q: query.q,
+        estado: query.estado,
+        orden: query.orden,
+      });
+      return { status: 200 as const, body: r };
+    },
   });
-  // Stub-auth en Fase 1 para todo el módulo (lecturas con actor default en dev).
   void app.register(async (scoped) => {
     scoped.addHook("preHandler", stubAuth);
     scoped.register(s.plugin(router));

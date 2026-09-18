@@ -11,7 +11,50 @@ export interface Actor {
   dni: string;
 }
 
-/** PATCH autoguardado §6: Result pattern + concurrencia optimista + auditoría hash. */
+const CAMPOS_EXPEDIENTE = [
+  "titulo",
+  "programa",
+  "nroDecreto",
+  "recomendacion",
+  "presidente",
+  "secretario",
+  "coAsesor",
+  "fechaApertura",
+  "fechaPresentacion",
+  "nroOficio",
+  "integrante",
+  "presidenteE2",
+  "secretarioE2",
+  "suplenteE2",
+  "decanal",
+  "fechaSustentacion",
+  "horaSustentacion",
+  "lugarSustentacion",
+  "modalidadVirtual",
+] as const;
+
+const CAMPOS_PERSONA = [
+  ["Email", "email"],
+  ["Telefono", "telefono"],
+  ["Cui", "cui"],
+  ["Nacionalidad", "nacionalidad"],
+  ["Ciudad", "ciudad"],
+  ["Direccion", "direccion"],
+] as const;
+
+function patchPersona(
+  input: ActualizarDatosInput,
+  prefijo: "participante1" | "participante2",
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  for (const [sufijo, columna] of CAMPOS_PERSONA) {
+    const v = input[`${prefijo}${sufijo}` as keyof ActualizarDatosInput];
+    if (v !== undefined) patch[columna] = v;
+  }
+  return patch;
+}
+
+/** PATCH autoguardado §6 (formulario completo): UoW + concurrencia + auditoría. */
 export class ActualizarDatosUseCase {
   async execute(
     id: string,
@@ -30,31 +73,23 @@ export class ActualizarDatosUseCase {
           ),
         );
       }
-      // Siempre se toca updatedAt: es el token de concurrencia optimista (§6).
-      await tx
-        .update(expedientes)
-        .set({
-          ...(input.titulo !== undefined ? { titulo: input.titulo } : {}),
-          ...(input.programa !== undefined ? { programa: input.programa } : {}),
-          updatedAt: new Date(),
-        })
-        .where(eq(expedientes.id, id));
-      if (
-        actual.participante1 &&
-        (input.participante1Email !== undefined ||
-          input.participante1Telefono !== undefined ||
-          input.participante1Cui !== undefined)
-      ) {
-        await tx
-          .update(usuarios)
-          .set({
-            ...(input.participante1Email !== undefined ? { email: input.participante1Email } : {}),
-            ...(input.participante1Telefono !== undefined
-              ? { telefono: input.participante1Telefono }
-              : {}),
-            ...(input.participante1Cui !== undefined ? { cui: input.participante1Cui } : {}),
-          })
-          .where(eq(usuarios.id, actual.participante1.id));
+      const patchExp: Record<string, unknown> = { updatedAt: new Date() };
+      for (const k of CAMPOS_EXPEDIENTE) {
+        const v = input[k];
+        if (v !== undefined) patchExp[k] = v === "" ? null : v;
+      }
+      await tx.update(expedientes).set(patchExp).where(eq(expedientes.id, id));
+      if (actual.participante1) {
+        const p1 = patchPersona(input, "participante1");
+        if (Object.keys(p1).length > 0) {
+          await tx.update(usuarios).set(p1).where(eq(usuarios.id, actual.participante1.id));
+        }
+      }
+      if (actual.participante2) {
+        const p2 = patchPersona(input, "participante2");
+        if (Object.keys(p2).length > 0) {
+          await tx.update(usuarios).set(p2).where(eq(usuarios.id, actual.participante2.id));
+        }
       }
       await appendAuditoria(tx, {
         expedienteId: id,

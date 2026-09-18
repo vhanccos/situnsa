@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { rolUsuarioEnum } from "./enums.js";
 
 export const usuarios = pgTable("usuarios", {
@@ -10,6 +10,11 @@ export const usuarios = pgTable("usuarios", {
   apellidos: text("apellidos").notNull(),
   rol: rolUsuarioEnum("rol").notNull(),
   telefono: varchar("telefono", { length: 20 }),
+  nacionalidad: varchar("nacionalidad", { length: 64 }),
+  ciudad: varchar("ciudad", { length: 64 }),
+  direccion: text("direccion"),
+  grado: varchar("grado", { length: 16 }),
+  activo: boolean("activo").notNull().default(true),
   passwordHash: text("password_hash"),
   googleSub: text("google_sub"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

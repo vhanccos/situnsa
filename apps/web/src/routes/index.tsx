@@ -1,27 +1,34 @@
-import { semaforoPlazo } from "@pis/domain/dist/expediente/dias-habiles.js";
-import { SemaforoBadge } from "../components/domain/semaforo-badge.js";
-import { TimelineFsm } from "../components/domain/timeline-fsm.js";
-import { Button } from "../components/ui/button.js";
+import { Link } from "@tanstack/react-router";
+import { destinoPorRol } from "../api/auth.js";
+import { useSession } from "../api/session.js";
 
+/** Raíz: redirige a la vista según rol o al login. */
 export function HomePage() {
-  const estado = semaforoPlazo(4);
+  const { sesion } = useSession();
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-8">
-      <h1 className="text-2xl font-bold">PIS Titulación — FIPS / UNSA</h1>
-      <p className="text-slate-600">
-        Skeleton verificado: Vite SPA + TanStack Router/Query + contratos ts-rest.
-      </p>
-      <TimelineFsm actual="EN_PLAN" />
-      <SemaforoBadge estado={estado} dias={4} />
-      <div className="flex gap-2">
-        <Button>Inscribir plan (RF-01)</Button>
-        <a
-          className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 px-4 text-sm font-medium hover:bg-slate-100"
-          href="/expedientes/33333333-3333-4333-8333-333333333333"
+    <main className="mx-auto max-w-3xl space-y-6 p-8 text-center">
+      <h1 className="text-2xl font-bold text-navy-950">PIS Titulación — FIPS / UNSA</h1>
+      {sesion ? (
+        <Link
+          className="inline-block rounded bg-guinda-800 px-6 py-2.5 text-sm font-bold text-white"
+          to={destinoPorRol(sesion.rol)}
         >
-          Ver expediente SET005 (demo)
+          Ir a mi panel ({sesion.rol.replace("_", " ")})
+        </Link>
+      ) : (
+        <Link
+          className="inline-block rounded bg-guinda-800 px-6 py-2.5 text-sm font-bold text-white"
+          to="/login"
+        >
+          Iniciar sesión
+        </Link>
+      )}
+      <p className="text-xs text-grafito-600">
+        Dev: expediente demo{" "}
+        <a className="underline" href="/expedientes/33333333-3333-4333-8333-333333333333">
+          SET005
         </a>
-      </div>
+      </p>
     </main>
   );
 }

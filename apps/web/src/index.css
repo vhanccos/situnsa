@@ -1,1 +1,22 @@
 @import "tailwindcss";
+/** Sistema visual institucional §14: Azul #0B1F30, Grafito, Guinda, Verde. */
+/* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind v4 theme tokens */
+@theme {
+  --color-navy-950: #0b1f30;
+  --color-navy-800: #123149;
+  --color-navy-100: #d3e0e8;
+  --color-grafito-900: #1b2228;
+  --color-grafito-600: #4b5563;
+  --color-guinda-800: #610617;
+  --color-guinda-700: #78152f;
+  --color-verde-inst-700: #197648;
+  --color-verde-inst-100: #e5f2e9;
+  --color-dorado-500: #d1a84b;
+  --color-aviso-100: #fef3c7;
+  --color-aviso-800: #92400e;
+}
+
+body {
+  background: #f3f5f7;
+  color: #1b2228;
+}

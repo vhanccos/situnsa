@@ -1,4 +1,4 @@
-import { jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { date, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { estadoExpedienteEnum, modalidadEnum } from "./enums.js";
 import { usuarios } from "./usuarios.js";
 
@@ -12,6 +12,25 @@ export const expedientes = pgTable("expedientes", {
   participante1Id: uuid("participante1_id").references(() => usuarios.id),
   participante2Id: uuid("participante2_id").references(() => usuarios.id),
   asesorId: uuid("asesor_id").references(() => usuarios.id),
+  // ETAPA 01 · administrativos (labels exactos del formulario legacy)
+  nroDecreto: varchar("nro_decreto", { length: 64 }),
+  recomendacion: text("recomendacion"),
+  presidente: varchar("presidente", { length: 160 }),
+  secretario: varchar("secretario", { length: 160 }),
+  coAsesor: varchar("co_asesor", { length: 160 }),
+  fechaApertura: date("fecha_apertura"),
+  fechaPresentacion: date("fecha_presentacion"),
+  nroOficio: varchar("nro_oficio", { length: 64 }),
+  // ETAPA 02 · sustentación
+  integrante: varchar("integrante", { length: 160 }),
+  presidenteE2: varchar("presidente_e2", { length: 160 }),
+  secretarioE2: varchar("secretario_e2", { length: 160 }),
+  suplenteE2: varchar("suplente_e2", { length: 160 }),
+  decanal: varchar("decanal", { length: 160 }),
+  fechaSustentacion: date("fecha_sustentacion"),
+  horaSustentacion: varchar("hora_sustentacion", { length: 16 }),
+  lugarSustentacion: varchar("lugar_sustentacion", { length: 160 }),
+  modalidadVirtual: varchar("modalidad_virtual", { length: 64 }),
   metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

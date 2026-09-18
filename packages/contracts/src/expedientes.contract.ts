@@ -2,14 +2,29 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { EstadoExpedienteSchema, ModalidadSchema } from "./enums.js";
 
-export const InscribirPlanSchema = z.object({
-  modalidad: ModalidadSchema,
-  programa: z.string().min(3).max(160),
-  titulo: z.string().min(10).max(500),
-  participante1Dni: z.string().length(8),
-  participante2Dni: z.string().length(8).optional(),
-  asesorDni: z.string().length(8),
+/** Registro de Nuevo Expediente §10: 1–2 participantes + validaciones RN-01.1. */
+export const ParticipanteInputSchema = z.object({
+  nombres: z.string().min(2).max(160),
+  apellidos: z.string().min(2).max(160),
+  dni: z.string().regex(/^\d{8}$/, "DNI debe tener 8 dígitos"),
+  cui: z.string().max(16).optional(),
+  email: z.string().email("Correo inválido"),
+  telefono: z.string().max(20).optional(),
 });
+
+export const InscribirPlanSchema = z
+  .object({
+    modalidad: ModalidadSchema,
+    programa: z.string().min(3).max(160),
+    titulo: z.string().min(10).max(500),
+    participante1: ParticipanteInputSchema,
+    participante2: ParticipanteInputSchema.optional(),
+    asesorDni: z.string().length(8).optional(),
+  })
+  .refine((v) => !v.participante2 || v.participante2.dni !== v.participante1.dni, {
+    message: "DNIs duplicados",
+    path: ["participante2", "dni"],
+  });
 
 export const ExpedienteDTOSchema = z.object({
   id: z.string().uuid(),
@@ -24,9 +39,10 @@ export const FiltrosExpedienteSchema = z.object({
   estado: EstadoExpedienteSchema.optional(),
   programa: z.string().optional(),
   q: z.string().optional(),
+  orden: z.enum(["recientes", "antiguos", "menor-avance", "mayor-avance"]).optional(),
 });
 
-/** Persona resumida para la pestaña Datos (§6 INTERFACES). */
+/** Persona con campos del formulario legacy (ETAPA 01 · datos personales). */
 export const PersonaDTOSchema = z.object({
   id: z.string().uuid(),
   dni: z.string(),
@@ -35,7 +51,33 @@ export const PersonaDTOSchema = z.object({
   apellidos: z.string(),
   email: z.string(),
   telefono: z.string().nullable(),
+  nacionalidad: z.string().nullable(),
+  ciudad: z.string().nullable(),
+  direccion: z.string().nullable(),
+  grado: z.string().nullable(),
+  activo: z.boolean(),
   rol: z.string(),
+});
+
+/** Administrativos ETAPA 01 + sustentación ETAPA 02 (labels legacy exactos). */
+export const DatosAdminDTOSchema = z.object({
+  nroDecreto: z.string().nullable(),
+  recomendacion: z.string().nullable(),
+  presidente: z.string().nullable(),
+  secretario: z.string().nullable(),
+  coAsesor: z.string().nullable(),
+  fechaApertura: z.string().nullable(),
+  fechaPresentacion: z.string().nullable(),
+  nroOficio: z.string().nullable(),
+  integrante: z.string().nullable(),
+  presidenteE2: z.string().nullable(),
+  secretarioE2: z.string().nullable(),
+  suplenteE2: z.string().nullable(),
+  decanal: z.string().nullable(),
+  fechaSustentacion: z.string().nullable(),
+  horaSustentacion: z.string().nullable(),
+  lugarSustentacion: z.string().nullable(),
+  modalidadVirtual: z.string().nullable(),
 });
 
 /** Documento del checklist (tarjeta documental §7–§8 INTERFACES). */
@@ -51,6 +93,32 @@ export const ChecklistItemDTOSchema = z.object({
   faltantes: z.array(z.string()),
 });
 
+export const SubetapaDTOSchema = z.object({
+  etapa: z.number(),
+  orden: z.number(),
+  nombre: z.string(),
+  plazo: z.string().nullable(),
+  estado: z.enum(["NO_INICIADO", "EN_CURSO", "FINALIZADO"]),
+  responsable: z.string().nullable(),
+  inicio: z.string().nullable(),
+  fin: z.string().nullable(),
+});
+
+export const AvanceDTOSchema = z.object({
+  marcados: z.number(),
+  total: z.number(),
+  pct: z.number(),
+  etapaActual: z.number(),
+  subetapaActual: z.string().nullable(),
+});
+
+export const MensajeDTOSchema = z.object({
+  id: z.string().uuid(),
+  texto: z.string(),
+  autorDni: z.string().nullable(),
+  createdAt: z.string(),
+});
+
 export const AuditoriaItemDTOSchema = z.object({
   estadoAnterior: z.string().nullable(),
   estadoNuevo: z.string(),
@@ -58,30 +126,76 @@ export const AuditoriaItemDTOSchema = z.object({
   createdAt: z.string(),
 });
 
-/** Detalle completo: pestañas Datos + Documentos + Resumen. */
+/** Detalle completo: pestañas Datos/Documentos/Resumen + mensajes. */
 export const ExpedienteDetalleDTOSchema = ExpedienteDTOSchema.extend({
   participante1: PersonaDTOSchema.nullable(),
   participante2: PersonaDTOSchema.nullable(),
   asesor: PersonaDTOSchema.nullable(),
+  datosAdmin: DatosAdminDTOSchema,
   checklist: z.array(ChecklistItemDTOSchema),
+  subetapas: z.array(SubetapaDTOSchema),
+  avance: AvanceDTOSchema,
+  mensajes: z.array(MensajeDTOSchema),
   historial: z.array(AuditoriaItemDTOSchema),
   updatedAt: z.string(),
 });
 
 export type ExpedienteDetalleDTO = z.infer<typeof ExpedienteDetalleDTOSchema>;
 
-/**
- * PATCH autoguardado (§6: DNI/correo/CUI obligatorios con formato).
- * expectedUpdatedAt = concurrencia optimista → 409 si otro guardó antes.
- */
-export const ActualizarDatosSchema = z.object({
+/** Fila del Dashboard Administrativo §4. */
+export const ExpedienteResumenDTOSchema = z.object({
+  id: z.string().uuid(),
+  codigo: z.string(),
+  tesista: z.string(),
+  dni: z.string(),
+  programa: z.string(),
+  etapaActual: z.number(),
+  subetapaActual: z.string().nullable(),
+  estado: EstadoExpedienteSchema,
+  avancePct: z.number(),
+  updatedAt: z.string(),
+});
+
+const patchBase = {
   titulo: z.string().min(10).max(500).optional(),
   programa: z.string().min(3).max(160).optional(),
   participante1Email: z.string().email().optional(),
   participante1Telefono: z.string().max(20).optional(),
   participante1Cui: z.string().max(16).optional(),
+  participante1Nacionalidad: z.string().max(64).optional(),
+  participante1Ciudad: z.string().max(64).optional(),
+  participante1Direccion: z.string().max(500).optional(),
+  participante2Email: z.string().email().optional(),
+  participante2Telefono: z.string().max(20).optional(),
+  participante2Cui: z.string().max(16).optional(),
+  participante2Nacionalidad: z.string().max(64).optional(),
+  participante2Ciudad: z.string().max(64).optional(),
+  participante2Direccion: z.string().max(500).optional(),
+  nroDecreto: z.string().max(64).optional(),
+  recomendacion: z.string().max(2000).optional(),
+  presidente: z.string().max(160).optional(),
+  secretario: z.string().max(160).optional(),
+  coAsesor: z.string().max(160).optional(),
+  fechaApertura: z.string().max(32).optional(),
+  fechaPresentacion: z.string().max(32).optional(),
+  nroOficio: z.string().max(64).optional(),
+  integrante: z.string().max(160).optional(),
+  presidenteE2: z.string().max(160).optional(),
+  secretarioE2: z.string().max(160).optional(),
+  suplenteE2: z.string().max(160).optional(),
+  decanal: z.string().max(160).optional(),
+  fechaSustentacion: z.string().max(32).optional(),
+  horaSustentacion: z.string().max(16).optional(),
+  lugarSustentacion: z.string().max(160).optional(),
+  modalidadVirtual: z.string().max(64).optional(),
   expectedUpdatedAt: z.string().optional(),
-});
+};
+
+/**
+ * PATCH autoguardado (§6: DNI/correo/CUI obligatorios con formato).
+ * expectedUpdatedAt = concurrencia optimista → 409 si otro guardó antes.
+ */
+export const ActualizarDatosSchema = z.object(patchBase);
 
 export type ActualizarDatosInput = z.infer<typeof ActualizarDatosSchema>;
 
@@ -93,10 +207,33 @@ export const expedientesContract = c.router({
     path: "/api/expedientes/inscribir-plan",
     body: InscribirPlanSchema,
     responses: {
-      201: ExpedienteDTOSchema,
+      201: z.object({ id: z.string().uuid(), codigo: z.string() }),
       400: z.object({ message: z.string(), code: z.string() }),
     },
-    summary: "RF-01: Inscribir plan de tesis",
+    summary: "§10 Registro de Nuevo Expediente (crea REGISTRADO)",
+  },
+  validar: {
+    method: "POST",
+    path: "/api/expedientes/:id/validar",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: z.object({}),
+    responses: {
+      200: ExpedienteDetalleDTOSchema,
+      400: z.object({ message: z.string(), code: z.string() }),
+      404: z.object({ message: z.string() }),
+    },
+    summary: "§12 Validar inscripción → EN_PLAN + genera seguimiento",
+  },
+  publicarMensaje: {
+    method: "POST",
+    path: "/api/expedientes/:id/mensajes",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: z.object({ texto: z.string().min(2).max(2000) }),
+    responses: {
+      201: MensajeDTOSchema,
+      404: z.object({ message: z.string() }),
+    },
+    summary: "Mensaje administrativo (§5 Historial de mensajes)",
   },
   getById: {
     method: "GET",
@@ -121,8 +258,18 @@ export const expedientesContract = c.router({
     method: "GET",
     path: "/api/expedientes",
     query: FiltrosExpedienteSchema,
-    responses: { 200: z.object({ items: z.array(ExpedienteDTOSchema), total: z.number() }) },
-    summary: "Listar expedientes con filtros",
+    responses: {
+      200: z.object({
+        items: z.array(ExpedienteResumenDTOSchema),
+        resumen: z.object({
+          total: z.number(),
+          enCurso: z.number(),
+          finalizados: z.number(),
+          sinIniciar: z.number(),
+        }),
+      }),
+    },
+    summary: "Dashboard §4: tabla + indicadores",
   },
 });
 
