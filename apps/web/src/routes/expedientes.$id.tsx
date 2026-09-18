@@ -86,7 +86,6 @@ export function ExpedienteDetallePage() {
     : "—";
   const e1 = d.checklist.filter((c) => c.etapa === "E1");
   const e2 = d.checklist.filter((c) => c.etapa === "E2");
-  const cargados = (xs: typeof e1): number => xs.filter((c) => c.documentoId !== null).length;
   const estadoGuardado = indicador[guardado];
 
   return (
@@ -140,15 +139,9 @@ export function ExpedienteDetallePage() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
         <TabsLista aria-label="Pestañas del expediente">
           <Tab value="datos">Datos</Tab>
-          <Tab value="e1" contador={`${cargados(e1)}/${e1.length}`}>
-            Documentos Etapa 01
-          </Tab>
-          <Tab value="e2" contador={`${cargados(e2)}/${e2.length}`}>
-            Documentos Etapa 02
-          </Tab>
-          <Tab value="resumen" contador={`${d.avance.pct}%`}>
-            Resumen del Trámite
-          </Tab>
+          <Tab value="e1">Documentos Etapa 01</Tab>
+          <Tab value="e2">Documentos Etapa 02</Tab>
+          <Tab value="resumen">Resumen del Trámite</Tab>
         </TabsLista>
         <TabPanel value="datos">
           <DatosForm detalle={d} setEstado={setGuardado} onConflicto={setConflicto} />
