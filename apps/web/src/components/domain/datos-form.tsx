@@ -8,6 +8,7 @@ import { PROGRAMAS_OFICIALES } from "@pis/domain/dist/expediente/seguimiento-cat
 import { useEffect, useId, useRef, useState } from "react";
 import { type GuardadoEstado, useActualizarDatos } from "../../api/expedientes.js";
 import { cn } from "../../utils/cn.js";
+import { Select } from "../ui/select.js";
 
 type Clave = keyof ActualizarDatosInput;
 
@@ -36,8 +37,9 @@ function Campo({
   onChange?: ((v: string) => void) | undefined;
 }) {
   const ro = def.clave === null;
+  // h-9 unifica la altura con los Select (mismo box-model en todo el form).
   const cls = cn(
-    "mt-1 w-full rounded border px-2 py-1.5 text-sm",
+    "mt-1 h-9 w-full rounded border px-2 text-sm",
     ro ? "bg-slate-50 text-slate-500" : "bg-white",
   );
   const controlId = useId();
@@ -49,46 +51,31 @@ function Campo({
       {def.control === "area" ? (
         <textarea
           id={controlId}
-          className={cls}
+          className={cn(cls, "h-auto min-h-9 py-1.5")}
           readOnly={ro}
           rows={2}
           value={value}
           onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         />
       ) : def.control === "modalidad" ? (
-        <select
-          id={controlId}
-          className={cls}
-          value={value}
-          onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-        >
+        <Select ariaLabel={def.label} value={value} onChange={onChange}>
           {ETIQUETAS_MODALIDAD.map((m) => (
             <option key={m} value={m}>
               {m}
             </option>
           ))}
-        </select>
+        </Select>
       ) : def.control === "modalidad-final" ? (
-        <select
-          id={controlId}
-          className={cls}
-          value={value}
-          onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-        >
+        <Select ariaLabel={def.label} value={value} onChange={onChange}>
           <option value="">—</option>
           {ETIQUETAS_MODALIDAD_FINAL.map((m) => (
             <option key={m} value={m}>
               {m}
             </option>
           ))}
-        </select>
+        </Select>
       ) : def.control === "programas" ? (
-        <select
-          id={controlId}
-          className={cls}
-          value={value}
-          onChange={onChange ? (e) => onChange(e.target.value) : undefined}
-        >
+        <Select ariaLabel={def.label} value={value} onChange={onChange}>
           <option value="Seleccione">Seleccione</option>
           {PROGRAMAS_OFICIALES.map((p) => (
             <option key={p.codigo} value={p.nombre}>
@@ -98,7 +85,7 @@ function Campo({
           {!PROGRAMAS_OFICIALES.some((p) => p.nombre === value) &&
             value !== "Seleccione" &&
             value !== "" && <option value={value}>{value} (no oficial)</option>}
-        </select>
+        </Select>
       ) : (
         <input
           id={controlId}
@@ -309,7 +296,7 @@ function extraer(d: ExpedienteDetalleDTO): Record<string, string> {
     modalidad02: get(admin.modalidad02) || modalidadAEtiqueta(d.modalidad),
     modalidadFinal: get(admin.modalidadFinal),
     asesorNombre:
-      get(admin["asesorNombre"]) || (d.asesor ? `${d.asesor.nombres} ${d.asesor.apellidos}` : ""),
+      get(admin.asesorNombre) || (d.asesor ? `${d.asesor.nombres} ${d.asesor.apellidos}` : ""),
     participante1Email: get(p1?.email),
     participante1Cui: get(p1?.cui),
     participante1Nacionalidad: get(p1?.nacionalidad),

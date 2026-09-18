@@ -4,6 +4,7 @@ import { useListarExpedientes } from "../api/expedientes.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { DataTable } from "../components/ui/data-table.js";
 import { PageHeader } from "../components/ui/page-header.js";
+import { Select } from "../components/ui/select.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
 
 const ETAPAS = ["", "1", "2", "3", "4", "5", "6", "7"];
@@ -65,44 +66,29 @@ export function AdminPage() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
-          <select
-            aria-label="Etapa"
-            className="rounded border px-3 py-2 text-sm"
-            value={etapa}
-            onChange={(e) => setEtapa(e.target.value)}
-          >
+          <Select ariaLabel="Etapa" value={etapa} onChange={setEtapa}>
             <option value="">Todas las etapas</option>
             {ETAPAS.filter(Boolean).map((e) => (
               <option key={e} value={e}>
                 Etapa {e}
               </option>
             ))}
-          </select>
-          <select
-            aria-label="Estado"
-            className="rounded border px-3 py-2 text-sm"
-            value={estado}
-            onChange={(e) => setEstado(e.target.value)}
-          >
+          </Select>
+          <Select ariaLabel="Estado" value={estado} onChange={setEstado}>
             <option value="">Todos los estados</option>
             {ESTADOS.filter(Boolean).map((e) => (
               <option key={e} value={e}>
                 {e.replace("_", " ")}
               </option>
             ))}
-          </select>
-          <select
-            aria-label="Orden"
-            className="rounded border px-3 py-2 text-sm"
-            value={orden}
-            onChange={(e) => setOrden(e.target.value)}
-          >
+          </Select>
+          <Select ariaLabel="Orden" value={orden} onChange={setOrden}>
             {ORDENES.map((o) => (
               <option key={o.v} value={o.v}>
                 {o.l}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {query.isError && (
           <p className="text-sm text-red-700">

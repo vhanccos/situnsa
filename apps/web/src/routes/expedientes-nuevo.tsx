@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useInscribir } from "../api/expedientes.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { PageHeader } from "../components/ui/page-header.js";
+import { Select } from "../components/ui/select.js";
 import { cn } from "../utils/cn.js";
 
 const PASOS = [
@@ -193,32 +194,22 @@ export function NuevoExpedientePage() {
           </p>
         ))}
         <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
-          <label className="block text-xs font-semibold">
-            PROGRAMA
-            <select
-              className="mt-1 w-full rounded border px-2 py-2 text-sm font-normal"
-              value={programa}
-              onChange={(e) => setPrograma(e.target.value)}
-            >
-              {PROGRAMAS_OFICIALES.map((p) => (
-                <option key={p.codigo} value={p.nombre}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-xs font-semibold">
-            MODALIDAD
-            <select
-              className="mt-1 w-full rounded border px-2 py-2 text-sm font-normal"
-              value={modalidad}
-              onChange={(e) => setModalidad(e.target.value as typeof modalidad)}
-            >
-              <option value="TESIS">Plan de Tesis</option>
-              <option value="TRABAJO_ACADEMICO">Plan de Trabajo Académico</option>
-              <option value="ARTICULO">Plan de Tesis Formato Artículo</option>
-            </select>
-          </label>
+          <Select label="PROGRAMA" value={programa} onChange={setPrograma}>
+            {PROGRAMAS_OFICIALES.map((p) => (
+              <option key={p.codigo} value={p.nombre}>
+                {p.nombre}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="MODALIDAD"
+            value={modalidad}
+            onChange={(v) => setModalidad(v as typeof modalidad)}
+          >
+            <option value="TESIS">Plan de Tesis</option>
+            <option value="TRABAJO_ACADEMICO">Plan de Trabajo Académico</option>
+            <option value="ARTICULO">Plan de Tesis Formato Artículo</option>
+          </Select>
         </div>
       </section>
       <BloqueParticipante n={1} p={p1} set={setP1} />
