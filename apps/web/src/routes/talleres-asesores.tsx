@@ -1,3 +1,4 @@
+import { GraduationCap, Plus, RotateCw, Users } from "lucide-react";
 import { useState } from "react";
 import {
   useAsesores,
@@ -7,10 +8,15 @@ import {
   useToggleAsesor,
 } from "../api/catalogos.js";
 import { AppShell } from "../components/layout/app-shell.js";
+import { Button } from "../components/ui/button.js";
+import { Card, CardEncabezado } from "../components/ui/card.js";
 import { DataTable } from "../components/ui/data-table.js";
+import { controlClase } from "../components/ui/field.js";
 import { PageHeader } from "../components/ui/page-header.js";
+import { StatCard } from "../components/ui/stat-card.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
 import { useToast } from "../components/ui/toast.js";
+import { cn } from "../utils/cn.js";
 
 /** §§11–12 Taller de Tesis: resumen + tabla + nuevo taller. */
 export function TalleresPage() {
@@ -44,66 +50,76 @@ export function TalleresPage() {
         titulo="Talleres de Tesis"
         descripcion="Administración de inscripciones, talleres, asesores, avance y asistencia."
         acciones={
-          <button
-            className="rounded bg-verde-inst-700 px-4 py-2 text-sm font-semibold text-white"
-            onClick={() => setForm((v) => !v)}
-            type="button"
-          >
+          <Button variante="exito" onClick={() => setForm((v) => !v)} type="button">
+            <Plus size={16} />
             NUEVO TALLER
-          </button>
+          </Button>
         }
       />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[
-          ["TALLERES", items.length],
-          ["ACTIVOS", items.filter((t) => t.estado === "ACTIVO").length],
-          ["INSCRITOS", items.reduce((n, t) => n + t.inscritos, 0)],
-          ["ASESORES", new Set(items.map((t) => t.asesorNombre).filter(Boolean)).size],
-        ].map(([l, v]) => (
-          <div className="rounded-lg border bg-white p-4" key={l}>
-            <p className="text-xs text-grafito-600">{l}</p>
-            <p className="text-2xl font-bold">{v}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <StatCard
+          etiqueta="Talleres"
+          valor={items.length}
+          icono={<GraduationCap size={20} />}
+          acento="bg-navy-950"
+        />
+        <StatCard
+          etiqueta="Activos"
+          valor={items.filter((t) => t.estado === "ACTIVO").length}
+          icono={<GraduationCap size={20} />}
+          acento="bg-verde-inst-700"
+        />
+        <StatCard
+          etiqueta="Inscritos"
+          valor={items.reduce((n, t) => n + t.inscritos, 0)}
+          icono={<Users size={20} />}
+          acento="bg-dorado-500"
+        />
+        <StatCard
+          etiqueta="Asesores"
+          valor={new Set(items.map((t) => t.asesorNombre).filter(Boolean)).size}
+          icono={<Users size={20} />}
+          acento="bg-slate-300"
+        />
       </div>
       {form && (
-        <section className="space-y-2 rounded-lg bg-white p-4">
-          <h2 className="text-sm font-bold">Nuevo taller</h2>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+        <Card>
+          <CardEncabezado titulo="Nuevo taller" />
+          <div className="grid grid-cols-1 gap-2 p-4 md:grid-cols-3 md:p-5">
             <input
               aria-label="Nombre del taller"
-              className="rounded border px-3 py-2 text-sm"
+              className={cn(controlClase, "h-10")}
               placeholder="Nombre del taller"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
             />
             <input
               aria-label="Periodo"
-              className="rounded border px-3 py-2 text-sm"
+              className={cn(controlClase, "h-10")}
               placeholder="Periodo (2026-I)"
               value={periodo}
               onChange={(e) => setPeriodo(e.target.value)}
             />
-            <button
-              className="rounded bg-navy-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            <Button
+              variante="oscuro"
               disabled={crear.isPending}
               onClick={() => void onCrear()}
               type="button"
             >
               Guardar taller
-            </button>
+            </Button>
           </div>
-        </section>
+        </Card>
       )}
       <DataTable
         cargando={query.isPending}
         vacio="No existen talleres registrados."
         columnas={[
-          { encabezado: "TALLER", celda: (f) => <strong>{f.nombre}</strong> },
-          { encabezado: "ASESOR", celda: (f) => f.asesorNombre ?? "—" },
-          { encabezado: "PERIODO", celda: (f) => f.periodo ?? "—" },
-          { encabezado: "INSCRITOS", celda: (f) => f.inscritos },
-          { encabezado: "ESTADO", celda: (f) => <StatusBadge estado={f.estado} /> },
+          { encabezado: "Taller", celda: (f) => <strong>{f.nombre}</strong> },
+          { encabezado: "Asesor", celda: (f) => f.asesorNombre ?? "—" },
+          { encabezado: "Periodo", celda: (f) => f.periodo ?? "—" },
+          { encabezado: "Inscritos", celda: (f) => f.inscritos },
+          { encabezado: "Estado", celda: (f) => <StatusBadge estado={f.estado} /> },
         ]}
         filas={items}
       />
@@ -154,133 +170,137 @@ export function AsesoresPage() {
         descripcion="Catálogo y gestión de responsables."
         acciones={
           <span className="flex gap-2">
-            <button
-              className="rounded border bg-white px-4 py-2 text-sm"
-              onClick={() => void query.refetch()}
-              type="button"
-            >
+            <Button variante="contorno" onClick={() => void query.refetch()} type="button">
+              <RotateCw size={15} />
               RECARGAR
-            </button>
-            <button
-              className="rounded bg-navy-950 px-4 py-2 text-sm font-semibold text-white"
-              onClick={() => setForm((v) => !v)}
-              type="button"
-            >
+            </Button>
+            <Button variante="oscuro" onClick={() => setForm((v) => !v)} type="button">
+              <Plus size={16} />
               Nuevo asesor
-            </button>
+            </Button>
           </span>
         }
       />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        {[
-          ["ASESORES", items.length],
-          ["ACTIVOS", items.filter((a) => a.activo).length],
-          ["TALLERES ASIGNADOS", items.reduce((n, a) => n + a.talleres, 0)],
-        ].map(([l, v]) => (
-          <div className="rounded-lg border bg-white p-4" key={l}>
-            <p className="text-xs text-grafito-600">{l}</p>
-            <p className="text-2xl font-bold">{v}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+        <StatCard
+          etiqueta="Asesores"
+          valor={items.length}
+          icono={<Users size={20} />}
+          acento="bg-navy-950"
+        />
+        <StatCard
+          etiqueta="Activos"
+          valor={items.filter((a) => a.activo).length}
+          icono={<Users size={20} />}
+          acento="bg-verde-inst-700"
+        />
+        <StatCard
+          etiqueta="Talleres asignados"
+          valor={items.reduce((n, a) => n + a.talleres, 0)}
+          icono={<GraduationCap size={20} />}
+          acento="bg-dorado-500"
+        />
       </div>
       {form && (
-        <section className="space-y-2 rounded-lg bg-white p-4">
-          <h2 className="text-sm font-bold">Nuevo asesor</h2>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-            <input
-              aria-label="DNI"
-              className="rounded border px-3 py-2 text-sm"
-              placeholder="DNI"
-              value={f.dni}
-              onChange={(e) => setF({ ...f, dni: e.target.value })}
-            />
-            <input
-              aria-label="Nombres"
-              className="rounded border px-3 py-2 text-sm"
-              placeholder="Nombres"
-              value={f.nombres}
-              onChange={(e) => setF({ ...f, nombres: e.target.value })}
-            />
-            <input
-              aria-label="Apellidos"
-              className="rounded border px-3 py-2 text-sm"
-              placeholder="Apellidos y nombres"
-              value={f.apellidos}
-              onChange={(e) => setF({ ...f, apellidos: e.target.value })}
-            />
-            <input
-              aria-label="Correo"
-              className="rounded border px-3 py-2 text-sm"
-              placeholder="asesor@unsa.edu.pe"
-              value={f.email}
-              onChange={(e) => setF({ ...f, email: e.target.value })}
-            />
-            <input
-              aria-label="Teléfono"
-              className="rounded border px-3 py-2 text-sm"
-              placeholder="Teléfono"
-              value={f.telefono}
-              onChange={(e) => setF({ ...f, telefono: e.target.value })}
-            />
-            <input
-              aria-label="Grado"
-              className="rounded border px-3 py-2 text-sm"
-              placeholder="Grado (Dr./Mg.)"
-              value={f.grado}
-              onChange={(e) => setF({ ...f, grado: e.target.value })}
-            />
+        <Card>
+          <CardEncabezado titulo="Nuevo asesor" />
+          <div className="space-y-3 p-4 md:p-5">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <input
+                aria-label="DNI"
+                className={cn(controlClase, "h-10")}
+                placeholder="DNI"
+                value={f.dni}
+                onChange={(e) => setF({ ...f, dni: e.target.value })}
+              />
+              <input
+                aria-label="Nombres"
+                className={cn(controlClase, "h-10")}
+                placeholder="Nombres"
+                value={f.nombres}
+                onChange={(e) => setF({ ...f, nombres: e.target.value })}
+              />
+              <input
+                aria-label="Apellidos"
+                className={cn(controlClase, "h-10")}
+                placeholder="Apellidos y nombres"
+                value={f.apellidos}
+                onChange={(e) => setF({ ...f, apellidos: e.target.value })}
+              />
+              <input
+                aria-label="Correo"
+                className={cn(controlClase, "h-10")}
+                placeholder="asesor@unsa.edu.pe"
+                value={f.email}
+                onChange={(e) => setF({ ...f, email: e.target.value })}
+              />
+              <input
+                aria-label="Teléfono"
+                className={cn(controlClase, "h-10")}
+                placeholder="Teléfono"
+                value={f.telefono}
+                onChange={(e) => setF({ ...f, telefono: e.target.value })}
+              />
+              <input
+                aria-label="Grado"
+                className={cn(controlClase, "h-10")}
+                placeholder="Grado (Dr./Mg.)"
+                value={f.grado}
+                onChange={(e) => setF({ ...f, grado: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variante="contorno" onClick={() => setForm(false)} type="button">
+                CANCELAR
+              </Button>
+              <Button
+                variante="oscuro"
+                disabled={crear.isPending}
+                onClick={() => void onCrear()}
+                type="button"
+              >
+                GUARDAR ASESOR
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              className="rounded border px-4 py-2 text-sm"
-              onClick={() => setForm(false)}
-              type="button"
-            >
-              CANCELAR
-            </button>
-            <button
-              className="rounded bg-navy-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              disabled={crear.isPending}
-              onClick={() => void onCrear()}
-              type="button"
-            >
-              GUARDAR ASESOR
-            </button>
-          </div>
-        </section>
+        </Card>
       )}
       <DataTable
         cargando={query.isPending}
         vacio="No existen asesores registrados."
         columnas={[
           {
-            encabezado: "ASESOR",
+            encabezado: "Asesor",
             celda: (a) => (
               <span>
-                {a.nombres} {a.apellidos}
+                <span className="font-medium">
+                  {a.nombres} {a.apellidos}
+                </span>
                 <br />
-                <span className="text-xs text-grafito-600">
+                <span className="text-xs tabular-nums text-grafito-600">
                   DNI {a.dni} · {a.email}
                 </span>
               </span>
             ),
           },
-          { encabezado: "GRADO", celda: (a) => a.grado ?? "—" },
-          { encabezado: "TALLERES", celda: (a) => a.talleres },
+          { encabezado: "Grado", celda: (a) => a.grado ?? "—" },
+          { encabezado: "Talleres", celda: (a) => a.talleres },
           {
-            encabezado: "ESTADO",
+            encabezado: "Estado",
             celda: (a) => <StatusBadge estado={a.activo ? "ACTIVO" : "CERRADO"} />,
           },
           {
-            encabezado: "ACCIÓN",
+            encabezado: "Acción",
+            clase: "text-right",
             celda: (a) => (
-              <button
-                className="rounded border px-3 py-1.5 text-xs"
+              <Button
+                tamano="sm"
+                variante="contorno"
                 onClick={() => toggle.mutate({ id: a.id, activo: !a.activo })}
                 type="button"
               >
                 {a.activo ? "Desactivar" : "Activar"}
-              </button>
+              </Button>
             ),
           },
         ]}

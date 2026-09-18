@@ -1,4 +1,5 @@
 import { type ReactNode, useId } from "react";
+import { cn } from "../../utils/cn.js";
 
 /**
  * Select §14.1 con altura unificada (h-9, igual que los inputs) y chevron
@@ -22,14 +23,17 @@ export function Select({
   return (
     <div className="block">
       {label && (
-        <label className="text-xs font-medium text-grafito-600" htmlFor={id}>
+        <label
+          className="mb-1 block text-[11px] font-bold tracking-wider text-grafito-600 uppercase"
+          htmlFor={id}
+        >
           {label}
         </label>
       )}
-      <span className="relative mt-1 block h-9">
+      <span className={cn("relative block h-9", label && "mt-1")}>
         <select
           aria-label={ariaLabel ?? label}
-          className="h-9 w-full appearance-none rounded border bg-white px-2 pr-8 text-sm"
+          className="h-9 w-full appearance-none rounded-lg border border-slate-300 bg-white pr-8 pl-3 text-sm shadow-card transition-colors hover:border-slate-400 focus:border-navy-800"
           id={id}
           value={value}
           onChange={onChange ? (e) => onChange(e.target.value) : undefined}

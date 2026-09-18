@@ -4,10 +4,13 @@ import {
   ETIQUETAS_MODALIDAD_FINAL,
   modalidadAEtiqueta,
 } from "@pis/domain/dist/expediente/modalidades.js";
+import { ClipboardList, FileText, Users } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useProgramas } from "../../api/catalogos.js";
 import { type GuardadoEstado, useActualizarDatos } from "../../api/expedientes.js";
 import { cn } from "../../utils/cn.js";
+import { controlClase, Field, ReadonlyField } from "../ui/field.js";
+import { FormSection } from "../ui/form-section.js";
 import { Select } from "../ui/select.js";
 
 type Clave = keyof ActualizarDatosInput;
@@ -15,6 +18,8 @@ type Clave = keyof ActualizarDatosInput;
 interface DefCampo {
   clave: Clave | null;
   label: string;
+  /** doble: el campo ocupa 2 columnas (títulos de tesis). */
+  ancho?: "doble";
   control:
     | "texto"
     | "email"
@@ -37,22 +42,28 @@ function Campo({
   onChange?: ((v: string) => void) | undefined;
 }) {
   const ro = def.clave === null;
-  // h-9 unifica la altura con los Select (mismo box-model en todo el form).
-  const cls = cn(
-    "mt-1 h-9 w-full rounded border px-2 text-sm",
-    ro ? "bg-slate-50 text-slate-500" : "bg-white",
-  );
   const controlId = useId();
+  const envoltura = def.ancho === "doble" ? "sm:col-span-2" : undefined;
+  // Solo lectura → apariencia de dato (no de input): corrige la confusión lectura/edición.
+  if (ro) {
+    return (
+      <ReadonlyField
+        {...(envoltura ? { className: envoltura } : {})}
+        etiqueta={def.label}
+        valor={value || "—"}
+      />
+    );
+  }
   return (
-    <div className="block">
-      <label className="text-xs font-medium text-grafito-600" htmlFor={controlId}>
-        {def.label}
-      </label>
+    <Field
+      {...(envoltura ? { className: envoltura } : {})}
+      etiqueta={def.label}
+      htmlFor={controlId}
+    >
       {def.control === "area" ? (
         <textarea
           id={controlId}
-          className={cn(cls, "h-auto min-h-9 py-1.5")}
-          readOnly={ro}
+          className={cn(controlClase, "min-h-9 py-2")}
           rows={2}
           value={value}
           onChange={onChange ? (e) => onChange(e.target.value) : undefined}
@@ -79,8 +90,7 @@ function Campo({
       ) : (
         <input
           id={controlId}
-          className={cls}
-          readOnly={ro}
+          className={cn(controlClase, "h-9")}
           type={
             def.control === "fecha"
               ? "date"
@@ -94,7 +104,7 @@ function Campo({
           onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         />
       )}
-    </div>
+    </Field>
   );
 }
 
@@ -102,7 +112,7 @@ function Campo({
 const PERSONA_1: DefCampo[] = [
   { clave: null, label: "NOMBRES", control: "texto", lectura: "p1nombre" },
   { clave: "programa", label: "PROGRAMAS", control: "programas" },
-  { clave: "titulo", label: "TESIS", control: "area" },
+  { clave: "titulo", label: "TESIS", control: "area", ancho: "doble" },
   { clave: null, label: "DNI", control: "texto", lectura: "p1dni" },
   { clave: "modalidad", label: "MODALIDAD", control: "modalidad" },
   { clave: "participante1Email", label: "CORREO", control: "email" },
@@ -116,7 +126,7 @@ const PERSONA_1: DefCampo[] = [
 const PERSONA_2: DefCampo[] = [
   { clave: null, label: "NOMBRES 02", control: "texto", lectura: "p2nombre" },
   { clave: null, label: "PROGRAMAS 02", control: "texto", lectura: "programa02" },
-  { clave: "titulo02", label: "TESIS 02", control: "area" },
+  { clave: "titulo02", label: "TESIS 02", control: "area", ancho: "doble" },
   { clave: null, label: "DNI 02", control: "texto", lectura: "p2dni" },
   { clave: "modalidad02", label: "MODALIDAD 02", control: "modalidad" },
   { clave: "participante2Email", label: "CORREO 02", control: "email" },
@@ -247,56 +257,68 @@ export function DatosForm({
     }, 650);
   }
 
-  function grid(campos: DefCampo[]) {
-    return (
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        {campos.map((c) => (
-          <Campo
-            def={c}
-            key={c.label}
-            value={c.clave === null ? lectura(c.lectura ?? "") : (valores[c.clave] ?? "")}
-            onChange={c.clave === null ? undefined : (v) => editar(c.clave as Clave, v)}
-          />
-        ))}
-      </div>
-    );
+  function campos(campos: DefCampo[]) {
+    return campos.map((c) => (
+      <Campo
+        def={c}
+        key={c.label}
+        value={c.clave === null ? lectura(c.lectura ?? "") : (valores[c.clave] ?? "")}
+        onChange={c.clave === null ? undefined : (v) => editar(c.clave as Clave, v)}
+      />
+    ));
   }
+
+  const subtitulo = "mb-1 text-xs font-bold tracking-wider text-grafito-600 uppercase";
 
   return (
     <div className="space-y-4">
       {!grupo2 && (
-        <section className="rounded-xl bg-white p-4 shadow-sm md:p-5">
-          <h2 className="mb-3 text-sm font-bold">ETAPA 01</h2>
-          {grid(PERSONA_1)}
-          <h3 className="mb-3 mt-5 text-xs font-bold tracking-wide text-grafito-600">
+        <FormSection
+          numero="1"
+          icono={<Users size={16} />}
+          titulo="ETAPA 01"
+          ayuda="Datos del participante y de los documentos de la terna."
+        >
+          {campos(PERSONA_1)}
+          <h3 className={cn(subtitulo, "col-span-full mt-2 border-t border-slate-200/70 pt-4")}>
             DATOS DE DOCUMENTOS
           </h3>
-          {grid(DATOS_DOCUMENTOS)}
-        </section>
+          {campos(DATOS_DOCUMENTOS)}
+        </FormSection>
       )}
       {grupo2 && (
         <>
-          <section className="rounded-xl bg-white p-4 shadow-sm md:p-5">
-            <h2 className="mb-3 text-sm font-bold">ETAPA 01 · DATOS PERSONALES</h2>
-            <h3 className="mb-3 text-xs font-bold tracking-wide text-grafito-600">
-              PARTICIPANTE 01
-            </h3>
-            {grid(PERSONA_1)}
-            <h3 className="mb-3 mt-5 text-xs font-bold tracking-wide text-grafito-600">
+          <FormSection
+            numero="1"
+            icono={<Users size={16} />}
+            titulo="ETAPA 01 · DATOS PERSONALES"
+            ayuda="Dos participantes: complete los datos de cada uno."
+          >
+            <h3 className={cn(subtitulo, "col-span-full")}>PARTICIPANTE 01</h3>
+            {campos(PERSONA_1)}
+            <h3 className={cn(subtitulo, "col-span-full mt-2 border-t border-slate-200/70 pt-4")}>
               PARTICIPANTE 02
             </h3>
-            {grid(PERSONA_2)}
-          </section>
-          <section className="rounded-xl bg-white p-4 shadow-sm md:p-5">
-            <h2 className="mb-3 text-sm font-bold">ETAPA 01 · DATOS DE DOCUMENTOS</h2>
-            {grid(DATOS_DOCUMENTOS)}
-          </section>
+            {campos(PERSONA_2)}
+          </FormSection>
+          <FormSection
+            numero="2"
+            icono={<FileText size={16} />}
+            titulo="ETAPA 01 · DATOS DE DOCUMENTOS"
+            ayuda="Decreto, terna y fechas de apertura y presentación."
+          >
+            {campos(DATOS_DOCUMENTOS)}
+          </FormSection>
         </>
       )}
-      <section className="rounded-xl bg-white p-4 shadow-sm md:p-5">
-        <h2 className="mb-3 text-sm font-bold">ETAPA 02</h2>
-        {grid(ETAPA_02)}
-      </section>
+      <FormSection
+        numero="3"
+        icono={<ClipboardList size={16} />}
+        titulo="ETAPA 02"
+        ayuda="Jurado, sustentación y modalidad de la etapa final."
+      >
+        {campos(ETAPA_02)}
+      </FormSection>
     </div>
   );
 }

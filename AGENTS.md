@@ -35,6 +35,11 @@ await uow.run(async (db) => { /* update + auditoría hash + enqueue pg-boss */ }
 
 ## 5. Convenciones
 - Idioma: código en inglés, comentarios/docs en español.
+- UI (`apps/web/src/components/ui/`): primitivas con CVA + Radix
+  (Button, Card, Tabs, Acordeon, Dialogo, Tooltip, Field/ReadonlyField,
+  EmptyState, StatCard, FormSection, PageHeader, DataTable). Las vistas
+  componen estos patrones; prohibido inventar estilos ad-hoc (labels,
+  inputs, tablas, badges) fuera de `ui/`. Tokens en `index.css` @theme.
 - Commits: `feat(rf-01): ...`, `fix(api): ...`, `docs(...)`.
 - Tests: 1 spec por use-case + tests puros de dominio (<100ms).
 

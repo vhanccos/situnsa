@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { useSession } from "../../api/session.js";
 import { cn } from "../../utils/cn.js";
+import { BuscadorGlobal } from "./buscador-global.js";
 
 interface Item {
   to: string;
@@ -96,7 +97,7 @@ export function AppShell({ children, activo }: { children: ReactNode; activo: st
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-navy-950 text-white shadow-xl transition-all duration-150",
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-navy-950 text-white shadow-xl transition-all duration-150 print:hidden",
           "md:sticky md:top-0 md:h-screen md:shadow-none",
           colapsado && "md:w-16",
           !colapsado && "md:w-60",
@@ -121,6 +122,9 @@ export function AppShell({ children, activo }: { children: ReactNode; activo: st
           >
             <X size={18} />
           </button>
+        </div>
+        <div className={cn("px-2 pt-2", colapsado && "md:hidden")}>
+          <BuscadorGlobal />
         </div>
         <nav className="flex gap-1 overflow-x-auto p-2 md:flex-col" aria-label="Menú principal">
           {items.map((i) => {

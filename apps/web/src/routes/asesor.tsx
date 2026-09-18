@@ -2,9 +2,11 @@ import { Link } from "@tanstack/react-router";
 import { useListarExpedientes } from "../api/expedientes.js";
 import { useSession } from "../api/session.js";
 import { AppShell } from "../components/layout/app-shell.js";
+import { botonClases } from "../components/ui/button.js";
 import { DataTable } from "../components/ui/data-table.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
+import { cn } from "../utils/cn.js";
 
 /** Portal del Asesor (asesor.html legacy): alumnos asignados (?vista=mis). */
 export function AsesorPage() {
@@ -39,7 +41,7 @@ export function AsesorPage() {
             encabezado: "ACCIÓN",
             celda: (f) => (
               <Link
-                className="rounded bg-navy-950 px-3 py-1.5 text-xs font-semibold text-white"
+                className={cn(botonClases({ variante: "oscuro", tamano: "sm" }))}
                 to="/expedientes/$id"
                 params={{ id: f.id }}
               >

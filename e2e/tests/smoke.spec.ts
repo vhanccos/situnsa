@@ -16,17 +16,16 @@ test("smoke: login renderiza", async ({ page }) => {
 test("fase1: detalle del expediente con 4 tabs", async ({ page }) => {
   await entrarComo(page, "00000001");
   await page.goto("/expedientes/33333333-3333-4333-8333-333333333333");
-  await expect(page.getByText("Detalle del Expediente")).toBeVisible();
-  await expect(page.getByText("SET005")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Expediente SET005" })).toBeVisible();
   for (const tab of [
     "Datos",
     "Documentos Etapa 01",
     "Documentos Etapa 02",
     "Resumen del Trámite",
   ]) {
-    await expect(page.getByRole("button", { name: tab })).toBeVisible();
+    await expect(page.getByRole("tab", { name: new RegExp(tab) })).toBeVisible();
   }
-  await page.getByRole("button", { name: "Documentos Etapa 01" }).click();
+  await page.getByRole("tab", { name: /Documentos Etapa 01/ }).click();
   await expect(page.getByText("Solicitud de inscripción del plan")).toBeVisible();
 });
 
@@ -56,17 +55,21 @@ test("corrección2: datos legacy-exactos (selects + documentos)", async ({ page 
 test("db real: tesista ve su trámite y asesor sus alumnos", async ({ page }) => {
   await entrarComo(page, "12345678");
   await page.goto("/mi-tramite");
-  await expect(page.getByText("SET005")).toBeVisible();
-  await expect(page.getByText(/Subetapa actual/)).toBeVisible();
+  await expect(page.getByText("SET005").first()).toBeVisible();
+  await expect(page.getByText(/Etapa actual/)).toBeVisible();
 });
 
 test("corrección: resumen muestra 7 etapas e historial", async ({ page }) => {
   await entrarComo(page, "00000001");
   await page.goto("/expedientes/33333333-3333-4333-8333-333333333333");
-  await page.getByRole("button", { name: "Resumen del Trámite" }).click();
-  await expect(page.getByText("Progreso del trámite")).toBeVisible();
+  await page.getByRole("tab", { name: /Resumen del Trámite/ }).click();
   await expect(page.getByText("Avance general del expediente")).toBeVisible();
   await expect(page.getByText("Historial del expediente")).toBeVisible();
-  await expect(page.getByText("Etapas del expediente")).toBeVisible();
-  await expect(page.getByText("Historial de mensajes")).toBeVisible();
+  await expect(page.getByText("Etapas del trámite")).toBeVisible();
+  await expect(page.getByText("Cadena de custodia")).toBeVisible();
+  // Stepper interactivo: filtrar por etapa 2 y volver a todas.
+  await page.getByRole("button", { name: /2\. Presentación/ }).click();
+  await expect(page.getByText("Filtrado: Etapa 2")).toBeVisible();
+  await page.getByRole("button", { name: "Ver todas" }).click();
+  await expect(page.getByText("Detalle de todas las etapas")).toBeVisible();
 });

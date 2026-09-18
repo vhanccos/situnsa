@@ -1,6 +1,11 @@
+import { FileBadge, Flag, Gauge, MessagesSquare } from "lucide-react";
 import { useExpedienteDetalle, useListarExpedientes } from "../api/expedientes.js";
 import { AppShell } from "../components/layout/app-shell.js";
+import { Acordeon, AcordeonItem } from "../components/ui/accordion.js";
+import { Card, CardEncabezado } from "../components/ui/card.js";
+import { EmptyState } from "../components/ui/empty-state.js";
 import { PageHeader } from "../components/ui/page-header.js";
+import { StatCard } from "../components/ui/stat-card.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
 
 /** Expediente del tesista en sesión (?vista=mis, portal alumno legacy). */
@@ -20,9 +25,10 @@ export function MiTramitePage() {
     return (
       <AppShell activo="/mi-tramite">
         <PageHeader titulo="Mi trámite de titulación" />
-        <p className="rounded border bg-white p-6 text-sm text-grafito-600">
-          Aún no tienes un expediente asociado a tu identidad.
-        </p>
+        <EmptyState
+          titulo="Sin expediente asociado"
+          descripcion="Aún no tienes un expediente asociado a tu identidad. Acércate a mesa de partes para iniciar tu trámite."
+        />
       </AppShell>
     );
   }
@@ -31,7 +37,7 @@ export function MiTramitePage() {
       <AppShell activo="/mi-tramite">
         <output className="space-y-2" aria-label="Cargando">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded bg-white" />
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-white" />
           ))}
         </output>
       </AppShell>
@@ -40,12 +46,20 @@ export function MiTramitePage() {
   if (query.isError) {
     return (
       <AppShell activo="/mi-tramite">
-        <p className="text-sm text-red-700">
-          No se pudo cargar tu trámite.{" "}
-          <button className="underline" onClick={() => void query.refetch()} type="button">
-            Reintentar
-          </button>
-        </p>
+        <PageHeader titulo="Mi trámite de titulación" />
+        <EmptyState
+          titulo="No se pudo cargar tu trámite"
+          descripcion="Ocurrió un problema al obtener tu expediente."
+          accion={
+            <button
+              className="text-sm font-semibold text-navy-800 underline underline-offset-2"
+              onClick={() => void query.refetch()}
+              type="button"
+            >
+              Reintentar
+            </button>
+          }
+        />
       </AppShell>
     );
   }
@@ -56,77 +70,115 @@ export function MiTramitePage() {
     arr.push(s);
     porEtapa.set(s.etapa, arr);
   }
+  const etapas = [...porEtapa.keys()].sort((a, b) => a - b);
 
   return (
     <AppShell activo="/mi-tramite">
       <PageHeader
-        titulo="MI TRÁMITE DE TITULACIÓN"
-        descripcion="Seguimiento personal del trámite."
-      />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded-lg border-t-4 border-t-guinda-800 bg-white p-4">
-          <p className="text-xs text-grafito-600">EXPEDIENTE</p>
-          <p className="text-xl font-bold">{d.codigo}</p>
-        </div>
-        <div className="rounded-lg border-t-4 border-t-guinda-800 bg-white p-4">
-          <p className="text-xs text-grafito-600">ESTADO</p>
-          <p className="mt-1">
+        titulo="Mi trámite de titulación"
+        descripcion="Seguimiento personal de tu expediente."
+        insignia={
+          <>
+            <span className="inline-flex items-center rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-bold">
+              {d.codigo}
+            </span>
             <StatusBadge estado={d.estado} />
-          </p>
-        </div>
-        <div className="rounded-lg border-t-4 border-t-guinda-800 bg-white p-4">
-          <p className="text-xs text-grafito-600">ETAPA ACTUAL</p>
-          <p className="text-sm font-bold">ETAPA {d.avance.etapaActual}</p>
-        </div>
-        <div className="rounded-lg border-t-4 border-t-guinda-800 bg-white p-4">
-          <p className="text-xs text-grafito-600">PROGRESO</p>
-          <p className="text-xl font-bold">{d.avance.pct}%</p>
-        </div>
+          </>
+        }
+      />
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <StatCard
+          etiqueta="Expediente"
+          valor={<span className="text-xl">{d.codigo}</span>}
+          icono={<FileBadge size={20} />}
+          acento="bg-navy-950"
+        />
+        <StatCard
+          etiqueta="Etapa actual"
+          valor={`Etapa ${d.avance.etapaActual}`}
+          icono={<Flag size={20} />}
+          acento="bg-dorado-500"
+          pie={d.avance.subetapaActual ?? "Sin seguimiento"}
+        />
+        <StatCard
+          etiqueta="Progreso"
+          valor={`${d.avance.pct}%`}
+          icono={<Gauge size={20} />}
+          acento="bg-verde-inst-700"
+          pie={`${d.avance.marcados} de ${d.avance.total} subetapas`}
+        />
+        <StatCard
+          etiqueta="Mensajes"
+          valor={d.mensajes.length}
+          icono={<MessagesSquare size={20} />}
+          acento="bg-slate-300"
+        />
       </div>
-      <section className="rounded-lg bg-white p-4">
-        <h2 className="text-sm font-bold">AVANCE DEL TRÁMITE</h2>
-        <div className="mt-2 space-y-2">
-          {[...porEtapa.entries()].map(([etapa, subs]) => (
-            <details className="rounded border" key={etapa} open={etapa === d.avance.etapaActual}>
-              <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">
-                ETAPA {etapa} — {subs[0]?.nombre.split(":")[0] ?? ""} (
-                {subs.filter((s) => s.estado === "FINALIZADO").length}/{subs.length})
-              </summary>
-              <ol className="space-y-1 border-t px-3 py-2">
-                {subs.map((s) => (
-                  <li
-                    className="flex items-center justify-between gap-2 text-sm"
-                    key={`${s.etapa}.${s.orden}`}
-                  >
-                    <span>
-                      {s.etapa}.{s.orden} {s.nombre}
+      <Card>
+        <CardEncabezado
+          titulo="Avance del trámite"
+          descripcion="Etapas y subetapas de tu expediente"
+        />
+        <div className="p-4 md:p-5">
+          <Acordeon abiertos={[`etapa-${d.avance.etapaActual}`]}>
+            {etapas.map((etapa) => {
+              const subs = porEtapa.get(etapa) ?? [];
+              const hechos = subs.filter((s) => s.estado === "FINALIZADO").length;
+              return (
+                <AcordeonItem
+                  key={etapa}
+                  value={`etapa-${etapa}`}
+                  titulo={`Etapa ${etapa} · ${subs[0]?.etapaNombre ?? ""}`}
+                  meta={
+                    <span className="text-xs font-bold tabular-nums text-grafito-600">
+                      {hechos}/{subs.length}
                     </span>
-                    <StatusBadge estado={s.estado} />
-                  </li>
-                ))}
-              </ol>
-            </details>
-          ))}
+                  }
+                >
+                  <ol className="divide-y divide-slate-200/70">
+                    {subs.map((s) => (
+                      <li
+                        className="flex items-center justify-between gap-2 py-2 text-sm"
+                        key={`${s.etapa}.${s.orden}`}
+                      >
+                        <span>
+                          <strong className="tabular-nums">
+                            {s.etapa}.{s.orden}
+                          </strong>{" "}
+                          {s.nombre}
+                        </span>
+                        <StatusBadge estado={s.estado} />
+                      </li>
+                    ))}
+                  </ol>
+                </AcordeonItem>
+              );
+            })}
+          </Acordeon>
         </div>
-      </section>
-      <section className="rounded-lg bg-white p-4">
-        <h2 className="text-sm font-bold">ACTUALIZACIÓN DEL TRÁMITE</h2>
-        {d.mensajes.length === 0 && <p className="mt-1 text-sm text-grafito-600">Sin mensajes.</p>}
-        <ul className="mt-2 space-y-2">
-          {d.mensajes.map((m) => (
-            <li className="rounded border-l-4 border-l-dorado-500 bg-slate-50 px-3 py-2" key={m.id}>
-              <p className="text-sm font-semibold">{m.texto}</p>
-              <p className="text-xs text-grafito-600">
-                {new Date(m.createdAt).toLocaleString("es-PE")}
-              </p>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-3 text-xs text-grafito-600">
-          Subetapa actual: {d.avance.subetapaActual ?? "—"} · {d.avance.marcados} de{" "}
-          {d.avance.total} finalizadas.
-        </p>
-      </section>
+      </Card>
+      <Card>
+        <CardEncabezado
+          titulo="Actualización del trámite"
+          descripcion="Mensajes de la administración"
+        />
+        <div className="p-4 md:px-5">
+          {d.mensajes.length === 0 && <p className="text-sm text-grafito-600">Sin mensajes.</p>}
+          <ul className="space-y-2">
+            {d.mensajes.map((m) => (
+              <li
+                className="rounded-lg border-l-4 border-l-dorado-500 bg-slate-50 px-3 py-2"
+                key={m.id}
+              >
+                <p className="text-sm font-medium">{m.texto}</p>
+                <p className="mt-0.5 text-xs text-grafito-600">
+                  {new Date(m.createdAt).toLocaleString("es-PE")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Card>
     </AppShell>
   );
 }

@@ -1,8 +1,13 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { CheckCircle2, FileText, Users } from "lucide-react";
 import { useState } from "react";
 import { useProgramas } from "../api/catalogos.js";
 import { useInscribir } from "../api/expedientes.js";
 import { AppShell } from "../components/layout/app-shell.js";
+import { Button, botonClases } from "../components/ui/button.js";
+import { Card } from "../components/ui/card.js";
+import { controlClase, Field } from "../components/ui/field.js";
+import { FormSection } from "../components/ui/form-section.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { Select } from "../components/ui/select.js";
 import { cn } from "../utils/cn.js";
@@ -125,29 +130,27 @@ export function NuevoExpedientePage() {
   if (creado) {
     return (
       <AppShell activo="/expedientes/nuevo">
-        <div className="mx-auto max-w-md space-y-4 rounded-lg bg-white p-8 text-center">
-          <p className="text-4xl" aria-hidden>
-            ✓
-          </p>
-          <h1 className="text-lg font-bold">Expediente {creado.codigo} creado</h1>
+        <Card className="mx-auto max-w-md space-y-3 p-8 text-center">
+          <CheckCircle2 size={44} className="mx-auto text-verde-inst-700" aria-hidden />
+          <h1 className="text-lg font-bold text-navy-950">Expediente {creado.codigo} creado</h1>
           <p className="text-sm text-grafito-600">Pendiente de validación administrativa.</p>
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center gap-2 pt-1">
             <Link
-              className="rounded bg-guinda-800 px-4 py-2 text-sm font-semibold text-white"
+              className={cn(botonClases({ variante: "primario" }))}
               to="/expedientes/$id"
               params={{ id: creado.id }}
             >
               Abrir expediente
             </Link>
-            <button
-              className="rounded border px-4 py-2 text-sm"
+            <Button
+              variante="contorno"
               onClick={() => void navigate({ to: "/inscripciones" })}
               type="button"
             >
               Ir a validación
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       </AppShell>
     );
   }
@@ -158,7 +161,7 @@ export function NuevoExpedientePage() {
         titulo="Registro de Nuevo Expediente"
         descripcion="Uno o dos participantes. El sistema genera código y seguimiento."
       />
-      <fieldset className="flex gap-2">
+      <fieldset className="flex w-fit gap-1 rounded-full border border-slate-300 bg-white p-1 shadow-card">
         <legend className="sr-only">N° de Participantes</legend>
         {[
           { v: false, l: "1 PARTICIPANTE" },
@@ -166,35 +169,45 @@ export function NuevoExpedientePage() {
         ].map((o) => (
           <button
             className={cn(
-              "rounded-full border px-4 py-1.5 text-sm font-semibold",
-              dos === o.v ? "border-navy-950 bg-navy-950 text-white" : "bg-white",
+              "rounded-full px-4 py-1.5 text-xs font-bold transition-colors",
+              dos === o.v
+                ? "bg-navy-950 text-white shadow-card"
+                : "text-grafito-600 hover:text-navy-950",
             )}
             key={o.l}
             onClick={() => setDos(o.v)}
             type="button"
+            aria-pressed={dos === o.v}
           >
             {o.l}
           </button>
         ))}
       </fieldset>
-      <section className="rounded-lg border-l-4 border-l-guinda-800 bg-white p-4">
-        <h2 className="text-sm font-bold">REGISTRO DEL TÍTULO DE TESIS</h2>
-        <p className="text-xs text-grafito-600">
-          Información obligatoria para la generación de documentos
-        </p>
-        <textarea
-          className="mt-2 w-full rounded border px-3 py-2 text-sm"
-          placeholder="Ejemplo: diseño e implementación de un sistema web para la gestión de expedientes de titulación"
-          rows={3}
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-        />
-        {avisosTitulo.map((a) => (
-          <p className="text-xs text-aviso-800" key={a}>
-            ℹ️ {a}
-          </p>
-        ))}
-        <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+      <FormSection
+        numero="1"
+        icono={<FileText size={16} />}
+        titulo="REGISTRO DEL TÍTULO DE TESIS"
+        ayuda="Información obligatoria para la generación de documentos."
+      >
+        <Field etiqueta="Título de la tesis" className="col-span-full">
+          <textarea
+            className={controlClase}
+            placeholder="Ejemplo: diseño e implementación de un sistema web para la gestión de expedientes de titulación"
+            rows={3}
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+          />
+        </Field>
+        {avisosTitulo.length > 0 && (
+          <ul className="col-span-full space-y-0.5">
+            {avisosTitulo.map((a) => (
+              <li className="text-xs font-medium text-aviso-800" key={a}>
+                ⓘ {a}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select label="PROGRAMA" value={programa} onChange={setPrograma}>
             <option value="Seleccione">Seleccione</option>
             {(programas.data ?? []).map((p) => (
@@ -213,36 +226,38 @@ export function NuevoExpedientePage() {
             <option value="ARTICULO">Plan de Tesis Formato Artículo</option>
           </Select>
         </div>
-      </section>
+      </FormSection>
       <BloqueParticipante n={1} p={p1} set={setP1} />
       {dos && <BloqueParticipante n={2} p={p2} set={setP2} />}
       {error && (
         <p
-          className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800"
+          className="rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-800"
           role="alert"
         >
           {error}
         </p>
       )}
       {paso >= 0 && (
-        <div className="rounded-lg bg-white p-4" aria-live="polite">
-          <p className="text-sm font-bold">{PASOS[paso]}…</p>
-          <div className="mt-2 h-2 overflow-hidden rounded bg-slate-200">
+        <Card className="p-4" aria-live="polite">
+          <p className="text-sm font-bold text-navy-950">{PASOS[paso]}…</p>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
             <div
-              className="h-full bg-verde-inst-700 transition-all"
+              className="h-full rounded-full bg-verde-inst-700 transition-all"
               style={{ width: `${((paso + 1) / PASOS.length) * 100}%` }}
             />
           </div>
-        </div>
+        </Card>
       )}
-      <button
-        className="rounded bg-guinda-800 px-6 py-2.5 text-sm font-bold text-white hover:bg-guinda-700 disabled:opacity-60"
-        disabled={inscribir.isPending}
-        onClick={() => void registrar()}
-        type="button"
-      >
-        {inscribir.isPending ? "Registrando…" : "REGISTRAR"}
-      </button>
+      <div>
+        <Button
+          tamano="lg"
+          disabled={inscribir.isPending}
+          onClick={() => void registrar()}
+          type="button"
+        >
+          {inscribir.isPending ? "Registrando…" : "REGISTRAR"}
+        </Button>
+      </div>
     </AppShell>
   );
 }
@@ -257,20 +272,23 @@ function BloqueParticipante({
   set: (v: Participante) => void;
 }) {
   const campo = (k: keyof Participante, label: string, placeholder?: string): React.ReactNode => (
-    <label className="block text-xs font-semibold">
-      {label}
+    <Field etiqueta={label}>
       <input
-        className="mt-1 w-full rounded border px-2 py-2 text-sm font-normal"
+        className={cn(controlClase, "h-9 font-normal")}
         placeholder={placeholder}
         value={p[k]}
         onChange={(e) => set({ ...p, [k]: e.target.value })}
       />
-    </label>
+    </Field>
   );
   return (
-    <section className="rounded-lg bg-white p-4">
-      <h2 className="text-sm font-bold">Registro de Participante {String(n).padStart(2, "0")}</h2>
-      <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+    <FormSection
+      numero={String(n + 1)}
+      icono={<Users size={16} />}
+      titulo={`Registro de Participante ${String(n).padStart(2, "0")}`}
+      ayuda={n === 1 ? "Datos del primer tesista." : "Datos del segundo tesista."}
+    >
+      <div className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2">
         {campo("nombres", "NOMBRES", "Ej. Pérez Quispe")}
         {campo("apellidos", "APELLIDOS", "Ej. Juan Carlos")}
         {campo("dni", "DNI *", "8 dígitos")}
@@ -278,6 +296,6 @@ function BloqueParticipante({
         {campo("email", "CORREO ELECTRÓNICO *", "correo@ejemplo.com")}
         {campo("telefono", "TELÉFONO", "Ej. 987654321")}
       </div>
-    </section>
+    </FormSection>
   );
 }

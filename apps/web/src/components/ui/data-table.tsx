@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../utils/cn.js";
+import { EmptyState } from "./empty-state.js";
 
 export interface Columna<T> {
   encabezado: string;
@@ -8,8 +9,8 @@ export interface Columna<T> {
 }
 
 /**
- * DataTable §14.1: encabezados persistentes, filas legibles, estado vacío y
- * versión responsive (scroll horizontal contenido + columna principal fija).
+ * DataTable: encabezado navy fijo, filas con hover, estado vacío diseñado.
+ * Responsive: scroll horizontal contenido.
  */
 export function DataTable<T extends { id: string }>({
   columnas,
@@ -19,33 +20,42 @@ export function DataTable<T extends { id: string }>({
 }: {
   columnas: Array<Columna<T>>;
   filas: T[];
-  vacio: string;
+  vacio: ReactNode;
   cargando?: boolean;
 }) {
   if (cargando) {
     return (
-      <output className="block space-y-2 rounded-lg border bg-white p-4" aria-label="Cargando">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
+      <output
+        className="block space-y-2 rounded-xl border border-slate-200/80 bg-white p-4 shadow-card"
+        aria-label="Cargando"
+      >
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            className="h-11 animate-pulse rounded-lg bg-gradient-to-r from-slate-100 via-slate-200/60 to-slate-100"
+            key={i}
+          />
         ))}
       </output>
     );
   }
   if (filas.length === 0) {
-    return (
-      <div className="rounded-lg border bg-white p-8 text-center">
-        <p className="text-sm text-grafito-600">{vacio}</p>
-      </div>
+    return typeof vacio === "string" ? (
+      <EmptyState titulo={vacio} />
+    ) : (
+      <div className="[display:contents]">{vacio}</div>
     );
   }
   return (
-    <div className="overflow-x-auto rounded-lg border bg-white">
-      <table className="w-full min-w-[720px] text-left text-sm">
-        <thead>
-          <tr className="bg-navy-950 text-white">
+    <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-card">
+      <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+        <thead className="sticky top-0">
+          <tr className="tira-institucional text-white">
             {columnas.map((c) => (
               <th
-                className={cn("px-3 py-2 text-xs font-semibold", c.clase)}
+                className={cn(
+                  "px-4 py-2.5 text-[11px] font-bold tracking-wider whitespace-nowrap uppercase first:rounded-tl-xl last:rounded-tr-xl",
+                  c.clase,
+                )}
                 key={c.encabezado}
                 scope="col"
               >
@@ -56,9 +66,12 @@ export function DataTable<T extends { id: string }>({
         </thead>
         <tbody>
           {filas.map((f) => (
-            <tr className="border-t hover:bg-slate-50" key={f.id}>
+            <tr
+              className="border-t border-slate-200/70 transition-colors first:border-t-0 hover:bg-navy-950/[0.025]"
+              key={f.id}
+            >
               {columnas.map((c) => (
-                <td className={cn("px-3 py-2 align-top", c.clase)} key={c.encabezado}>
+                <td className={cn("px-4 py-3 align-middle", c.clase)} key={c.encabezado}>
                   {c.celda(f)}
                 </td>
               ))}
