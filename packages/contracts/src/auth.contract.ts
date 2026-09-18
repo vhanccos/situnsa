@@ -17,14 +17,14 @@ const c = initContract();
 export const authContract = c.router({
   loginLocal: {
     method: "POST",
-    path: "/auth/login",
+    path: "/api/auth/login",
     body: LoginLocalSchema,
     responses: { 200: SesionDTOSchema, 401: z.object({ message: z.string() }) },
     summary: "Login híbrido DNI/correo (Google OAuth = fase posterior)",
   },
   sesion: {
     method: "GET",
-    path: "/auth/sesion",
+    path: "/api/auth/sesion",
     responses: { 200: SesionDTOSchema, 401: z.object({ message: z.string() }) },
     summary: "Sesión actual",
   },

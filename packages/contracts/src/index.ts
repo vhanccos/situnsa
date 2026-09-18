@@ -12,7 +12,7 @@ export const appContract = c.router({
   documentos: documentosContract,
   health: {
     method: "GET",
-    path: "/health",
+    path: "/api/health",
     responses: { 200: z.object({ ok: z.literal(true), version: z.string() }) },
     summary: "Healthcheck",
   },

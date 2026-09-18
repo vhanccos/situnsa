@@ -19,7 +19,7 @@ export function useExpedienteDetalle(id: string) {
   return useQuery({
     queryKey: expedienteKey(id),
     queryFn: async (): Promise<ExpedienteDetalleDTO> =>
-      leerDetalle(await fetch(`${apiBaseUrl}/expedientes/${id}`)),
+      leerDetalle(await fetch(`${apiBaseUrl}/api/expedientes/${id}`)),
   });
 }
 
@@ -36,7 +36,7 @@ export function useActualizarDatos(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: ActualizarDatosInput): Promise<ExpedienteDetalleDTO> => {
-      const res = await fetch(`${apiBaseUrl}/expedientes/${id}`, {
+      const res = await fetch(`${apiBaseUrl}/api/expedientes/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),

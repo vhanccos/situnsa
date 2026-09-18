@@ -90,7 +90,7 @@ const c = initContract();
 export const expedientesContract = c.router({
   inscribirPlan: {
     method: "POST",
-    path: "/expedientes/inscribir-plan",
+    path: "/api/expedientes/inscribir-plan",
     body: InscribirPlanSchema,
     responses: {
       201: ExpedienteDTOSchema,
@@ -100,14 +100,14 @@ export const expedientesContract = c.router({
   },
   getById: {
     method: "GET",
-    path: "/expedientes/:id",
+    path: "/api/expedientes/:id",
     pathParams: z.object({ id: z.string().uuid() }),
     responses: { 200: ExpedienteDetalleDTOSchema, 404: z.object({ message: z.string() }) },
     summary: "Detalle del expediente (pestañas Datos/Documentos/Resumen)",
   },
   actualizarDatos: {
     method: "PATCH",
-    path: "/expedientes/:id",
+    path: "/api/expedientes/:id",
     pathParams: z.object({ id: z.string().uuid() }),
     body: ActualizarDatosSchema,
     responses: {
@@ -119,7 +119,7 @@ export const expedientesContract = c.router({
   },
   listar: {
     method: "GET",
-    path: "/expedientes",
+    path: "/api/expedientes",
     query: FiltrosExpedienteSchema,
     responses: { 200: z.object({ items: z.array(ExpedienteDTOSchema), total: z.number() }) },
     summary: "Listar expedientes con filtros",

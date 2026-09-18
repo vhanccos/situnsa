@@ -25,14 +25,14 @@ const c = initContract();
 export const documentosContract = c.router({
   metadata: {
     method: "GET",
-    path: "/documentos/:id",
+    path: "/api/documentos/:id",
     pathParams: z.object({ id: z.string().uuid() }),
     responses: { 200: DocumentoMetadataSchema, 404: z.object({ message: z.string() }) },
     summary: "Metadatos de documento",
   },
   descargar: {
     method: "GET",
-    path: "/documentos/:id/descargar",
+    path: "/api/documentos/:id/descargar",
     pathParams: z.object({ id: z.string().uuid() }),
     responses: { 302: z.void(), 404: z.object({ message: z.string() }) },
     summary: "Descarga protegida vía X-Accel-Redirect (Nginx)",
