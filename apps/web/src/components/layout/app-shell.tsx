@@ -4,6 +4,7 @@ import {
   FilePlus,
   GraduationCap,
   LayoutList,
+  LogOut,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -70,6 +71,12 @@ export function AppShell({ children, activo }: { children: ReactNode; activo: st
   }
 
   const items = navPorRol(sesion.rol);
+  const iniciales = sesion.nombres
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
   const marca = (
     <>
       <p className="text-sm font-bold tracking-wide">SISTEMA DE TITULACIÓN</p>
@@ -145,43 +152,59 @@ export function AppShell({ children, activo }: { children: ReactNode; activo: st
           })}
         </nav>
         <div
-          className={cn("mt-auto border-t border-white/10 p-4 text-xs", colapsado && "md:hidden")}
+          className={cn("mt-auto border-t border-white/10 p-3", colapsado && "md:hidden")}
+          title={`${sesion.nombres} · DNI ${sesion.dni}`}
         >
-          <p className="truncate font-semibold text-white">{sesion.nombres}</p>
-          <p className="text-navy-100">
-            DNI {sesion.dni} · {sesion.rol.replace("_", " ")}
-          </p>
+          <div className="flex items-center gap-2.5">
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-dorado-500 text-xs font-bold text-navy-950"
+              aria-hidden
+            >
+              {iniciales}
+            </span>
+            <span className="min-w-0 text-xs">
+              <span className="block truncate font-semibold text-white">{sesion.nombres}</span>
+              <span className="block truncate text-navy-100">
+                DNI {sesion.dni} · {sesion.rol.replace("_", " ")}
+              </span>
+            </span>
+          </div>
           <button
-            className="mt-2 text-navy-100 underline underline-offset-2 hover:text-white"
+            className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-md bg-white/10 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/15 active:bg-white/20"
             onClick={cerrarSesion}
             type="button"
           >
+            <LogOut size={14} />
             Cerrar sesión
           </button>
         </div>
       </aside>
       <div className="min-w-0 flex-1">
-        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-2.5 backdrop-blur">
+        {/* Solo móvil: en desktop la identidad vive en el sidebar (sin duplicar). */}
+        <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur md:hidden">
           <button
             aria-label="Abrir menú"
-            className="rounded p-1.5 hover:bg-slate-100 md:hidden"
+            className="rounded p-1.5 hover:bg-slate-100"
             onClick={() => setAbierto(true)}
             type="button"
           >
             <Menu size={20} />
           </button>
-          <p className="truncate text-sm font-semibold text-navy-950">
-            Sistema de Titulación — FIPS UNSA
-          </p>
-          <span className="ml-auto hidden truncate text-xs text-grafito-600 sm:block">
-            {sesion.nombres} · {sesion.rol.replace("_", " ")}
+          <p className="truncate text-sm font-bold text-navy-950">SITUNSA · FIPS</p>
+          <span
+            className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-950 text-[11px] font-bold text-white"
+            aria-hidden
+          >
+            {iniciales}
           </span>
           <button
-            className="ml-auto text-xs text-navy-800 underline underline-offset-2 sm:ml-0 md:hidden"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            className="rounded p-1.5 text-navy-800 hover:bg-slate-100"
             onClick={cerrarSesion}
             type="button"
           >
-            Salir
+            <LogOut size={18} />
           </button>
         </div>
         <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">{children}</div>

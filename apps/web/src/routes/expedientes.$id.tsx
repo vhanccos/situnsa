@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { type GuardadoEstado, useAnular, useExpedienteDetalle } from "../api/expedientes.js";
 import { DatosForm } from "../components/domain/datos-form.js";
@@ -61,7 +62,11 @@ export function ExpedienteDetallePage() {
           <button className="underline" onClick={() => void query.refetch()} type="button">
             Reintentar
           </button>{" "}
-          <Link className="underline" to="/admin">
+          <Link
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold hover:bg-slate-100"
+            to="/admin"
+          >
+            <ArrowLeft size={14} />
             Volver al listado
           </Link>
         </p>
@@ -73,8 +78,12 @@ export function ExpedienteDetallePage() {
 
   return (
     <AppShell activo="/admin">
-      <Link className="text-sm text-navy-800 underline" to="/admin">
-        ← Volver al listado
+      <Link
+        className="inline-flex w-fit items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-navy-950 shadow-sm transition-colors hover:bg-slate-100"
+        to="/admin"
+      >
+        <ArrowLeft size={16} />
+        Volver al listado
       </Link>
       <PageHeader
         titulo="Detalle del Expediente"
