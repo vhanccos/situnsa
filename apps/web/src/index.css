@@ -42,11 +42,6 @@ body {
   border-radius: 4px;
 }
 
-/** Tira institucional: franja navy→guinda usada en encabezados de sección. */
-.tira-institucional {
-  background: linear-gradient(100deg, #0b1f30 0%, #123149 55%, #610617 130%);
-}
-
 /** Ficha imprimible: los elementos con print:hidden no salen en papel. */
 @media print {
   body {

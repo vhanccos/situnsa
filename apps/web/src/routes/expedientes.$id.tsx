@@ -7,7 +7,7 @@ import { DocumentoCard } from "../components/domain/documento-card.js";
 import { ResumenTab } from "../components/domain/resumen-tab.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { Button, botonClases } from "../components/ui/button.js";
-import { Card, CardEncabezado } from "../components/ui/card.js";
+import { Card } from "../components/ui/card.js";
 import { ConfirmDialog } from "../components/ui/confirm-dialog.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
@@ -152,47 +152,14 @@ export function ExpedienteDetallePage() {
         </TabsLista>
         <TabPanel value="datos">
           <DatosForm detalle={d} setEstado={setGuardado} onConflicto={setConflicto} />
-          <div className="mt-4 grid print:hidden gap-3 lg:grid-cols-[1fr_320px]">
-            <div>
-              <Button
-                tamano="sm"
-                variante="peligro"
-                onClick={() => setEliminar(true)}
-                type="button"
-              >
-                <Trash2 size={14} />
-                ELIMINAR REGISTRO
-              </Button>
-              <p className="mt-1.5 text-xs text-grafito-600">
-                Baja lógica (ANULADO): se conserva el historial y la cadena de custodia.
-              </p>
-            </div>
-            <Card>
-              <CardEncabezado titulo="Estado del expediente" />
-              <div className="space-y-2 p-4">
-                <p className="flex items-center gap-2 text-sm">
-                  <StatusBadge estado={d.estado} />
-                  <span className="font-bold tabular-nums">
-                    {d.avance.marcados}/{d.avance.total} · {d.avance.pct}%
-                  </span>
-                </p>
-                <div
-                  className="h-2 overflow-hidden rounded-full bg-slate-200"
-                  role="progressbar"
-                  aria-valuenow={d.avance.pct}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <div
-                    className="h-full rounded-full bg-navy-800"
-                    style={{ width: `${d.avance.pct}%` }}
-                  />
-                </div>
-                <p className="text-xs text-grafito-600">
-                  {d.avance.subetapaActual ?? "Sin seguimiento"}
-                </p>
-              </div>
-            </Card>
+          <div className="mt-4 print:hidden">
+            <Button tamano="sm" variante="peligro" onClick={() => setEliminar(true)} type="button">
+              <Trash2 size={14} />
+              ELIMINAR REGISTRO
+            </Button>
+            <p className="mt-1.5 text-xs text-grafito-600">
+              Baja lógica (ANULADO): se conserva el historial y la cadena de custodia.
+            </p>
           </div>
         </TabPanel>
         <TabPanel value="e1">

@@ -49,7 +49,7 @@ export function DataTable<T extends { id: string }>({
     <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-card">
       <table className="w-full min-w-[760px] border-collapse text-left text-sm">
         <thead className="sticky top-0">
-          <tr className="tira-institucional text-white">
+          <tr className="bg-navy-950 text-white">
             {columnas.map((c) => (
               <th
                 className={cn(

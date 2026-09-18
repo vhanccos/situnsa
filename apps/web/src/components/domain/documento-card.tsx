@@ -120,9 +120,6 @@ export function DocumentoCard(p: Props) {
           <UploadCloud size={14} />
           {subir.isPending ? "SUBIENDO…" : p.version === null ? "ADJUNTAR" : "REEMPLAZAR"}
         </button>
-        <span className="ml-auto hidden text-[11px] text-grafito-600 sm:block">
-          PDF ≤ 50 MB · arrastra el archivo aquí
-        </span>
         <input
           accept="application/pdf"
           className="hidden"

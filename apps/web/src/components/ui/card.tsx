@@ -29,7 +29,7 @@ export function CardEncabezado({
     <div
       className={cn(
         "flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 px-4 py-3 md:px-5",
-        tira && "tira-institucional rounded-t-xl border-b-0 text-white [&_p]:text-navy-100",
+        tira && "rounded-t-xl border-b-0 bg-navy-950 text-white [&_p]:text-navy-100",
         className,
       )}
     >
