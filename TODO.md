@@ -4,7 +4,9 @@
 
 ## 🔴 Remoto GitHub — ✅ configurado (2026-09-18)
 - [x] Repo público `vhanccos/situnsa` creado por el usuario (vacío).
-- [x] `git remote add origin https://github.com/vhanccos/situnsa.git` + `git push -u origin main`.
+- [x] `git remote add origin https://github.com/vhanccos/situnsa.git` + push inicial (13 commits).
+- [x] Nota: pushear con `env GITHUB_TOKEN="" GH_TOKEN="" git push` (el helper
+  `/etc/gitconfig` inyecta el token limitado del codespace y da 403).
 - [ ] Proteger rama `main` + exigir CI verde (`.github/workflows/ci.yml`).
 
 ## 🟡 Verificación con Docker — ✅ verificado en setup (2026-09-18)
