@@ -2,6 +2,7 @@ import type { ExpedienteDetalleDTO } from "@pis/contracts";
 import { Check, Lock, MessageSquareText, Printer, Send } from "lucide-react";
 import { useState } from "react";
 import { usePublicarMensaje } from "../../api/expedientes.js";
+import { useFinalizarSubetapa } from "../../api/seguimiento.js";
 import { useSession } from "../../api/session.js";
 import { cn } from "../../utils/cn.js";
 import { Button } from "../ui/button.js";
@@ -19,6 +20,22 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
   const [etapaSel, setEtapaSel] = useState<number | null>(detalle.avance.etapaActual);
   const publicar = usePublicarMensaje(detalle.id);
   const puedePublicar = sesion && sesion.rol !== "TESISTA";
+  // RN-08: solo el responsable (staff) cierra subetapas.
+  const puedeFinalizar = !!sesion && ["ADMIN_FIPS", "SECRETARIA", "DECANO"].includes(sesion.rol);
+  const finalizar = useFinalizarSubetapa(detalle.id);
+
+  async function onFinalizar(subetapaId: string): Promise<void> {
+    try {
+      const r = await finalizar.mutateAsync(subetapaId);
+      avisar(
+        r.siguienteId
+          ? `Subetapa finalizada; habilitada la siguiente`
+          : "Subetapa finalizada (etapa completa)",
+      );
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudo finalizar", "error");
+    }
+  }
 
   const porEtapa = new Map<number, typeof detalle.subetapas>();
   for (const s of detalle.subetapas) {
@@ -197,6 +214,17 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
                     <span>Inicio {new Date(s.inicio).toLocaleDateString("es-PE")}</span>
                   ) : null}
                   <StatusBadge estado={s.estado} />
+                  {puedeFinalizar && s.estado === "EN_CURSO" && (
+                    <Button
+                      tamano="xs"
+                      variante="exito"
+                      disabled={finalizar.isPending}
+                      onClick={() => void onFinalizar(s.id)}
+                      type="button"
+                    >
+                      Finalizar
+                    </Button>
+                  )}
                 </span>
               </li>
             ))}

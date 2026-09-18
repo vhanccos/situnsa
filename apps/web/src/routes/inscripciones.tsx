@@ -2,11 +2,13 @@ import { Link } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useState } from "react";
 import { useListarExpedientes, useValidar } from "../api/expedientes.js";
+import { useObservar } from "../api/seguimiento.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { Button, botonClases } from "../components/ui/button.js";
 import { Card, CardEncabezado } from "../components/ui/card.js";
 import { ConfirmDialog } from "../components/ui/confirm-dialog.js";
 import { DataTable } from "../components/ui/data-table.js";
+import { Dialogo } from "../components/ui/dialog.js";
 import { controlClase } from "../components/ui/field.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
@@ -20,7 +22,12 @@ export function InscripcionesPage() {
   const [q, setQ] = useState("");
   const [confirmar, setConfirmar] = useState<{ id: string; codigo: string } | null>(null);
   const query = useListarExpedientes({ q, estado: "", orden: "recientes" });
-  const pendientes = (query.data?.items ?? []).filter((i) => i.estado === "REGISTRADO");
+  const observar = useObservar();
+  const [observada, setObservada] = useState<{ id: string; codigo: string } | null>(null);
+  const [motivo, setMotivo] = useState("");
+  const pendientes = (query.data?.items ?? []).filter(
+    (i) => i.estado === "REGISTRADO" || i.estado === "OBSERVADO",
+  );
 
   async function onValidar(): Promise<void> {
     if (!confirmar) return;
@@ -31,6 +38,21 @@ export function InscripcionesPage() {
       avisar(e instanceof Error ? e.message : "No se pudo validar", "error");
     } finally {
       setConfirmar(null);
+    }
+  }
+
+  async function onObservar(): Promise<void> {
+    if (!observada || motivo.trim().length < 5) {
+      avisar("El motivo requiere 5 caracteres mínimo", "error");
+      return;
+    }
+    try {
+      await observar.mutateAsync({ id: observada.id, motivo: motivo.trim() });
+      avisar(`Expediente ${observada.codigo} observado`);
+      setObservada(null);
+      setMotivo("");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudo observar", "error");
     }
   }
 
@@ -97,15 +119,31 @@ export function InscripcionesPage() {
                     >
                       REVISAR
                     </Link>
-                    <Button
-                      tamano="sm"
-                      variante="exito"
-                      disabled={validar.isPending}
-                      onClick={() => setConfirmar({ id: f.id, codigo: f.codigo })}
-                      type="button"
-                    >
-                      VALIDAR Y MATRICULAR
-                    </Button>
+                    {(f.estado === "REGISTRADO" || f.estado === "OBSERVADO") && (
+                      <>
+                        <Button
+                          tamano="sm"
+                          variante="exito"
+                          disabled={validar.isPending}
+                          onClick={() => setConfirmar({ id: f.id, codigo: f.codigo })}
+                          type="button"
+                        >
+                          VALIDAR Y MATRICULAR
+                        </Button>
+                        <Button
+                          tamano="sm"
+                          variante="contorno"
+                          disabled={observar.isPending}
+                          onClick={() => {
+                            setMotivo("");
+                            setObservada({ id: f.id, codigo: f.codigo });
+                          }}
+                          type="button"
+                        >
+                          OBSERVAR
+                        </Button>
+                      </>
+                    )}
                   </span>
                 ),
               },
@@ -122,6 +160,37 @@ export function InscripcionesPage() {
           onConfirmar={() => void onValidar()}
           onCancelar={() => setConfirmar(null)}
         />
+      )}
+      {observada && (
+        <Dialogo
+          abierto
+          onAbierto={(v) => {
+            if (!v) setObservada(null);
+          }}
+          titulo={`Observar ${observada.codigo}`}
+          descripcion="El motivo queda como mensaje visible al tesista (mínimo 5 caracteres)."
+        >
+          <textarea
+            aria-label="Motivo de la observación"
+            className={cn(controlClase, "min-h-24")}
+            placeholder="Indique qué falta o qué debe corregir…"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+          />
+          <div className="mt-3 flex justify-end gap-2">
+            <Button variante="contorno" onClick={() => setObservada(null)} type="button">
+              Cancelar
+            </Button>
+            <Button
+              variante="oscuro"
+              disabled={observar.isPending || motivo.trim().length < 5}
+              onClick={() => void onObservar()}
+              type="button"
+            >
+              {observar.isPending ? "Observando…" : "Observar"}
+            </Button>
+          </div>
+        </Dialogo>
       )}
     </AppShell>
   );

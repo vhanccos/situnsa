@@ -1,6 +1,7 @@
 import { PROGRAMAS_OFICIALES } from "@pis/domain";
 import type { Db } from "../client.js";
 import { programas } from "../schema/programas.js";
+import { seedCatalogoProceso } from "./catalogo-proceso.js";
 import { asignarRolesLegacy, seedSeguridad } from "./roles-permisos.js";
 
 /** Seed BASE (idempotente, seguro en prod): catálogos requeridos por RN-L04/L14. */
@@ -11,4 +12,5 @@ export async function seedBase(db: Db): Promise<void> {
   console.log(`Programas oficiales FIPS (${PROGRAMAS_OFICIALES.length})`);
   await seedSeguridad(db);
   await asignarRolesLegacy(db);
+  await seedCatalogoProceso(db);
 }

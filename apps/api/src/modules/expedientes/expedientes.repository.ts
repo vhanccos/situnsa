@@ -65,6 +65,7 @@ export interface DetalleRow {
     faltantes: string[];
   }>;
   subetapas: Array<{
+    id: string;
     etapa: number;
     etapaNombre: string;
     orden: number;
@@ -224,6 +225,7 @@ export async function getDetalleById(db: Db, id: string): Promise<DetalleRow | n
     datosAdmin,
     checklist,
     subetapas: subs.map((s) => ({
+      id: s.id,
       etapa: s.etapa,
       etapaNombre: FLUJO_TITULACION.find((e) => e.numero === s.etapa)?.nombre ?? `Etapa ${s.etapa}`,
       orden: s.orden,

@@ -8,6 +8,7 @@ import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
 import { registerProgramasRoutes } from "./modules/catalogos/catalogos.routes.js";
 import { registerDocumentosRoutes } from "./modules/documentos/documentos.routes.js";
 import { registerExpedientesRoutes } from "./modules/expedientes/expedientes.routes.js";
+import { registerSeguimientoRoutes } from "./modules/seguimiento/seguimiento.routes.js";
 import { registerSeguridadRoutes } from "./modules/seguridad/seguridad.routes.js";
 import {
   registerAsesoresRoutes,
@@ -30,6 +31,7 @@ export async function buildServer() {
 
   registerAuthRoutes(app);
   registerSeguridadRoutes(app);
+  registerSeguimientoRoutes(app);
   registerProgramasRoutes(app);
   registerExpedientesRoutes(app);
   registerDocumentosRoutes(app);
@@ -42,7 +44,12 @@ export async function buildServer() {
 const isMain = process.argv[1]?.match(/server\.[tj]s$/) !== null;
 if (isMain) {
   buildServer()
-    .then((app) => app.listen({ port: PORT, host: "0.0.0.0" }))
+    .then(async (app) => {
+      // Workers pg-boss best-effort (nunca bloquean el arranque ni tumban la API).
+      const { iniciarWorkers } = await import("./infra/jobs/workers.js");
+      await iniciarWorkers();
+      await app.listen({ port: PORT, host: "0.0.0.0" });
+    })
     .catch((err: unknown) => {
       console.error(err);
       process.exit(1);

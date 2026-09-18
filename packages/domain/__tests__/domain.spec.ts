@@ -23,6 +23,10 @@ describe("FSM", () => {
     expect(canTransition("REGISTRADO", "EN_PLAN")).toBe(true);
     expect(canTransition("EN_PLAN", "PLAN_APROBADO")).toBe(true);
   });
+  it("permite observar inscripción y levantarla (B1)", () => {
+    expect(canTransition("REGISTRADO", "OBSERVADO")).toBe(true);
+    expect(canTransition("OBSERVADO", "REGISTRADO")).toBe(true);
+  });
   it("rechaza saltos ilegales", () => {
     expect(canTransition("REGISTRADO", "TITULO_EMITIDO")).toBe(false);
     expect(assertTransition("REGISTRADO", "TITULO_EMITIDO").ok).toBe(false);

@@ -117,6 +117,7 @@ export const ChecklistItemDTOSchema = z.object({
 });
 
 export const SubetapaDTOSchema = z.object({
+  id: z.string().uuid(),
   etapa: z.number(),
   etapaNombre: z.string(),
   orden: z.number(),

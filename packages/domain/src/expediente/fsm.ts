@@ -26,6 +26,8 @@ type Key = `${EstadoExpediente}>${EstadoExpediente}`;
  */
 const TRANSICIONES: ReadonlySet<Key> = new Set<Key>([
   "REGISTRADO>EN_PLAN",
+  "REGISTRADO>OBSERVADO",
+  "OBSERVADO>REGISTRADO",
   "REGISTRADO>ANULADO",
   "EN_PLAN>OBSERVADO",
   "EN_PLAN>PLAN_APROBADO",

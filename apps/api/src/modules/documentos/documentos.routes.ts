@@ -1,4 +1,5 @@
 import { basename } from "node:path";
+import { VistoBuenoSchema } from "@pis/contracts";
 import { db, documentos } from "@pis/db";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -7,6 +8,7 @@ import { errorEnvelope } from "../../infra/http/errores.js";
 import { LocalStorageService } from "../../infra/storage/local-storage.service.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { SubirDocumentoUseCase } from "./use-cases/subir-documento/subir-documento.use-case.js";
+import { VistoBuenoDocumentoUseCase } from "./use-cases/visto-bueno/visto-bueno.use-case.js";
 
 /**
  * GET /api/documentos/:id/descargar → X-Accel-Redirect.
@@ -116,5 +118,53 @@ export function registerDocumentosRoutes(app: FastifyInstance): void {
     "/api/documentos/:id/descargar",
     { preHandler: async (req, reply) => requireAuth(req, reply) },
     downloadAccelQuery,
+  );
+
+  // V°B° académico (ruta nativa JSON validada contra el contrato;
+  // ts-rest no registra este módulo — igual que el upload multipart).
+  app.post(
+    "/api/documentos/:id/visto-bueno",
+    { preHandler: async (req, reply) => requireAuth(req, reply) },
+    async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      const parsed = VistoBuenoSchema.safeParse(req.body);
+      if (!parsed.success) {
+        reply
+          .status(400)
+          .send(errorEnvelope("VALIDACION_FALLIDA", "Cuerpo inválido para el visto bueno"));
+        return;
+      }
+      const rows = await db
+        .select({ expedienteId: documentos.expedienteId })
+        .from(documentos)
+        .where(eq(documentos.id, req.params.id))
+        .limit(1);
+      const expedienteId = rows[0]?.expedienteId ?? null;
+      const a = await autorizar(
+        req.actor,
+        expedienteId
+          ? { permiso: ["documentos", "aprobar"], expedienteId }
+          : { permiso: ["documentos", "aprobar"] },
+      );
+      if (!a.ok) {
+        reply.status(a.status).send(a.body);
+        return;
+      }
+      const actor = req.actor ?? { id: "", dni: "desconocido" };
+      const uc = new VistoBuenoDocumentoUseCase();
+      const r = await uc.execute(
+        req.params.id,
+        {
+          aprobado: parsed.data.aprobado,
+          ...(parsed.data.comentario !== undefined ? { comentario: parsed.data.comentario } : {}),
+        },
+        actor,
+      );
+      if (!r.ok) {
+        const status = r.error.code === "NO_ENCONTRADO" ? 404 : 400;
+        reply.status(status).send(errorEnvelope(r.error.code, r.error.message));
+        return;
+      }
+      reply.status(200).send(r.value);
+    },
   );
 }

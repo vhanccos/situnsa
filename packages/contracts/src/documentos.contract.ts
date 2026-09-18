@@ -2,6 +2,17 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorEnvelopeSchema } from "./api-conventions.js";
 
+export const VistoBuenoSchema = z.object({
+  aprobado: z.boolean(),
+  comentario: z.string().max(2000).optional(),
+});
+
+export const VistoBuenoDTOSchema = z.object({
+  id: z.string().uuid(),
+  estado: z.string(),
+  version: z.number(),
+});
+
 export const DocumentoMetadataSchema = z.object({
   id: z.string().uuid(),
   expedienteId: z.string().uuid(),
@@ -47,5 +58,19 @@ export const documentosContract = c.router({
       404: ErrorEnvelopeSchema,
     },
     summary: "Descarga protegida vía X-Accel-Redirect (Nginx)",
+  },
+  vistoBueno: {
+    method: "POST",
+    path: "/api/documentos/:id/visto-bueno",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: VistoBuenoSchema,
+    responses: {
+      200: VistoBuenoDTOSchema,
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "V°B° académico del documento (RN-08: no cierra subetapa)",
   },
 });

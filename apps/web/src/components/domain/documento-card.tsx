@@ -1,11 +1,14 @@
-import { AlertTriangle, Eye, FileText, UploadCloud } from "lucide-react";
+import { AlertTriangle, Eye, FileText, Stamp, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 import { documentoDescargaUrl, useSubirDocumento } from "../../api/expedientes.js";
+import { useVistoBueno } from "../../api/seguimiento.js";
+import { useSession } from "../../api/session.js";
 import { cn } from "../../utils/cn.js";
-import { botonClases } from "../ui/button.js";
+import { Button, botonClases } from "../ui/button.js";
 import { Card } from "../ui/card.js";
 import { ConfirmDialog } from "../ui/confirm-dialog.js";
 import { StatusBadge } from "../ui/status-badge.js";
+import { useToast } from "../ui/toast.js";
 
 interface Props {
   expedienteId: string;
@@ -21,9 +24,36 @@ interface Props {
 export function DocumentoCard(p: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const subir = useSubirDocumento(p.expedienteId);
+  const vistoBueno = useVistoBueno(p.expedienteId);
+  const { sesion } = useSession();
+  const avisar = useToast();
   const [error, setError] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const [pendiente, setPendiente] = useState<File | null>(null);
+  // V°B°: asesor asignado o staff; solo sobre documento cargado u observado.
+  const puedeVisar =
+    !!p.documentoId &&
+    (p.estado === "CARGADO" || p.estado === "OBSERVADO") &&
+    !!sesion &&
+    ["ASESOR", "ADMIN_FIPS", "SECRETARIA", "DECANO"].includes(sesion.rol);
+
+  async function visar(aprobado: boolean): Promise<void> {
+    if (!p.documentoId) return;
+    const comentario = aprobado
+      ? undefined
+      : window.prompt("Motivo de la observación para el tesista:");
+    if (!aprobado && !(comentario ?? "").trim()) return;
+    try {
+      await vistoBueno.mutateAsync({
+        documentoId: p.documentoId,
+        aprobado,
+        ...(comentario != null ? { comentario } : {}),
+      });
+      avisar(aprobado ? "V°B° registrado" : "Documento observado");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudo visar", "error");
+    }
+  }
 
   async function ejecutar(file: File): Promise<void> {
     setError(null);
@@ -120,6 +150,29 @@ export function DocumentoCard(p: Props) {
           <UploadCloud size={14} />
           {subir.isPending ? "SUBIENDO…" : p.version === null ? "ADJUNTAR" : "REEMPLAZAR"}
         </button>
+        {puedeVisar && (
+          <span className="flex gap-1.5">
+            <Button
+              tamano="sm"
+              variante="exito"
+              disabled={vistoBueno.isPending}
+              onClick={() => void visar(true)}
+              type="button"
+            >
+              <Stamp size={14} />
+              V°B°
+            </Button>
+            <Button
+              tamano="sm"
+              variante="contorno"
+              disabled={vistoBueno.isPending}
+              onClick={() => void visar(false)}
+              type="button"
+            >
+              Observar
+            </Button>
+          </span>
+        )}
         <input
           accept="application/pdf"
           className="hidden"
