@@ -6,14 +6,19 @@ echo "=== Iniciando Situnsa en Render ==="
 # 1. Configurar puerto dinámico en Nginx
 PORT=${PORT:-10000}
 echo "Configurando Nginx en puerto $PORT..."
-mkdir -p /etc/nginx/conf.d /run/nginx /var/data/titulacion-docs
-sed "s/__PORT__/$PORT/g" /etc/nginx/nginx.render.conf > /etc/nginx/conf.d/default.conf
+# En Alpine, conf.d/*.conf se incluye en contexto root (server es ilegal ahí);
+# los virtual hosts van en http.d/ (dentro del bloque http).
+mkdir -p /etc/nginx/http.d /run/nginx /var/data/titulacion-docs
+sed "s/__PORT__/$PORT/g" /etc/nginx/nginx.render.conf > /etc/nginx/http.d/default.conf
 
 # 2. Esperar conexión a Postgres si DATABASE_URL está definida
 if [ -n "$DATABASE_URL" ]; then
   echo "Esperando conexión a la base de datos..."
   node -e '
-    const pg = require("pg");
+    // Resolver pg vía el workspace @pis/db: el layout aislado de pnpm no lo
+    // expone en /app/node_modules y require("pg") pelado falla (MODULE_NOT_FOUND).
+    const { createRequire } = require("module");
+    const pg = createRequire("/app/packages/db/dist/migrate.js")("pg");
     const url = process.env.DATABASE_URL;
     const useSsl = process.env.DATABASE_SSL === "true" || url.includes("sslmode=require") || url.includes("render.com");
     const pool = new pg.Pool({ connectionString: url, ssl: useSsl ? { rejectUnauthorized: false } : undefined, connectionTimeoutMillis: 5000 });

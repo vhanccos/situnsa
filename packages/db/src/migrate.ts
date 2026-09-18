@@ -1,3 +1,5 @@
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
@@ -19,7 +21,10 @@ async function main(): Promise<void> {
     ssl: useSsl ? { rejectUnauthorized: false } : undefined,
   });
   const db = drizzle(pool);
-  await migrate(db, { migrationsFolder: "./drizzle" });
+  // Relativo al archivo (no al CWD): funciona tanto con `pnpm db:migrate`
+  // (CWD = packages/db) como con `node packages/db/dist/migrate.js` (CWD = /app).
+  const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), "..", "drizzle");
+  await migrate(db, { migrationsFolder });
   console.log("Migraciones aplicadas OK");
   await pool.end();
   process.exit(0);
