@@ -274,7 +274,6 @@ export function DatosForm({
     <div className="space-y-4">
       {!grupo2 && (
         <FormSection
-          numero="1"
           icono={<Users size={16} />}
           titulo="ETAPA 01"
           ayuda="Datos del participante y de los documentos de la terna."
@@ -289,7 +288,6 @@ export function DatosForm({
       {grupo2 && (
         <>
           <FormSection
-            numero="1"
             icono={<Users size={16} />}
             titulo="ETAPA 01 · DATOS PERSONALES"
             ayuda="Dos participantes: complete los datos de cada uno."
@@ -302,7 +300,6 @@ export function DatosForm({
             {campos(PERSONA_2)}
           </FormSection>
           <FormSection
-            numero="2"
             icono={<FileText size={16} />}
             titulo="ETAPA 01 · DATOS DE DOCUMENTOS"
             ayuda="Decreto, terna y fechas de apertura y presentación."
@@ -312,7 +309,6 @@ export function DatosForm({
         </>
       )}
       <FormSection
-        numero="3"
         icono={<ClipboardList size={16} />}
         titulo="ETAPA 02"
         ayuda="Jurado, sustentación y modalidad de la etapa final."

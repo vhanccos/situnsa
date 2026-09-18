@@ -6,7 +6,6 @@ import { Card, CardEncabezado } from "./card.js";
  * Rompe el "muro de campos" en bloques escaneables.
  */
 export function FormSection({
-  numero,
   icono,
   titulo,
   ayuda,
@@ -14,7 +13,6 @@ export function FormSection({
   children,
   className,
 }: {
-  numero?: string;
   icono?: ReactNode;
   titulo: string;
   ayuda?: string;
@@ -27,14 +25,6 @@ export function FormSection({
       <CardEncabezado
         titulo={
           <span className="flex items-center gap-2.5">
-            {numero && (
-              <span
-                className="flex h-6 w-6 items-center justify-center rounded-md bg-navy-950 text-[11px] font-bold text-white"
-                aria-hidden
-              >
-                {numero}
-              </span>
-            )}
             {icono && <span className="text-navy-800">{icono}</span>}
             {titulo}
           </span>

@@ -184,7 +184,6 @@ export function NuevoExpedientePage() {
         ))}
       </fieldset>
       <FormSection
-        numero="1"
         icono={<FileText size={16} />}
         titulo="REGISTRO DEL TÍTULO DE TESIS"
         ayuda="Información obligatoria para la generación de documentos."
@@ -283,7 +282,6 @@ function BloqueParticipante({
   );
   return (
     <FormSection
-      numero={String(n + 1)}
       icono={<Users size={16} />}
       titulo={`Registro de Participante ${String(n).padStart(2, "0")}`}
       ayuda={n === 1 ? "Datos del primer tesista." : "Datos del segundo tesista."}
