@@ -11,6 +11,7 @@ import { DataTable } from "../ui/data-table.js";
 import { controlClase } from "../ui/field.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
+import { CierreCard } from "./cierre-card.js";
 
 /** Tab Resumen §9 (datos 100% del backend: subetapas + avance + mensajes). */
 export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
@@ -353,6 +354,8 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
           </ol>
         </Card>
       </div>
+
+      <CierreCard expedienteId={detalle.id} />
     </div>
   );
 }

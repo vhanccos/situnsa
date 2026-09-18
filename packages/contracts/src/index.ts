@@ -1,6 +1,7 @@
 import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { authContract } from "./auth.contract.js";
+import { cierreContract } from "./cierre.contract.js";
 import { documentosContract } from "./documentos.contract.js";
 import { expedientesContract } from "./expedientes.contract.js";
 import { gruposContract, reportesContract } from "./grupos-pagos.contract.js";
@@ -21,6 +22,7 @@ export const appContract = c.router({
   seguimiento: seguimientoContract,
   grupos: gruposContract,
   reportes: reportesContract,
+  cierre: cierreContract,
   programas: programasContract,
   health: {
     method: "GET",
@@ -32,6 +34,7 @@ export const appContract = c.router({
 
 export * from "./api-conventions.js";
 export * from "./auth.contract.js";
+export * from "./cierre.contract.js";
 export * from "./documentos.contract.js";
 export * from "./enums.js";
 export * from "./expedientes.contract.js";

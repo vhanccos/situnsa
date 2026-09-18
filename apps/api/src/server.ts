@@ -6,6 +6,7 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
 import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
 import { registerProgramasRoutes } from "./modules/catalogos/catalogos.routes.js";
+import { registerCierreRoutes } from "./modules/cierre/cierre.routes.js";
 import { registerDocumentosRoutes } from "./modules/documentos/documentos.routes.js";
 import { registerExpedientesRoutes } from "./modules/expedientes/expedientes.routes.js";
 import { registerSeguimientoRoutes } from "./modules/seguimiento/seguimiento.routes.js";
@@ -39,6 +40,7 @@ export async function buildServer() {
   registerProgramasRoutes(app);
   registerExpedientesRoutes(app);
   registerDocumentosRoutes(app);
+  registerCierreRoutes(app);
   registerTalleresRoutes(app);
   registerAsesoresRoutes(app);
   registerGruposRoutes(app);
