@@ -2,12 +2,10 @@
 
 > Generado en la inicialización del proyecto (2026-09-18). Ver `docs/04-operations/initial-setup-plan.md`.
 
-## 🔴 Bloqueante: remoto GitHub
-- [ ] Crear repositorio en GitHub (org UNSA/FIPS) — decidir nombre: `pis-titulacion`.
-- [ ] `git remote add origin git@github.com:<org>/pis-titulacion.git`
-- [ ] `git add . && git commit -m "chore: inicialización monorepo (Fase 0-8)" && git push -u origin main`
+## 🔴 Remoto GitHub — ✅ configurado (2026-09-18)
+- [x] Repo público `vhanccos/situnsa` creado por el usuario (vacío).
+- [x] `git remote add origin https://github.com/vhanccos/situnsa.git` + `git push -u origin main`.
 - [ ] Proteger rama `main` + exigir CI verde (`.github/workflows/ci.yml`).
-- [ ] **Decisión pendiente del usuario:** ¿repo público o privado? ¿quién crea el repo?
 
 ## 🟡 Verificación con Docker — ✅ verificado en setup (2026-09-18)
 - [x] `docker compose up -d postgres mailpit` → postgres healthy, mailpit UI 200
