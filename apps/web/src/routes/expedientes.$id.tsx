@@ -44,7 +44,7 @@ export function ExpedienteDetallePage() {
 
   if (query.isPending) {
     return (
-      <AppShell activo="">
+      <AppShell activo="/admin">
         <output className="space-y-2" aria-label="Cargando">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-14 animate-pulse rounded bg-white" />
@@ -55,7 +55,7 @@ export function ExpedienteDetallePage() {
   }
   if (query.isError) {
     return (
-      <AppShell activo="">
+      <AppShell activo="/admin">
         <p className="rounded border bg-white p-6 text-sm text-red-700">
           No se pudo cargar el expediente.{" "}
           <button className="underline" onClick={() => void query.refetch()} type="button">
@@ -72,7 +72,7 @@ export function ExpedienteDetallePage() {
   const d = query.data;
 
   return (
-    <AppShell activo="">
+    <AppShell activo="/admin">
       <Link className="text-sm text-navy-800 underline" to="/admin">
         ← Volver al listado
       </Link>
