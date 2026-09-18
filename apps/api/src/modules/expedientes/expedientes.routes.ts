@@ -76,11 +76,14 @@ export function registerExpedientesRoutes(app: FastifyInstance): void {
         return { status: 400 as const, body: { message: r.error.message, code: r.error.code } };
       return { status: 200 as const, body: ExpedienteDetalleDTOSchema.parse(r.value) };
     },
-    listar: async ({ query }) => {
+    listar: async ({ query, request }) => {
       const r = await listarExpedientes(db, {
         q: query.q,
         estado: query.estado,
         orden: query.orden,
+        vista: query.vista,
+        actorDni: request.actor?.dni,
+        actorRol: request.actor?.rol,
       });
       return { status: 200 as const, body: r };
     },

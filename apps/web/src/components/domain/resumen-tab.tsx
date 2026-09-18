@@ -1,5 +1,4 @@
 import type { ExpedienteDetalleDTO } from "@pis/contracts";
-import { FLUJO_TITULACION } from "@pis/domain/dist/expediente/seguimiento-catalogo.js";
 import { useState } from "react";
 import { usePublicarMensaje } from "../../api/expedientes.js";
 import { useSession } from "../../api/session.js";
@@ -8,11 +7,7 @@ import { DataTable } from "../ui/data-table.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
 
-const NOMBRES_ETAPA: Record<number, string> = Object.fromEntries(
-  FLUJO_TITULACION.map((e) => [e.numero, e.nombre]),
-);
-
-/** Tab Resumen §9: 7 etapas + acordeones + historial + mensajes. */
+/** Tab Resumen §9 (datos 100% del backend: subetapas + avance + mensajes). */
 export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
   const { sesion } = useSession();
   const avisar = useToast();
@@ -25,6 +20,9 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
     arr.push(s);
     porEtapa.set(s.etapa, arr);
   }
+  const etapas = [...porEtapa.keys()].sort((a, b) => a - b);
+  const nombreEtapa = (etapa: number): string =>
+    porEtapa.get(etapa)?.[0]?.etapaNombre ?? `Etapa ${etapa}`;
   const pctEtapa = (etapa: number): number => {
     const subs = porEtapa.get(etapa) ?? [];
     if (subs.length === 0) return 0;
@@ -53,22 +51,22 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
           </p>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-7">
-          {FLUJO_TITULACION.map((e) => {
-            const activa = e.numero === detalle.avance.etapaActual;
+          {etapas.map((numero) => {
+            const activa = numero === detalle.avance.etapaActual;
             return (
               <div
                 className={cn(
                   "rounded-lg border p-2 text-center",
                   activa ? "border-dorado-500 bg-aviso-100" : "bg-white",
                 )}
-                key={e.numero}
+                key={numero}
               >
-                <p className="text-lg font-bold text-navy-950">{e.numero}</p>
-                <p className="min-h-8 text-[11px] leading-tight">{e.nombre}</p>
-                <p className="mt-1 text-xs font-bold">{pctEtapa(e.numero)}%</p>
+                <p className="text-lg font-bold text-navy-950">{numero}</p>
+                <p className="min-h-8 text-[11px] leading-tight">{nombreEtapa(numero)}</p>
+                <p className="mt-1 text-xs font-bold">{pctEtapa(numero)}%</p>
                 <StatusBadge
                   estado={
-                    pctEtapa(e.numero) === 100 ? "FINALIZADO" : activa ? "EN_CURSO" : "NO_INICIADO"
+                    pctEtapa(numero) === 100 ? "FINALIZADO" : activa ? "EN_CURSO" : "NO_INICIADO"
                   }
                 />
               </div>
@@ -80,7 +78,7 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
       <section>
         <h2 className="text-sm font-bold">Etapas del expediente</h2>
         <div className="mt-2 space-y-2">
-          {[1, 2, 3, 4, 5, 6, 7].map((etapa) => {
+          {etapas.map((etapa) => {
             const subs = porEtapa.get(etapa) ?? [];
             return (
               <details
@@ -89,7 +87,7 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
                 open={etapa === detalle.avance.etapaActual}
               >
                 <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">
-                  {etapa}. {NOMBRES_ETAPA[etapa]} —{" "}
+                  {etapa}. {nombreEtapa(etapa)} —{" "}
                   {subs.filter((s) => s.estado === "FINALIZADO").length}/{subs.length}
                 </summary>
                 <ol className="space-y-1 border-t px-3 py-2">

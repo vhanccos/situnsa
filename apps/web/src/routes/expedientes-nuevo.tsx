@@ -1,6 +1,6 @@
-import { PROGRAMAS_OFICIALES } from "@pis/domain/dist/expediente/seguimiento-catalogo.js";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useProgramas } from "../api/catalogos.js";
 import { useInscribir } from "../api/expedientes.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { PageHeader } from "../components/ui/page-header.js";
@@ -38,7 +38,8 @@ export function NuevoExpedientePage() {
   const inscribir = useInscribir();
   const [dos, setDos] = useState(false);
   const [titulo, setTitulo] = useState("");
-  const [programa, setPrograma] = useState(PROGRAMAS_OFICIALES[6]?.nombre ?? "");
+  const programas = useProgramas();
+  const [programa, setPrograma] = useState("Seleccione");
   const [modalidad, setModalidad] = useState<"TESIS" | "TRABAJO_ACADEMICO" | "ARTICULO">("TESIS");
   const [p1, setP1] = useState<Participante>(VACIO);
   const [p2, setP2] = useState<Participante>(VACIO);
@@ -195,7 +196,8 @@ export function NuevoExpedientePage() {
         ))}
         <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
           <Select label="PROGRAMA" value={programa} onChange={setPrograma}>
-            {PROGRAMAS_OFICIALES.map((p) => (
+            <option value="Seleccione">Seleccione</option>
+            {(programas.data ?? []).map((p) => (
               <option key={p.codigo} value={p.nombre}>
                 {p.nombre}
               </option>

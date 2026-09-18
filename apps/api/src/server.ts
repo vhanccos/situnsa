@@ -3,6 +3,7 @@ import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import Fastify from "fastify";
 import { registerAuthRoutes } from "./modules/auth/auth.routes.js";
+import { registerProgramasRoutes } from "./modules/catalogos/catalogos.routes.js";
 import { registerDocumentosRoutes } from "./modules/documentos/documentos.routes.js";
 import { registerExpedientesRoutes } from "./modules/expedientes/expedientes.routes.js";
 import {
@@ -22,6 +23,7 @@ export async function buildServer() {
   app.get("/docs", async () => ({ contract: "pis @ts-rest", version: "0.1.0" }));
 
   registerAuthRoutes(app);
+  registerProgramasRoutes(app);
   registerExpedientesRoutes(app);
   registerDocumentosRoutes(app);
   registerTalleresRoutes(app);

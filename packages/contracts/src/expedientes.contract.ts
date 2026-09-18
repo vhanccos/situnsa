@@ -40,6 +40,8 @@ export const FiltrosExpedienteSchema = z.object({
   programa: z.string().optional(),
   q: z.string().optional(),
   orden: z.enum(["recientes", "antiguos", "menor-avance", "mayor-avance"]).optional(),
+  /** vista=mis: filtra por el actor autenticado (tesista→propios, asesor→asesorados). */
+  vista: z.enum(["mis"]).optional(),
 });
 
 /** Persona con campos del formulario legacy (ETAPA 01 · datos personales). */
@@ -111,6 +113,7 @@ export const ChecklistItemDTOSchema = z.object({
 
 export const SubetapaDTOSchema = z.object({
   etapa: z.number(),
+  etapaNombre: z.string(),
   orden: z.number(),
   nombre: z.string(),
   plazo: z.string().nullable(),

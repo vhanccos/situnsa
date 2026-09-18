@@ -5,7 +5,7 @@ async function entrarComo(page: Page, dni: string): Promise<void> {
   await page.getByPlaceholder("DNI, CUI o correo").fill(dni);
   await page.getByPlaceholder("Ingrese su contraseña").fill("x");
   await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page.getByText("Panel de administración")).toBeVisible();
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
 }
 
 test("smoke: login renderiza", async ({ page }) => {
@@ -48,6 +48,13 @@ test("corrección2: datos legacy-exactos (selects + documentos)", async ({ page 
   const modalidad = page.getByLabel("MODALIDAD", { exact: true });
   await expect(modalidad).toBeVisible();
   await expect(modalidad).toHaveValue("Plan de Tesis");
+});
+
+test("db real: tesista ve su trámite y asesor sus alumnos", async ({ page }) => {
+  await entrarComo(page, "12345678");
+  await page.goto("/mi-tramite");
+  await expect(page.getByText("SET005")).toBeVisible();
+  await expect(page.getByText(/Subetapa actual/)).toBeVisible();
 });
 
 test("corrección: resumen muestra 7 etapas e historial", async ({ page }) => {

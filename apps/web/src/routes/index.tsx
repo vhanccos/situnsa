@@ -23,12 +23,6 @@ export function HomePage() {
           Iniciar sesión
         </Link>
       )}
-      <p className="text-xs text-grafito-600">
-        Dev: expediente demo{" "}
-        <a className="underline" href="/expedientes/33333333-3333-4333-8333-333333333333">
-          SET005
-        </a>
-      </p>
     </main>
   );
 }

@@ -19,9 +19,10 @@ async function leerDetalle(res: Response): Promise<ExpedienteDetalleDTO> {
 }
 
 /** Detalle (Datos + checklist + seguimiento + mensajes), validado contra el contrato. */
-export function useExpedienteDetalle(id: string) {
+export function useExpedienteDetalle(id: string, enabled = true) {
   return useQuery({
     queryKey: expedienteKey(id),
+    enabled,
     queryFn: async (): Promise<ExpedienteDetalleDTO> =>
       leerDetalle(await apiFetch(`${apiBaseUrl}/api/expedientes/${id}`)),
   });
@@ -31,6 +32,7 @@ export interface FiltrosDashboard {
   q: string;
   estado: string;
   orden: string;
+  vista?: string;
 }
 
 /** Dashboard §4: tabla + indicadores en una sola lectura (§17 Optimización). */
@@ -39,8 +41,9 @@ export function useListarExpedientes(f: FiltrosDashboard) {
   if (f.q) params.set("q", f.q);
   if (f.estado) params.set("estado", f.estado);
   if (f.orden) params.set("orden", f.orden);
+  if (f.vista) params.set("vista", f.vista);
   return useQuery({
-    queryKey: [...expedientesKey, f.q, f.estado, f.orden],
+    queryKey: [...expedientesKey, f.q, f.estado, f.orden, f.vista ?? ""],
     queryFn: async () => {
       const res = await apiFetch(`${apiBaseUrl}/api/expedientes?${params}`);
       if (!res.ok) throw new Error("No se pudo cargar el listado");

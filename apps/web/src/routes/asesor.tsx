@@ -6,12 +6,11 @@ import { DataTable } from "../components/ui/data-table.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
 
-/** Portal del Asesor (asesor.html legacy): alumnos y talleres asignados. */
+/** Portal del Asesor (asesor.html legacy): alumnos asignados (?vista=mis). */
 export function AsesorPage() {
   const { sesion } = useSession();
-  const query = useListarExpedientes({ q: "", estado: "", orden: "recientes" });
-  // Demo: el asesor de prueba ve SET005. Fase RF: /api/expedientes?asesor=mio.
-  const items = (query.data?.items ?? []).filter(() => sesion?.dni === "87654321");
+  const query = useListarExpedientes({ q: "", estado: "", orden: "recientes", vista: "mis" });
+  const items = query.data?.items ?? [];
 
   return (
     <AppShell activo="/asesor">

@@ -4,8 +4,8 @@ import {
   ETIQUETAS_MODALIDAD_FINAL,
   modalidadAEtiqueta,
 } from "@pis/domain/dist/expediente/modalidades.js";
-import { PROGRAMAS_OFICIALES } from "@pis/domain/dist/expediente/seguimiento-catalogo.js";
 import { useEffect, useId, useRef, useState } from "react";
+import { useProgramas } from "../../api/catalogos.js";
 import { type GuardadoEstado, useActualizarDatos } from "../../api/expedientes.js";
 import { cn } from "../../utils/cn.js";
 import { Select } from "../ui/select.js";
@@ -75,17 +75,7 @@ function Campo({
           ))}
         </Select>
       ) : def.control === "programas" ? (
-        <Select ariaLabel={def.label} value={value} onChange={onChange}>
-          <option value="Seleccione">Seleccione</option>
-          {PROGRAMAS_OFICIALES.map((p) => (
-            <option key={p.codigo} value={p.nombre}>
-              {p.nombre}
-            </option>
-          ))}
-          {!PROGRAMAS_OFICIALES.some((p) => p.nombre === value) &&
-            value !== "Seleccione" &&
-            value !== "" && <option value={value}>{value} (no oficial)</option>}
-        </Select>
+        <ProgramasSelect label={def.label} value={value} onChange={onChange} />
       ) : (
         <input
           id={controlId}
@@ -161,6 +151,34 @@ const ETAPA_02: DefCampo[] = [
   { clave: "lugarSustentacion", label: "LUGAR SUSTENTACIÓN", control: "texto" },
   { clave: "modalidadFinal", label: "MODALIDAD VIRTUAL", control: "modalidad-final" },
 ];
+
+/** Programas desde el catálogo real (RN-L14, HU-0069), cache de sesión. */
+function ProgramasSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange?: ((v: string) => void) | undefined;
+}) {
+  const programas = useProgramas();
+  const items = programas.data ?? [];
+  return (
+    <Select ariaLabel={label} value={value} onChange={onChange}>
+      <option value="Seleccione">Seleccione</option>
+      {items.map((p) => (
+        <option key={p.codigo} value={p.nombre}>
+          {p.nombre}
+        </option>
+      ))}
+      {!programas.isPending &&
+        !items.some((p) => p.nombre === value) &&
+        value !== "Seleccione" &&
+        value !== "" && <option value={value}>{value} (no oficial)</option>}
+    </Select>
+  );
+}
 
 /**
  * Pestaña Datos §6 con la estructura legacy exacta:

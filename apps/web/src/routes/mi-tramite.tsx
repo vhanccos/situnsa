@@ -1,25 +1,22 @@
-import { semaforoPlazo } from "@pis/domain/dist/expediente/dias-habiles.js";
-import { useExpedienteDetalle } from "../api/expedientes.js";
-import { useSession } from "../api/session.js";
-import { SemaforoBadge } from "../components/domain/semaforo-badge.js";
+import { useExpedienteDetalle, useListarExpedientes } from "../api/expedientes.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
 
-/** Expediente del tesista en sesión (portal alumno legacy: tramite.html). */
-function useMiExpedienteId(): string | null {
-  const { sesion } = useSession();
-  // Demo: el tesista de prueba tiene SET005. Fase RF: /api/expedientes?mio=1.
-  if (sesion?.dni === "12345678") return "33333333-3333-4333-8333-333333333333";
-  return null;
+/** Expediente del tesista en sesión (?vista=mis, portal alumno legacy). */
+function useMiExpedienteId(): string | null | undefined {
+  const lista = useListarExpedientes({ q: "", estado: "", orden: "recientes", vista: "mis" });
+  if (lista.isPending) return undefined;
+  if (lista.isError) return null;
+  return lista.data.items[0]?.id ?? null;
 }
 
 /** §5 Dashboard del Tesista: seguimiento personal, avance y mensajes. */
 export function MiTramitePage() {
   const id = useMiExpedienteId();
-  const query = useExpedienteDetalle(id ?? "00000000-0000-0000-0000-000000000000");
+  const query = useExpedienteDetalle(id ?? "", id !== undefined && id !== null);
 
-  if (!id) {
+  if (id === null) {
     return (
       <AppShell activo="/mi-tramite">
         <PageHeader titulo="Mi trámite de titulación" />
@@ -29,7 +26,7 @@ export function MiTramitePage() {
       </AppShell>
     );
   }
-  if (query.isPending) {
+  if (id === undefined || query.isPending) {
     return (
       <AppShell activo="/mi-tramite">
         <output className="space-y-2" aria-label="Cargando">
@@ -125,9 +122,10 @@ export function MiTramitePage() {
             </li>
           ))}
         </ul>
-        <div className="mt-3">
-          <SemaforoBadge dias={4} estado={semaforoPlazo(4)} />
-        </div>
+        <p className="mt-3 text-xs text-grafito-600">
+          Subetapa actual: {d.avance.subetapaActual ?? "—"} · {d.avance.marcados} de{" "}
+          {d.avance.total} finalizadas.
+        </p>
       </section>
     </AppShell>
   );

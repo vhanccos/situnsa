@@ -85,9 +85,6 @@ export function LoginPage() {
         <Button className="w-full" disabled={cargando || !identificador || !password} type="submit">
           {cargando ? "Validando credenciales…" : "Ingresar"}
         </Button>
-        <p className="text-center text-xs text-grafito-600">
-          Dev: 12345678 (tesista) · 00000001 (admin) · 87654321 (asesor)
-        </p>
       </form>
     </main>
   );
