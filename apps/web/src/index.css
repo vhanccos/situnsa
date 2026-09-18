@@ -1,7 +1,10 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+
 /** Sistema visual institucional §14: Azul #0B1F30, Grafito, Guinda, Verde. */
 /* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind v4 theme tokens */
 @theme {
+  --font-sans: "Inter Variable", "Inter", "Segoe UI", system-ui, sans-serif;
   --color-navy-950: #0b1f30;
   --color-navy-800: #123149;
   --color-navy-100: #d3e0e8;
@@ -17,6 +20,21 @@
 }
 
 body {
-  background: #f3f5f7;
+  background: #eef1f4;
   color: #1b2228;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid #123149;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/** Fondo institucional del login: navy con halo dorado tenue. */
+.login-fondo {
+  background:
+    radial-gradient(60rem 30rem at 50% -10%, rgba(209, 168, 75, 0.16), transparent 60%),
+    radial-gradient(40rem 24rem at 85% 110%, rgba(120, 21, 47, 0.35), transparent 60%), #0b1f30;
 }

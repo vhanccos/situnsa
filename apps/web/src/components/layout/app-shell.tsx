@@ -1,29 +1,50 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import {
+  ClipboardCheck,
+  FilePlus,
+  GraduationCap,
+  LayoutList,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Users,
+  X,
+} from "lucide-react";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { useSession } from "../../api/session.js";
 import { cn } from "../../utils/cn.js";
 
 interface Item {
   to: string;
   etiqueta: string;
+  icono: ReactNode;
 }
 
 function navPorRol(rol: string | undefined): Item[] {
-  if (rol === "TESISTA") return [{ to: "/mi-tramite", etiqueta: "Mi Trámite" }];
-  if (rol === "ASESOR" || rol === "JURADO") return [{ to: "/asesor", etiqueta: "Mis Alumnos" }];
+  if (rol === "TESISTA") {
+    return [{ to: "/mi-tramite", etiqueta: "Mi Trámite", icono: <LayoutList size={18} /> }];
+  }
+  if (rol === "ASESOR" || rol === "JURADO") {
+    return [{ to: "/asesor", etiqueta: "Mis Alumnos", icono: <GraduationCap size={18} /> }];
+  }
   return [
-    { to: "/admin", etiqueta: "Listado de Expedientes" },
-    { to: "/expedientes/nuevo", etiqueta: "Nuevo Expediente" },
-    { to: "/inscripciones", etiqueta: "Validación" },
-    { to: "/talleres", etiqueta: "Taller de Tesis" },
-    { to: "/asesores", etiqueta: "Asesores" },
+    { to: "/admin", etiqueta: "Listado de Expedientes", icono: <LayoutList size={18} /> },
+    { to: "/expedientes/nuevo", etiqueta: "Nuevo Expediente", icono: <FilePlus size={18} /> },
+    { to: "/inscripciones", etiqueta: "Validación", icono: <ClipboardCheck size={18} /> },
+    { to: "/talleres", etiqueta: "Taller de Tesis", icono: <GraduationCap size={18} /> },
+    { to: "/asesores", etiqueta: "Asesores", icono: <Users size={18} /> },
   ];
 }
 
-/** AppShell §14.1: sidebar + topbar + área de contenido; exige sesión. */
+/** AppShell §14.1: sidebar navy fijo + colapsable, drawer en móvil. */
 export function AppShell({ children, activo }: { children: ReactNode; activo: string }) {
   const { sesion, salir } = useSession();
   const navigate = useNavigate();
+  const [colapsado, setColapsado] = useState(
+    () => localStorage.getItem("pis-sidebar") === "colapsado",
+  );
+  const [abierto, setAbierto] = useState(false);
 
   if (!sesion) {
     return (
@@ -36,55 +57,128 @@ export function AppShell({ children, activo }: { children: ReactNode; activo: st
     );
   }
 
+  function alternar(): void {
+    setColapsado((v) => {
+      localStorage.setItem("pis-sidebar", v ? "expandido" : "colapsado");
+      return !v;
+    });
+  }
+
+  function cerrarSesion(): void {
+    salir();
+    void navigate({ to: "/login" });
+  }
+
+  const items = navPorRol(sesion.rol);
+  const marca = (
+    <>
+      <p className="text-sm font-bold tracking-wide">SISTEMA DE TITULACIÓN</p>
+      {!colapsado && <p className="text-xs text-navy-100">Segunda Especialidad - FIPS UNSA</p>}
+    </>
+  );
+
   return (
-    <div className="min-h-screen md:flex">
-      <aside className="bg-navy-950 text-white md:flex md:w-60 md:flex-col">
-        <div className="border-b border-white/10 p-4">
-          <p className="text-sm font-bold">SISTEMA DE TITULACIÓN</p>
-          <p className="text-xs text-navy-100">Segunda Especialidad - FIPS UNSA</p>
+    <div className="min-h-screen bg-[#eef1f4] md:flex">
+      {abierto && (
+        <button
+          aria-label="Cerrar menú"
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setAbierto(false)}
+          type="button"
+        />
+      )}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-navy-950 text-white shadow-xl transition-all duration-150",
+          "md:sticky md:top-0 md:h-screen md:shadow-none",
+          colapsado && "md:w-16",
+          !colapsado && "md:w-60",
+          abierto ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+        )}
+      >
+        <div className="flex items-center justify-between gap-2 border-b border-white/10 p-4">
+          <div className={cn("min-w-0", colapsado && "md:hidden")}>{marca}</div>
+          <button
+            aria-label={colapsado ? "Expandir menú" : "Colapsar menú"}
+            className="hidden rounded p-1.5 hover:bg-white/10 md:block"
+            onClick={alternar}
+            type="button"
+          >
+            {colapsado ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+          <button
+            aria-label="Cerrar menú"
+            className="rounded p-1.5 hover:bg-white/10 md:hidden"
+            onClick={() => setAbierto(false)}
+            type="button"
+          >
+            <X size={18} />
+          </button>
         </div>
         <nav className="flex gap-1 overflow-x-auto p-2 md:flex-col" aria-label="Menú principal">
-          {navPorRol(sesion.rol).map((i) => (
-            <Link
-              className={cn(
-                "whitespace-nowrap rounded px-3 py-2 text-sm",
-                activo === i.to ? "bg-guinda-700 font-semibold" : "hover:bg-white/10",
-              )}
-              key={i.to}
-              to={i.to}
-            >
-              {i.etiqueta}
-            </Link>
-          ))}
+          {items.map((i) => {
+            const esActivo = activo === i.to;
+            return (
+              <Link
+                className={cn(
+                  "relative flex items-center gap-3 whitespace-nowrap rounded-md px-3 py-2.5 text-sm transition-colors",
+                  esActivo
+                    ? "bg-white/10 font-semibold"
+                    : "text-white/80 hover:bg-white/5 hover:text-white",
+                  colapsado && "md:justify-center md:px-0",
+                )}
+                key={i.to}
+                title={i.etiqueta}
+                to={i.to}
+                onClick={() => setAbierto(false)}
+              >
+                {esActivo && (
+                  <span
+                    className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-dorado-500"
+                    aria-hidden
+                  />
+                )}
+                <span className="shrink-0">{i.icono}</span>
+                <span className={cn(colapsado && "md:hidden")}>{i.etiqueta}</span>
+              </Link>
+            );
+          })}
         </nav>
-        <div className="mt-auto hidden p-4 text-xs text-navy-100 md:block">
-          <p className="font-semibold text-white">{sesion.nombres}</p>
-          <p>
+        <div
+          className={cn("mt-auto border-t border-white/10 p-4 text-xs", colapsado && "md:hidden")}
+        >
+          <p className="truncate font-semibold text-white">{sesion.nombres}</p>
+          <p className="text-navy-100">
             DNI {sesion.dni} · {sesion.rol.replace("_", " ")}
           </p>
           <button
-            className="mt-2 underline"
-            onClick={() => {
-              salir();
-              void navigate({ to: "/login" });
-            }}
+            className="mt-2 text-navy-100 underline underline-offset-2 hover:text-white"
+            onClick={cerrarSesion}
             type="button"
           >
             Cerrar sesión
           </button>
         </div>
       </aside>
-      <div className="flex-1">
-        <div className="flex items-center justify-between gap-2 border-b bg-white px-4 py-2 md:hidden">
-          <span className="truncate text-xs text-grafito-600">
-            {sesion.nombres} · {sesion.rol}
+      <div className="min-w-0 flex-1">
+        <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-2.5 backdrop-blur">
+          <button
+            aria-label="Abrir menú"
+            className="rounded p-1.5 hover:bg-slate-100 md:hidden"
+            onClick={() => setAbierto(true)}
+            type="button"
+          >
+            <Menu size={20} />
+          </button>
+          <p className="truncate text-sm font-semibold text-navy-950">
+            Sistema de Titulación — FIPS UNSA
+          </p>
+          <span className="ml-auto hidden truncate text-xs text-grafito-600 sm:block">
+            {sesion.nombres} · {sesion.rol.replace("_", " ")}
           </span>
           <button
-            className="text-xs underline"
-            onClick={() => {
-              salir();
-              void navigate({ to: "/login" });
-            }}
+            className="ml-auto text-xs text-navy-800 underline underline-offset-2 sm:ml-0 md:hidden"
+            onClick={cerrarSesion}
             type="button"
           >
             Salir

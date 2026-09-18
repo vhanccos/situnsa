@@ -1,3 +1,4 @@
+import { FileText } from "lucide-react";
 import { useRef, useState } from "react";
 import { documentoDescargaUrl, useSubirDocumento } from "../../api/expedientes.js";
 import { cn } from "../../utils/cn.js";
@@ -51,7 +52,7 @@ export function DocumentoCard(p: Props) {
     <div className="rounded-lg border bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span aria-hidden>📄</span>
+          <FileText aria-hidden size={16} className="shrink-0 text-navy-800" />
           <h3 className="text-sm font-semibold">{p.nombre}</h3>
         </div>
         <span

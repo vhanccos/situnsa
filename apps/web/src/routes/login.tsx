@@ -1,7 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
+import { GraduationCap } from "lucide-react";
 import { useState } from "react";
 import { destinoPorRol } from "../api/auth.js";
 import { useSession } from "../api/session.js";
+import { Button } from "../components/ui/button.js";
 
 /** §3 Login: acceso, "Validando credenciales…", error controlado, navegación por rol. */
 export function LoginPage() {
@@ -33,7 +35,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-navy-950 p-4">
+    <main className="login-fondo flex min-h-screen items-center justify-center p-4">
       <form
         aria-label="Iniciar sesión"
         className="w-full max-w-sm space-y-4 rounded-xl bg-white p-6 shadow-xl"
@@ -43,10 +45,10 @@ export function LoginPage() {
       >
         <div className="text-center">
           <div
-            className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-navy-950 text-xl text-white"
+            className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-navy-950 text-white"
             aria-hidden
           >
-            🎓
+            <GraduationCap size={26} />
           </div>
           <h1 className="mt-2 text-lg font-bold text-navy-950">SISTEMA DE TITULACIÓN</h1>
           <p className="text-xs text-grafito-600">Segunda Especialidad - FIPS UNSA</p>
@@ -80,13 +82,9 @@ export function LoginPage() {
             {error}
           </p>
         )}
-        <button
-          className="w-full rounded bg-guinda-800 py-2.5 text-sm font-bold text-white hover:bg-guinda-700 disabled:opacity-60"
-          disabled={cargando || !identificador || !password}
-          type="submit"
-        >
+        <Button className="w-full" disabled={cargando || !identificador || !password} type="submit">
           {cargando ? "Validando credenciales…" : "Ingresar"}
-        </button>
+        </Button>
         <p className="text-center text-xs text-grafito-600">
           Dev: 12345678 (tesista) · 00000001 (admin) · 87654321 (asesor)
         </p>

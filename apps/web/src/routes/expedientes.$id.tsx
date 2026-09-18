@@ -112,10 +112,10 @@ export function ExpedienteDetallePage() {
           <button
             key={t.id}
             className={cn(
-              "rounded-t border-b-2 px-4 py-2 text-sm",
+              "rounded-t px-4 py-2 text-sm transition-colors",
               tab === t.id
-                ? "border-guinda-800 bg-white font-semibold"
-                : "border-transparent text-grafito-600 hover:bg-white",
+                ? "border-b-2 border-guinda-800 bg-white font-semibold text-navy-950"
+                : "border-b-2 border-transparent text-grafito-600 hover:bg-white hover:text-navy-950",
             )}
             onClick={() => setTab(t.id)}
             type="button"

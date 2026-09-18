@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { CircleDashed, Files, Hourglass, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { useListarExpedientes } from "../api/expedientes.js";
 import { AppShell } from "../components/layout/app-shell.js";
@@ -34,7 +35,7 @@ export function AdminPage() {
         descripcion="Consulta, filtros e historial operativo."
         acciones={
           <Link
-            className="rounded bg-guinda-800 px-4 py-2 text-sm font-semibold text-white hover:bg-guinda-700"
+            className="inline-flex h-10 items-center rounded-md bg-guinda-800 px-4 text-sm font-semibold text-white transition-colors hover:bg-guinda-700"
             to="/expedientes/nuevo"
           >
             Nuevo Expediente
@@ -43,14 +44,40 @@ export function AdminPage() {
       />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
-          ["TOTAL DE EXPEDIENTES", r?.total ?? "—"],
-          ["EN CURSO", r?.enCurso ?? "—"],
-          ["FINALIZADOS", r?.finalizados ?? "—"],
-          ["SIN INICIAR", r?.sinIniciar ?? "—"],
-        ].map(([l, v]) => (
-          <div className="rounded-lg border border-t-4 border-t-guinda-800 bg-white p-4" key={l}>
-            <p className="text-xs text-grafito-600">{l}</p>
-            <p className="text-2xl font-bold">{v}</p>
+          {
+            l: "TOTAL DE EXPEDIENTES",
+            v: r?.total ?? "—",
+            icono: <Files size={18} />,
+            borde: "border-t-navy-950",
+          },
+          {
+            l: "EN CURSO",
+            v: r?.enCurso ?? "—",
+            icono: <Hourglass size={18} />,
+            borde: "border-t-dorado-500",
+          },
+          {
+            l: "FINALIZADOS",
+            v: r?.finalizados ?? "—",
+            icono: <ListChecks size={18} />,
+            borde: "border-t-verde-inst-700",
+          },
+          {
+            l: "SIN INICIAR",
+            v: r?.sinIniciar ?? "—",
+            icono: <CircleDashed size={18} />,
+            borde: "border-t-slate-300",
+          },
+        ].map((c) => (
+          <div
+            className={`rounded-lg border border-t-4 ${c.borde} bg-white p-4 shadow-sm`}
+            key={c.l}
+          >
+            <p className="flex items-center gap-1.5 text-xs font-medium text-grafito-600">
+              <span className="text-navy-800">{c.icono}</span>
+              {c.l}
+            </p>
+            <p className="mt-1 text-2xl font-bold tabular-nums">{c.v}</p>
           </div>
         ))}
       </div>
