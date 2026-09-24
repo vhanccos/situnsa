@@ -67,19 +67,19 @@ make dev
 | Tesista | `12345678` / `11223344` | `x` |
 | Asesor | `87654321` | `x` |
 
-Auth real: acceso JWT 15 min (Bearer) + refresh rotativo HttpOnly 8 h,
-bloqueo 5 intentos × 15 min, Google OIDC solo para usuarios existentes
-(sin autocreación). Permisos `modulo.accion` en `roles`/`permisos`.
-
-Login dev (stub `x-user-dni`, Fase 2: Better-Auth): tesista `12345678`,
-admin `00000001`, asesor `87654321` (cualquier contraseña no vacía).
+Auth real: acceso JWT 15 min (Bearer, solo en memoria) + refresh rotativo
+HttpOnly 8 h, bloqueo 5 intentos × 15 min, Google OIDC solo para usuarios
+existentes (sin autocreación). Permisos `modulo.accion` + alcance por
+registro (403 auditado). El stub `x-user-dni` solo vive con `AUTH_STUB=1`
+(dev/curl); en prod se exige Bearer.
 
 ## Flujo de trabajo
 
 ```bash
 make dev          # codificar (HMR <50ms, tsx --watch)
 make check        # antes de cada commit: Biome + typecheck + Vitest
-make prod-local   # antes de cada PR: paridad prod (Nginx :80 + API + DB)
+make prod-local   # antes de cada PR: MISMA imagen que Render en :80
+                  # (migrate + seed demo + Nginx + API; credencial demo: x)
 make prod-down    # bajar el entorno de paridad
 ```
 
@@ -119,5 +119,9 @@ Detalle del Expediente (Datos legacy-exactos + autoguardado, Documentos E1/E2
 con upload real, Resumen con seguimiento e historial), registro con validación,
 talleres, asesores y mensajes administrativos.
 
-Pendiente (Fase 2): generador documental (botón Insertar Datos), Better-Auth
-(DNI + Google `@unsa.edu.pe`), workers `pg-boss`, gate `prod-local` en CI.
+Port S-FIPS (4 oleadas): convenciones API + auth/sesiones, RBAC y controles,
+proceso operativo (observar/V°B°/finalizar), taller y pagos, cierre del
+trámite (jurados/sustentación/validaciones).
+
+Pendiente: generador documental (botón Insertar Datos), transporte SMTP
+real (los workers hoy loguean), UI admin del proceso configurable.

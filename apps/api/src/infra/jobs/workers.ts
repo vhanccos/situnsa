@@ -19,6 +19,10 @@ export async function iniciarWorkers(): Promise<void> {
     console.error("[workers] pg-boss no disponible; workers desactivados", err);
     return;
   }
+  // Las colas deben existir antes de programar el cron (schedule en
+  // cola inexistente = "Queue not found"). createQueue es idempotente.
+  await boss.createQueue(COLA_CORREOS);
+  await boss.createQueue(COLA_RECORDATORIOS);
   await boss.work<CorreoPayload>(COLA_CORREOS, async (jobs) => {
     const job = jobs[0];
     const p = job?.data;

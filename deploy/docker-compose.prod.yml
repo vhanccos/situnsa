@@ -1,3 +1,6 @@
+# Paridad prod local: MISMA imagen que Render (deploy/Dockerfile.render) +
+# MISMO entrypoint (migrate + seed + nginx + API en un contenedor).
+# Uso: make prod-local  →  http://localhost/  (Nginx :80 → SPA + /api → :3001)
 services:
   postgres:
     image: postgres:16-alpine
@@ -14,34 +17,28 @@ services:
       timeout: 5s
       retries: 10
 
-  api:
+  web:
     build:
       context: ..
-      dockerfile: deploy/Dockerfile
-      target: api
+      dockerfile: deploy/Dockerfile.render
     restart: unless-stopped
+    ports:
+      - "80:80"
     environment:
-      PORT: 3001
-      DATABASE_URL: postgres://pis:pis_dev@postgres:5432/pis_titulacion
+      PORT: 80
+      DATABASE_URL: postgres://${POSTGRES_USER:-pis}:${POSTGRES_PASSWORD:-pis_dev}@postgres:5432/${POSTGRES_DB:-pis_titulacion}
       DOCS_VOLUME_PATH: /var/data/titulacion-docs
+      # Auth real en modo prod-local (mismos nombres que en Render):
+      JWT_SECRET: ${JWT_SECRET:-prod-local-secret-solo-para-paridad-no-usar-en-render-123456}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-x}
+      AUTH_STUB: "0"
+      NODE_ENV: production
+      SEED_MODE: ${SEED_MODE:-demo}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - docs-prod:/var/data/titulacion-docs
-
-  nginx:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      target: web
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      - api
-    volumes:
-      - docs-prod:/var/data/titulacion-docs:ro
 
 volumes:
   pgdata-prod:
