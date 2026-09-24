@@ -3,7 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 async function entrarComo(page: Page, dni: string): Promise<void> {
   await page.goto("/login");
   await page.getByPlaceholder("DNI, CUI o correo").fill(dni);
-  await page.getByPlaceholder("Ingrese su contraseña").fill("demo-2026");
+  await page.getByPlaceholder("Ingrese su contraseña").fill("x");
   await page.getByRole("button", { name: "Ingresar" }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"));
 }
@@ -32,7 +32,7 @@ test("fase1: detalle del expediente con 4 tabs", async ({ page }) => {
 test("corrección: login por rol lleva al dashboard", async ({ page }) => {
   await page.goto("/login");
   await page.getByPlaceholder("DNI, CUI o correo").fill("00000001");
-  await page.getByPlaceholder("Ingrese su contraseña").fill("demo-2026");
+  await page.getByPlaceholder("Ingrese su contraseña").fill("x");
   await page.getByRole("button", { name: "Ingresar" }).click();
   await expect(page.getByText("Panel de administración")).toBeVisible();
   for (const cod of ["SET004", "SET005", "SET007"]) {

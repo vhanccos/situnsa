@@ -12,8 +12,8 @@ import {
 
 describe("hash bcrypt", () => {
   it("verifica la clave correcta y rechaza otra", () => {
-    const h = hashearClaveTest("demo-2026");
-    expect(verificarClave("demo-2026", h)).toBe(true);
+    const h = hashearClaveTest("x");
+    expect(verificarClave("x", h)).toBe(true);
     expect(verificarClave("otra", h)).toBe(false);
     expect(verificarClave("x", "no-es-hash")).toBe(false);
   });

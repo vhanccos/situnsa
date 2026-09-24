@@ -62,10 +62,10 @@ make dev
 
 | Rol | Usuario (DNI) | Clave |
 |---|---|---|
-| Admin | `00000001` | `demo-2026` |
-| Secretaría | `00000002` | `demo-2026` |
-| Tesista | `12345678` / `11223344` | `demo-2026` |
-| Asesor | `87654321` | `demo-2026` |
+| Admin | `00000001` | `x` |
+| Secretaría | `00000002` | `x` |
+| Tesista | `12345678` / `11223344` | `x` |
+| Asesor | `87654321` | `x` |
 
 Auth real: acceso JWT 15 min (Bearer) + refresh rotativo HttpOnly 8 h,
 bloqueo 5 intentos × 15 min, Google OIDC solo para usuarios existentes

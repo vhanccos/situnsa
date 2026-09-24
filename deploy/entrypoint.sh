@@ -44,12 +44,21 @@ if [ -n "$DATABASE_URL" ]; then
     echo "Advertencia: Error conectando a DB, continuando..."
   }
 
-  # 3. Aplicar migraciones y seed demo
+  # 3. Aplicar migraciones y seed
+  # SEED_MODE=demo (default): catálogos + roles + usuarios demo (00000001/x).
+  # Solo para demo: cualquiera que conozca el DNI entra. Para uso serio,
+  # poner SEED_MODE=base (solo catálogos+roles, sin usuarios demo) y crear
+  # el admin a mano por SQL.
   echo "Aplicando migraciones versionadas..."
   node packages/db/dist/migrate.js || pnpm --filter @pis/db db:migrate || true
 
-  echo "Ejecutando seed de datos demo..."
-  node packages/db/dist/seed.js || pnpm --filter @pis/db db:seed || true
+  if [ "${SEED_MODE:-demo}" = "base" ]; then
+    echo "Ejecutando seed base (sin usuarios demo)..."
+    node packages/db/dist/seed-base.js || pnpm --filter @pis/db db:seed:base || true
+  else
+    echo "Ejecutando seed de datos demo..."
+    node packages/db/dist/seed.js || pnpm --filter @pis/db db:seed || true
+  fi
 else
   echo "ADVERTENCIA: DATABASE_URL no definida: se omite migrate/seed y la API no tendra DB (login dara 500)."
 fi

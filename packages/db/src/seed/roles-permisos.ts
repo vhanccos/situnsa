@@ -257,7 +257,7 @@ export async function asignarRolesLegacy(db: Db): Promise<void> {
 
 /** Clave demo/dev (solo seed demo, nunca prod). Documentada en README. */
 export function claveDemo(): string {
-  return process.env.DEMO_PASSWORD ?? "demo-2026";
+  return process.env.DEMO_PASSWORD ?? "x";
 }
 
 /** Fija el hash bcrypt (coste 12, S-FIPS) a los usuarios demo indicados. */

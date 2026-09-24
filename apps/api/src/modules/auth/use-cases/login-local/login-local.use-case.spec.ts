@@ -34,7 +34,7 @@ const base: CuentaAuth = {
   email: "angela@unsa.edu.pe",
   rol: "ADMIN_FIPS",
   activo: true,
-  passwordHash: hashearClaveTest("demo-2026"),
+  passwordHash: hashearClaveTest("x"),
   googleSub: null,
   intentosFallidos: 0,
   bloqueadoHasta: null,
@@ -46,7 +46,7 @@ describe("LoginLocalUseCase", () => {
   it("emite par de tokens con credenciales válidas y resetea intentos", async () => {
     const repo = cuentasFake(base);
     const uc = new LoginLocalUseCase(repo, sesionesFake(), () => new Date("2026-01-01T00:00Z"));
-    const r = await uc.execute({ identificador: "00000001", password: "demo-2026", ...ctx });
+    const r = await uc.execute({ identificador: "00000001", password: "x", ...ctx });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.value.usuario.dni).toBe("00000001");
@@ -78,15 +78,15 @@ describe("LoginLocalUseCase", () => {
       sesionesFake(),
       () => new Date("2026-01-01T00:05Z"),
     );
-    const r2 = await uc2.execute({ identificador: "00000001", password: "demo-2026", ...ctx });
+    const r2 = await uc2.execute({ identificador: "00000001", password: "x", ...ctx });
     expect(!r2.ok && r2.error.code).toBe("CUENTA_BLOQUEADA");
   });
 
   it("rechaza inactivos y cuentas sin clave", async () => {
     const uc1 = new LoginLocalUseCase(cuentasFake({ ...base, activo: false }), sesionesFake());
-    expect(
-      !(await uc1.execute({ identificador: "00000001", password: "demo-2026", ...ctx })).ok,
-    ).toBe(true);
+    expect(!(await uc1.execute({ identificador: "00000001", password: "x", ...ctx })).ok).toBe(
+      true,
+    );
     const uc2 = new LoginLocalUseCase(cuentasFake({ ...base, passwordHash: null }), sesionesFake());
     const r = await uc2.execute({ identificador: "00000001", password: "x", ...ctx });
     expect(!r.ok && r.error.code).toBe("SIN_CLAVE");

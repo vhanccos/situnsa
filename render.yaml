@@ -16,8 +16,17 @@ services:
           property: connectionString
       - key: DOCS_VOLUME_PATH
         value: /var/data/titulacion-docs
-      - key: BETTER_AUTH_SECRET
+      # Auth real (port A2): HS256 >= 32 caracteres, generado por Render
+      - key: JWT_SECRET
         generateValue: true
+      # Clave del seed demo (SOLO demo; nunca usar en prod serio)
+      - key: DEMO_PASSWORD
+        value: x
+      # Stub x-user-dni desactivado: se exige Bearer JWT
+      - key: AUTH_STUB
+        value: "0"
+      - key: NODE_ENV
+        value: production
 
 databases:
   - name: situnsa-db
