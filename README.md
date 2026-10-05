@@ -54,9 +54,30 @@ make dev
 | Servicio | URL | Notas |
 |---|---|---|
 | Web (Vite HMR) | http://localhost:5173 | `VITE_API_URL` vacío = mismo origen vía proxy `/api` |
-| API (Fastify) | http://localhost:3001 | `GET /health`, `GET /docs` |
+| API (Fastify) | http://localhost:3001 | `GET /api/health` (y `/health`), `GET /docs` |
 | Postgres 16 | localhost:5432 | `DATABASE_URL` en `.env` |
-| Mailpit UI / SMTP | http://localhost:8025 / :1025 | Correos de dev, sin envío real |
+| Mailpit UI / SMTP | http://localhost:8025 / :1025 | Bandeja de los correos de dev (activación, observaciones, avances) |
+
+### Variables nuevas (ver `.env.example`)
+
+| Variable | Uso |
+|---|---|
+| `APP_URL` | URL pública de la web para los enlaces de los correos (en Render, si falta, se usa `RENDER_EXTERNAL_URL`) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `MAIL_FROM` | Transporte SMTP (nodemailer). Dev: Mailpit `localhost:1025`. Sin `SMTP_HOST` los correos solo se registran en el log |
+| `DOCS_ENTREGA` | `accel` (Nginx X-Accel-Redirect) o `stream` (sin Nginx). Vacío = `accel` en producción, `stream` en dev |
+
+El API carga el `.env` de la raíz por sí mismo en desarrollo
+(`apps/api/src/config/cargar-env.ts`); en producción las variables las
+inyecta el orquestador.
+
+### Acceso de tesistas al portal
+
+Al **validar la inscripción**, los participantes sin clave reciben un correo
+con un enlace de un solo uso (`/activar?token=…`, vence en 72 h) para crear su
+clave. Desde el login, «¿Primera vez u olvidaste tu clave?» (`/restablecer`)
+envía un enlace nuevo sin revelar si la cuenta existe. El administrador puede
+reenviarlo desde Datos del expediente → «Acceso al portal». En dev los
+correos se leen en Mailpit.
 
 ### Credenciales dev (seed demo, `DEMO_PASSWORD`, solo local)
 
@@ -80,8 +101,22 @@ make dev          # codificar (HMR <50ms, tsx --watch)
 make check        # antes de cada commit: Biome + typecheck + Vitest
 make prod-local   # antes de cada PR: MISMA imagen que Render en :80
                   # (migrate + seed demo + Nginx + API; credencial demo: x)
+                  # con el 80 ocupado: PROD_PORT=8088 make prod-local
 make prod-down    # bajar el entorno de paridad
+make backup       # respaldo inmediato (BD + documentos) en deploy/backups/
+make restore SELLO=20261005T070000Z   # restaura y verifica la cadena de custodia
 ```
+
+### Pruebas
+
+| Nivel | Comando | Qué cubre |
+|---|---|---|
+| Unitarias | `make check` | Dominio (FSM, reglas de avance, plazos, plantillas), use cases, infraestructura |
+| E2E de API | `E2E_BASE_URL=http://localhost:5173 pnpm --filter pis-e2e test flujo-titulacion` | Un expediente nuevo de `REGISTRADO` a `TITULO_EMITIDO`, observaciones, Turnitin, activación por correo (Mailpit) y RN-06 |
+| CI | `.github/workflows/ci.yml` | `verify` (Biome + typecheck + Vitest) y `e2e-api` (Postgres + Mailpit como servicios) |
+
+El e2e de API crea datos: ejecútalo sobre el seed demo de dev o de
+`prod-local`, nunca contra producción.
 
 ## Estructura
 
@@ -123,5 +158,35 @@ Port S-FIPS (4 oleadas): convenciones API + auth/sesiones, RBAC y controles,
 proceso operativo (observar/V°B°/finalizar), taller y pagos, cierre del
 trámite (jurados/sustentación/validaciones).
 
-Pendiente: generador documental (botón Insertar Datos), transporte SMTP
-real (los workers hoy loguean), UI admin del proceso configurable.
+Completado sobre esa base (octubre 2026):
+
+- Motor de reglas de avance por clave de subetapa: el estado del expediente
+  avanza con el seguimiento E1–E7 y la API explica lo que falta
+  ([`state-machine.md` §6](docs/02-domain/state-machine.md)).
+- Observar y levantar observaciones con retorno al estado de origen;
+  Turnitin < 20 %; publicación con 7 días de anticipación.
+- Plazos en días hábiles con semáforo y aviso diario de subetapas vencidas;
+  derivación de subetapas entre responsables.
+- Generador documental «INSERTAR DATOS» (formatos PDF de E1/E2) e informe
+  para Secretaría Académica (E6, HU-0045), con campos pendientes resaltados.
+- Propuesta de rango de fechas de sustentación por el tesista (HU-0038) y
+  Excel consolidado para el Consejo de Facultad con casilleros XXX (HU-0046).
+- Correo SMTP real y acceso de tesistas por enlace de un solo uso.
+- Carga del tesista solo en su subetapa activa u observados (RN-06) y
+  configuración del proceso para ADMIN_FIPS (HU-0052).
+- Respaldo diario con 30 días de retención, restauración guiada y
+  verificación independiente de la cadena de custodia (RNF-03,
+  [`backup-restore.md`](docs/04-operations/backup-restore.md)).
+- Correcciones de las incidencias INC-01 … INC-07 del informe de pruebas.
+
+Pendiente / limitaciones conocidas:
+
+- Agenda de sesiones del Consejo con cupo (RN-07.1): el listado toma los
+  expedientes con la subetapa «Consejo de Facultad» en curso.
+- Disponibilidad de la terna por periodo para proponer intersecciones de
+  fechas (RN-05.1): el área elige la fecha dentro del rango del tesista.
+- Etnia y lengua consignadas por el alumno para SISGRAD (RN-07.3) y
+  constancias académicas (HU-0033).
+- Turnitin, SISGRAD y SUNEDU sin integración automática: se registran como
+  validaciones institucionales. Citación por WhatsApp (RN-05.3): solo correo.
+- Render en plan gratuito: sin disco persistente ni respaldos.

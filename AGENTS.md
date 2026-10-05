@@ -19,10 +19,24 @@ Reglas de importación: `apps/*` puede importar `packages/*`; `packages/*` NUNCA
 ## 3. Patrón obligatorio — Use Cases
 ```ts
 // Result pattern + UoW + FSM check. Nunca throw para reglas de negocio.
-const gate = assertTransition(exp.estado, "PLAN_APROBADO");
-if (!gate.ok) return fail(gate.error);
-await uow.run(async (db) => { /* update + auditoría hash + enqueue pg-boss */ });
+const r = await uow.run(async (tx) => {
+  const gate = assertTransition(exp.estado, "PLAN_APROBADO");
+  if (!gate.ok) return fail(gate.error); // Result fallido ⇒ ROLLBACK de todo lo hecho en tx
+  await tx.update(expedientes).set({ estado: "PLAN_APROBADO" }).where(eq(expedientes.id, id));
+  await appendAuditoria(tx, { /* hash chain en la MISMA transacción */ });
+  return ok({ id });
+});
+if (!r.ok) return r;
+await enqueueCorreo({ expedienteId: id, asunto, titulo, texto }); // SOLO tras el commit
+return r;
 ```
+- `uow.run` abre una transacción real: si el callback devuelve un `Result` con
+  `ok: false` se revierte; si lanza, también. Repositorios y helpers reciben
+  `DbExecutor` (conexión o transacción), nunca el pool concreto.
+- Reglas de avance del seguimiento = `@pis/domain` (`reglas-avance.ts`), por
+  **clave estable** de subetapa (`CLAVES_SUBETAPA`), nunca por nombre u orden.
+- Autorización: `autorizar(actor, { permiso, alternativas?, expedienteId? })`
+  (RBAC `modulo.accion` + alcance RN-06/RN-07; 403 auditado, uuid inválido = 404).
 
 ## 4. Prohibiciones explícitas
 - ❌ `any` (Biome lo bloquea). Usa `unknown` + narrowing o Zod.
@@ -56,6 +70,35 @@ await uow.run(async (db) => { /* update + auditoría hash + enqueue pg-boss */ }
 - Web usa `fetch` + `Schema.parse()` de `@pis/contracts` (no `@ts-rest/react-query`:
   su API de cliente cambió entre versiones y rompe el typecheck). Los paths
   deben coincidir con `packages/contracts/src/*.contract.ts`.
-- Upload multipart es ruta nativa Fastify (`documentos.routes.ts`), no ts-rest
-  (`@ts-rest/fastify` no maneja multipart fiable). El use-case sí usa Result.
-  Autenticación actual = stub `x-user-dni` (`middleware/stub-auth.ts`).
+- Upload multipart y descargas son rutas nativas Fastify (`documentos.routes.ts`),
+  no ts-rest (`@ts-rest/fastify` no maneja multipart fiable). Tipar con el
+  genérico de la ruta, no con `FastifyRequest<…>` (rompe con
+  `exactOptionalPropertyTypes`):
+  `app.get<{ Params: { id: string } }>(url, { preHandler: async (req, reply) => requireAuth(req, reply) }, handler)`.
+  El use-case sí usa Result.
+- Autenticación = Bearer JWT (`middleware/require-auth.ts`). El stub
+  `x-user-dni` (`middleware/stub-auth.ts`) solo se activa con `AUTH_STUB=1`
+  (dev/curl), nunca en prod.
+- Errores HTTP: `infra/http/manejador-errores.ts` es el único punto que traduce
+  excepciones (Postgres 23505 → 409 `DATOS_DUPLICADOS`, 23503 → 409, 22xxx →
+  400, resto → 500 genérico con id de correlación). Nunca `reply.send(err)` ni
+  exponer SQL. Los routers ts-rest se registran con `OPCIONES_TS_REST`
+  (errores de validación con el envelope `VALIDACION_FALLIDA`).
+- Variables de entorno del API: `config/cargar-env.ts` carga el `.env` de la
+  raíz en dev (Turbo en modo estricto no reenvía el entorno a las tareas). Debe
+  seguir siendo el **primer import** de `server.ts`. En prod las inyecta el
+  orquestador (Render / compose).
+- Correo: `enqueueCorreo` (pg-boss) **después** del commit. Transporte SMTP
+  con nodemailer (dev: Mailpit en :1025/:8025); sin `SMTP_HOST` solo se
+  registra en el log. Enlaces con `urlPortal()` (`APP_URL` o
+  `RENDER_EXTERNAL_URL`).
+- Cadena de custodia: solo `appendAuditoria` (o el seed) escribe en
+  `auditoria_transiciones`, con el `actorDni` que entra al hash. Tras tocar la
+  auditoría o restaurar un respaldo, `pnpm --filter @pis/api verificar-auditoria`
+  debe terminar con código 0.
+- Reportes en archivo (XLSX del Consejo) = rutas nativas en `modules/reportes/`;
+  el XLSX lo arma `infra/xlsx/escribir-xlsx.ts` (sin dependencias).
+- Archivos: `LocalStorageService` guarda rutas absolutas bajo
+  `DOCS_VOLUME_PATH`; la entrega usa `entregarArchivo()` (X-Accel-Redirect a
+  `/protected-files/` en prod, stream en dev; ver `DOCS_ENTREGA`). La web
+  descarga con Bearer (`abrirArchivoProtegido`), nunca con un enlace directo.

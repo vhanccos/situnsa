@@ -141,3 +141,61 @@ stateDiagram-v2
     APROBADA --> FINALIZADA: aprobación\nadministrativa (responsable)
     FINALIZADA --> EN_PROCESO: reapertura autorizada\n(permiso especial)
 ```
+
+## 6. Reglas de avance implementadas (estado actual del código)
+
+El motor `evaluarCierreSubetapa` (`packages/domain/src/expediente/reglas-avance.ts`)
+se evalúa al **finalizar** cada subetapa, dentro de la misma transacción que la
+marca como `FINALIZADO` (`FinalizarSubetapaUseCase`). Las reglas se asocian a la
+**clave estable** de la subetapa (`seguimiento-catalogo.ts → CLAVES_SUBETAPA`),
+no a su nombre ni a su orden; una subetapa personalizada (HU-0052, sin clave) no
+mueve el estado. Si una guarda no se cumple, la subetapa sigue abierta y la API
+responde `REQUISITO_PENDIENTE` (o el código indicado) con el motivo.
+
+Guardas generales:
+
+- `ANULADO`, `DESAPROBADO_TRUNCO`, `TITULO_EMITIDO` y `REGISTRADO` no admiten avance.
+- Con el expediente `OBSERVADO` solo pueden cerrarse `E1_LEVANTAMIENTO` y `E3_LEVANTAMIENTO`.
+- E5_TURNITIN, E5_REPOSITORIO, todas las E6 y E7_COLACION/E7_SUNEDU exigen su
+  validación institucional (`validaciones_institucionales`) en `APROBADO`.
+- «Documentos cargados» = los obligatorios cuyo `requerido_en` es la subetapa,
+  en estado `CARGADO` o `APROBADO` (nunca `OBSERVADO`).
+
+| Clave de subetapa | Guarda de salida | Transición macro |
+|---|---|---|
+| `E1_PRESENTACION_PLAN`, `E1_VALIDACION_DOCUMENTOS` | documentos de E1 cargados | — |
+| `E1_ASIGNACION_TERNA` | 3 titulares en la terna | — |
+| `E1_REVISION_TERNA` | los 3 se pronunciaron | → `OBSERVADO` si alguno observa |
+| `E1_LEVANTAMIENTO` / `E3_LEVANTAMIENTO` | terna / jurado 100 % favorable | `OBSERVADO` → `observadoDesde` (`EN_PLAN` / `EN_DICTAMEN`) |
+| `E1_DECRETO` | terna favorable + N° de decreto | → `PLAN_APROBADO` |
+| `E2_CARGA_DOCUMENTOS` | acta de conformidad + anexos 27, 01 y 32 cargados | → `EN_BORRADOR` |
+| `E2_REVISION_DOCUMENTAL`, `E2_VALIDACION_EXPEDIENTE` | documentos de E2 cargados | — |
+| `E3_SORTEO_JURADOS` | 3 jurados titulares + resolución decanal | → `EN_DICTAMEN` |
+| `E3_REVISION_JURADOS` | todos los dictámenes emitidos | — |
+| `E3_OBSERVACIONES` | — | → `OBSERVADO` si hay dictamen observado |
+| `E3_CONFORMIDAD_FINAL` | jurado favorable + acta de dictamen | → `APTO_SUSTENTACION` |
+| `E4_COORDINACION_JURADOS` | sustentación programada | — |
+| `E4_PUBLICACION` | ≥ 7 días corridos hasta la sustentación (RN-PLZ-04), si no `PLAZO_VENCIDO` | — |
+| `E4_VERSION_FINAL` | autorización de impresión cargada | — |
+| `E4_SUSTENTACION` | estado `SUSTENTADO` (acta registrada) + acta cargada | → `EN_VALIDACION` |
+| `E5_REVISION_SIMILITUD` | porcentaje OTI registrado y < 20 %, si no `TURNITIN_NO_CONFORME` | — |
+| `E5_REPOSITORIO` | autorización de publicación cargada | — |
+| `E5_URL_REPOSITORIO` | validación REPOSITORIO con URL http(s) en el detalle | → `EN_APROBACION` |
+| `E7_SUNEDU` | validación SUNEDU aprobada | → `TITULO_EMITIDO` |
+
+Transiciones que no dependen de finalizar una subetapa:
+
+| Acción (use case) | Transición |
+|---|---|
+| Validar inscripción | `REGISTRADO` (u `OBSERVADO` desde la inscripción) → `EN_PLAN`; genera las 38 subetapas una sola vez |
+| Observar expediente | estado actual → `OBSERVADO`, guarda `metadata.observadoDesde` |
+| Levantar observación | `OBSERVADO` → `observadoDesde` |
+| Registrar acta de sustentación | `APTO_SUSTENTACION` → `SUSTENTADO` o `DESAPROBADO_TRUNCO` (desaprobación) |
+| Registrar validación OTI con porcentaje | ≥ 20 %: `EN_VALIDACION` → `OBSERVADO`; < 20 % levanta esa observación → `EN_VALIDACION` |
+| Anular | → `ANULADO` (permiso especial) |
+
+Plazos: `plazos.ts` convierte el texto del plazo (p. ej. «3–5 d.h.») en días
+hábiles máximos y el detalle del expediente expone vencimiento, días restantes y
+semáforo (verde / ámbar / rojo). El job `revisar-plazos` (pg-boss, 07:00 de lunes
+a viernes, America/Lima) avisa por correo una sola vez por subetapa vencida
+(`subetapas.alertada_at`).
