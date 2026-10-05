@@ -16,7 +16,10 @@ export type DomainErrorCode =
   | "SESION_INVALIDA"
   | "SIN_PERMISO"
   | "FUERA_DE_ALCANCE"
-  | "NO_ENCONTRADO";
+  | "NO_ENCONTRADO"
+  | "REQUISITO_PENDIENTE"
+  | "DATOS_DUPLICADOS"
+  | "TOKEN_INVALIDO";
 
 export class DomainError extends Error {
   readonly code: DomainErrorCode;

@@ -1,9 +1,10 @@
 import type { ErrorEnvelope } from "@pis/contracts";
 import { db, expedientes, permisos, roles, rolesPermisos, usuarios, usuariosRoles } from "@pis/db";
 import { and, eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { StubActor } from "../../middleware/stub-auth.js";
 import { appendAuditoria } from "../../modules/expedientes/expedientes.auditoria.js";
-import { errorEnvelope } from "../http/errores.js";
+import { errorEnvelope, PATRON_UUID } from "../http/errores.js";
 
 /**
  * Autorización (port S-FIPS + matriz ABAC pis):
@@ -22,33 +23,50 @@ const ROLES_STAFF = new Set([
   "AUTORIDAD",
 ]);
 
-export async function rolesDe(usuarioId: string): Promise<string[]> {
+/** ¿Algún rol de personal administrativo (alcance global)? */
+export function esPersonal(nombresRol: readonly string[]): boolean {
+  return nombresRol.some((r) => ROLES_STAFF.has(r));
+}
+
+export interface Perfil {
+  roles: string[];
+  permisos: Set<string>;
+}
+
+/** Roles activos + claves de permiso del usuario en una sola consulta. */
+export async function perfilDe(usuarioId: string): Promise<Perfil> {
   const rows = await db
-    .select({ nombre: roles.nombre })
+    .select({ rol: roles.nombre, clave: permisos.clave })
     .from(usuariosRoles)
-    .innerJoin(roles, eq(usuariosRoles.rolId, roles.id))
-    .where(and(eq(usuariosRoles.usuarioId, usuarioId), eq(roles.activo, true)));
-  return rows.map((r) => r.nombre);
+    .innerJoin(roles, and(eq(usuariosRoles.rolId, roles.id), eq(roles.activo, true)))
+    .leftJoin(rolesPermisos, eq(rolesPermisos.rolId, roles.id))
+    .leftJoin(permisos, eq(permisos.id, rolesPermisos.permisoId))
+    .where(eq(usuariosRoles.usuarioId, usuarioId));
+  const nombres = new Set<string>();
+  const claves = new Set<string>();
+  for (const r of rows) {
+    nombres.add(r.rol);
+    if (r.clave) claves.add(r.clave);
+  }
+  return { roles: [...nombres], permisos: claves };
+}
+
+export async function rolesDe(usuarioId: string): Promise<string[]> {
+  return (await perfilDe(usuarioId)).roles;
 }
 
 /** ADMIN_SISTEMA lo tiene todo implícito; el resto nace sin permisos. */
+export function permite(perfil: Perfil, modulo: string, accion: string): boolean {
+  if (perfil.roles.includes(ROL_ADMIN)) return true;
+  return perfil.permisos.has(`${modulo}.${accion}`);
+}
+
 export async function tienePermiso(
   usuarioId: string,
   modulo: string,
   accion: string,
 ): Promise<boolean> {
-  const names = await rolesDe(usuarioId);
-  if (names.includes(ROL_ADMIN)) return true;
-  if (names.length === 0) return false;
-  const rows = await db
-    .select({ clave: permisos.clave })
-    .from(usuariosRoles)
-    .innerJoin(roles, eq(usuariosRoles.rolId, roles.id))
-    .innerJoin(rolesPermisos, eq(rolesPermisos.rolId, roles.id))
-    .innerJoin(permisos, eq(permisos.id, rolesPermisos.permisoId))
-    .where(and(eq(usuariosRoles.usuarioId, usuarioId), eq(roles.activo, true)));
-  const claves = new Set(rows.map((r) => r.clave));
-  return claves.has(`${modulo}.${accion}`);
+  return permite(await perfilDe(usuarioId), modulo, accion);
 }
 
 interface ExpedienteAlcance {
@@ -66,7 +84,7 @@ export function decideAlcance(
   actorId: string,
   exp: ExpedienteAlcance,
 ): boolean {
-  if (nombresRol.some((r) => ROLES_STAFF.has(r))) return true;
+  if (esPersonal(nombresRol)) return true;
   if (nombresRol.includes("ASESOR") || nombresRol.includes("JURADO")) {
     return exp.asesorId !== null && exp.asesorId === actorId;
   }
@@ -77,32 +95,27 @@ export function decideAlcance(
 }
 
 async function expedienteParaAlcance(expedienteId: string): Promise<ExpedienteAlcance | null> {
+  if (!PATRON_UUID.test(expedienteId)) return null;
+  const p1 = alias(usuarios, "p1");
+  const p2 = alias(usuarios, "p2");
   const rows = await db
     .select({
       id: expedientes.id,
       estado: expedientes.estado,
       asesorId: expedientes.asesorId,
-      participante1Id: expedientes.participante1Id,
-      participante2Id: expedientes.participante2Id,
+      dni1: p1.dni,
+      dni2: p2.dni,
     })
     .from(expedientes)
+    .leftJoin(p1, eq(expedientes.participante1Id, p1.id))
+    .leftJoin(p2, eq(expedientes.participante2Id, p2.id))
     .where(eq(expedientes.id, expedienteId))
     .limit(1);
-  const row = rows[0];
-  if (!row) return null;
-  const gente = await db.select({ id: usuarios.id, dni: usuarios.dni }).from(usuarios);
-  const porId = new Map(gente.map((u) => [u.id, u.dni]));
-  return {
-    id: row.id,
-    estado: row.estado,
-    asesorId: row.asesorId,
-    dni1: row.participante1Id ? (porId.get(row.participante1Id) ?? null) : null,
-    dni2: row.participante2Id ? (porId.get(row.participante2Id) ?? null) : null,
-  };
+  return rows[0] ?? null;
 }
 
 export type Autorizacion =
-  | { ok: true }
+  | { ok: true; perfil: Perfil }
   | { ok: false; status: 401 | 403 | 404; body: ErrorEnvelope };
 
 /** Retorno tipado para handlers ts-rest (narrowing por status). */
@@ -121,12 +134,17 @@ export function denegado(
  * Uso en handlers ts-rest (requireAuth debe correr antes):
  * ```ts
  * const a = await autorizar(req.actor, { permiso: ["expedientes", "editar"], expedienteId: params.id });
- * if (!a.ok) return { status: a.status, body: a.body };
+ * if (!a.ok) return denegado(a);
  * ```
  */
 export async function autorizar(
   actor: StubActor | undefined,
-  opts: { permiso: [string, string]; expedienteId?: string },
+  opts: {
+    permiso: [string, string];
+    /** Permisos alternativos: basta con tener cualquiera (incluido `permiso`). */
+    alternativas?: Array<[string, string]>;
+    expedienteId?: string;
+  },
 ): Promise<Autorizacion> {
   if (!actor) {
     return {
@@ -135,15 +153,17 @@ export async function autorizar(
       body: errorEnvelope("SIN_SESION", "Se requiere autenticación"),
     };
   }
+  const perfil = await perfilDe(actor.id);
   const [modulo, accion] = opts.permiso;
-  if (!(await tienePermiso(actor.id, modulo, accion))) {
+  const candidatos = [opts.permiso, ...(opts.alternativas ?? [])];
+  if (!candidatos.some(([m, a]) => permite(perfil, m, a))) {
     return {
       ok: false,
       status: 403,
       body: errorEnvelope("SIN_PERMISO", `Se requiere permiso ${modulo}.${accion}`),
     };
   }
-  if (opts.expedienteId) {
+  if (opts.expedienteId !== undefined) {
     const exp = await expedienteParaAlcance(opts.expedienteId);
     if (!exp) {
       return {
@@ -152,8 +172,7 @@ export async function autorizar(
         body: errorEnvelope("NO_ENCONTRADO", "Expediente no encontrado"),
       };
     }
-    const names = await rolesDe(actor.id);
-    if (!decideAlcance(names, actor.dni, actor.id, exp)) {
+    if (!decideAlcance(perfil.roles, actor.dni, actor.id, exp)) {
       await appendAuditoria(db, {
         expedienteId: exp.id,
         actorId: actor.id,
@@ -169,5 +188,5 @@ export async function autorizar(
       };
     }
   }
-  return { ok: true };
+  return { ok: true, perfil };
 }

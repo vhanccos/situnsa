@@ -1,7 +1,31 @@
+import type { ExpedienteDetalleDTO } from "@pis/contracts";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  FileDown,
+  KeyRound,
+  Lock,
+  MessageSquareWarning,
+  Trash2,
+  Undo2,
+  WandSparkles,
+} from "lucide-react";
 import { useState } from "react";
-import { type GuardadoEstado, useAnular, useExpedienteDetalle } from "../api/expedientes.js";
+import { destinoPorRol } from "../api/auth.js";
+import { ApiError } from "../api/errores.js";
+import {
+  abrirArchivoProtegido,
+  formatoDescargaUrl,
+  type GuardadoEstado,
+  useAnular,
+  useEnviarAcceso,
+  useExpedienteDetalle,
+  useGenerarDocumentos,
+  useLevantarObservacion,
+} from "../api/expedientes.js";
+import { esStaff } from "../api/guard.js";
+import { useObservar } from "../api/seguimiento.js";
+import { useSession } from "../api/session.js";
 import { DatosForm } from "../components/domain/datos-form.js";
 import { DocumentoCard } from "../components/domain/documento-card.js";
 import { ResumenTab } from "../components/domain/resumen-tab.js";
@@ -9,6 +33,8 @@ import { AppShell } from "../components/layout/app-shell.js";
 import { Button, botonClases } from "../components/ui/button.js";
 import { Card } from "../components/ui/card.js";
 import { ConfirmDialog } from "../components/ui/confirm-dialog.js";
+import { EmptyState } from "../components/ui/empty-state.js";
+import { controlClase } from "../components/ui/field.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
 import { Tab, TabPanel, Tabs, TabsLista } from "../components/ui/tabs.js";
@@ -16,6 +42,15 @@ import { useToast } from "../components/ui/toast.js";
 import { cn } from "../utils/cn.js";
 
 type TabId = "datos" | "e1" | "e2" | "resumen";
+
+/** Estados desde los que el área puede observar el expediente (state-machine.md). */
+const OBSERVABLES = new Set([
+  "REGISTRADO",
+  "EN_PLAN",
+  "EN_BORRADOR",
+  "EN_DICTAMEN",
+  "EN_VALIDACION",
+]);
 
 /** Indicador de autoguardado (legacy activarAutoguardadoAdminV4) como píldora. */
 const indicador: Record<GuardadoEstado, { texto: string; clase: string }> = {
@@ -47,6 +82,7 @@ export function ExpedienteDetallePage() {
   const anular = useAnular(id);
   const avisar = useToast();
   const navigate = useNavigate();
+  const { sesion } = useSession();
 
   if (query.isPending) {
     return (
@@ -60,6 +96,35 @@ export function ExpedienteDetallePage() {
     );
   }
   if (query.isError) {
+    const status = query.error instanceof ApiError ? query.error.status : 0;
+    const destino = sesion ? destinoPorRol(sesion.rol) : "/login";
+    // INC-07: un 403/404 se informa de inmediato (sin reintentos ni carga eterna).
+    if (status === 403 || status === 404) {
+      return (
+        <AppShell activo={destino}>
+          <EmptyState
+            icono={<Lock size={22} />}
+            titulo={
+              status === 403 ? "No tienes acceso a este expediente" : "Expediente no encontrado"
+            }
+            descripcion={
+              status === 403
+                ? "El expediente no pertenece a tu alcance. Si crees que es un error, comunícate con el área de titulación."
+                : "El expediente no existe o fue retirado."
+            }
+            accion={
+              <Link
+                className={cn(botonClases({ variante: "contorno", tamano: "sm" }))}
+                to={destino}
+              >
+                <ArrowLeft size={14} />
+                Volver a mi panel
+              </Link>
+            }
+          />
+        </AppShell>
+      );
+    }
     return (
       <AppShell activo="/admin">
         <Card className="p-6 text-sm text-red-700">
@@ -81,6 +146,7 @@ export function ExpedienteDetallePage() {
   }
 
   const d = query.data;
+  const staff = esStaff(sesion?.rol);
   const nombreTesista = d.participante1
     ? `${d.participante1.nombres} ${d.participante1.apellidos}`.trim()
     : "—";
@@ -89,13 +155,13 @@ export function ExpedienteDetallePage() {
   const estadoGuardado = indicador[guardado];
 
   return (
-    <AppShell activo="/admin">
+    <AppShell activo={staff ? "/admin" : destinoPorRol(sesion?.rol ?? "")}>
       <Link
         className={cn(botonClases({ variante: "contorno", tamano: "sm" }), "w-fit print:hidden")}
-        to="/admin"
+        to={staff ? "/admin" : destinoPorRol(sesion?.rol ?? "")}
       >
         <ArrowLeft size={16} />
-        Volver al listado
+        {staff ? "Volver al listado" : "Volver a mi panel"}
       </Link>
       <PageHeader
         titulo={`Expediente ${d.codigo}`}
@@ -120,6 +186,7 @@ export function ExpedienteDetallePage() {
           </>
         }
       />
+      <BannerObservacion detalle={d} staff={staff} />
       {conflicto && (
         <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900">
           {conflicto}{" "}
@@ -145,21 +212,29 @@ export function ExpedienteDetallePage() {
         </TabsLista>
         <TabPanel value="datos">
           <DatosForm detalle={d} setEstado={setGuardado} onConflicto={setConflicto} />
-          <div className="mt-4 print:hidden">
-            <Button tamano="sm" variante="peligro" onClick={() => setEliminar(true)} type="button">
-              <Trash2 size={14} />
-              ELIMINAR REGISTRO
-            </Button>
-            <p className="mt-1.5 text-xs text-grafito-600">
-              Baja lógica (ANULADO): se conserva el historial y la cadena de custodia.
-            </p>
-          </div>
+          {staff && <AccesoPortal detalle={d} />}
+          {staff && (
+            <div className="mt-4 print:hidden">
+              <Button
+                tamano="sm"
+                variante="peligro"
+                onClick={() => setEliminar(true)}
+                type="button"
+              >
+                <Trash2 size={14} />
+                ELIMINAR REGISTRO
+              </Button>
+              <p className="mt-1.5 text-xs text-grafito-600">
+                Baja lógica (ANULADO): se conserva el historial y la cadena de custodia.
+              </p>
+            </div>
+          )}
         </TabPanel>
         <TabPanel value="e1">
-          <DocumentosTab etapa="E1" expedienteId={d.id} items={e1} />
+          <DocumentosTab etapa="E1" detalle={d} items={e1} staff={staff} />
         </TabPanel>
         <TabPanel value="e2">
-          <DocumentosTab etapa="E2" expedienteId={d.id} items={e2} />
+          <DocumentosTab etapa="E2" detalle={d} items={e2} staff={staff} />
         </TabPanel>
         <TabPanel value="resumen">
           <ResumenTab detalle={d} />
@@ -188,24 +263,186 @@ export function ExpedienteDetallePage() {
   );
 }
 
+/** Observación vigente (o acción para observar) — state-machine.md OBSERVADO. */
+function BannerObservacion({
+  detalle: d,
+  staff,
+}: {
+  detalle: ExpedienteDetalleDTO;
+  staff: boolean;
+}) {
+  const levantar = useLevantarObservacion(d.id);
+  const observar = useObservar();
+  const avisar = useToast();
+  const [motivo, setMotivo] = useState("");
+  const [abierto, setAbierto] = useState(false);
+
+  if (d.estado === "OBSERVADO") {
+    const ultima = [...d.mensajes].reverse().find((m) => /Observaci/i.test(m.texto));
+    return (
+      <section
+        className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-yellow-300 bg-aviso-100 p-4 text-sm text-aviso-800"
+        aria-label="Observación vigente"
+      >
+        <div className="flex gap-2">
+          <MessageSquareWarning size={18} className="mt-0.5 shrink-0" aria-hidden />
+          <div>
+            <p className="font-bold">
+              Expediente observado
+              {d.observadoDesde ? ` (vuelve a ${d.observadoDesde.replace(/_/g, " ")})` : ""}
+            </p>
+            {ultima && <p className="mt-0.5">{ultima.texto}</p>}
+          </div>
+        </div>
+        {staff && (
+          <Button
+            tamano="sm"
+            variante="oscuro"
+            disabled={levantar.isPending}
+            onClick={() =>
+              levantar.mutate(undefined, {
+                onSuccess: (r) => avisar(`Observación levantada: ${r.estado.replace(/_/g, " ")}`),
+                onError: (e) =>
+                  avisar(e instanceof Error ? e.message : "No se pudo levantar", "error"),
+              })
+            }
+            type="button"
+          >
+            <Undo2 size={14} />
+            Levantar observación
+          </Button>
+        )}
+      </section>
+    );
+  }
+  if (!staff || !OBSERVABLES.has(d.estado)) return null;
+  return (
+    <div className="print:hidden">
+      {abierto ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white p-3">
+          <input
+            aria-label="Motivo de la observación"
+            className={cn(controlClase, "h-9 min-w-64 flex-1")}
+            placeholder="Motivo de la observación (visible para el tesista)"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+          />
+          <Button
+            tamano="sm"
+            variante="peligro"
+            disabled={observar.isPending || motivo.trim().length < 5}
+            onClick={() =>
+              observar.mutate(
+                { id: d.id, motivo: motivo.trim() },
+                {
+                  onSuccess: () => {
+                    setMotivo("");
+                    setAbierto(false);
+                    avisar("Expediente observado; se notificó al tesista");
+                  },
+                  onError: (e) =>
+                    avisar(e instanceof Error ? e.message : "No se pudo observar", "error"),
+                },
+              )
+            }
+            type="button"
+          >
+            Observar
+          </Button>
+          <Button tamano="sm" variante="contorno" onClick={() => setAbierto(false)} type="button">
+            Cancelar
+          </Button>
+        </div>
+      ) : (
+        <Button tamano="sm" variante="contorno" onClick={() => setAbierto(true)} type="button">
+          <MessageSquareWarning size={14} />
+          Observar expediente
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** Acceso de los participantes a su portal (HU-0002). */
+function AccesoPortal({ detalle: d }: { detalle: ExpedienteDetalleDTO }) {
+  const enviar = useEnviarAcceso(d.id);
+  const avisar = useToast();
+  const participantes = [d.participante1, d.participante2].filter(
+    (p): p is NonNullable<typeof p> => p !== null,
+  );
+  if (participantes.length === 0) return null;
+  const validado = d.estado !== "REGISTRADO" && d.estado !== "ANULADO";
+  return (
+    <Card className="mt-4 p-4 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="flex items-center gap-1.5 text-sm font-bold text-navy-950">
+            <KeyRound size={15} />
+            Acceso al portal del tesista
+          </h3>
+          <ul className="mt-1 space-y-0.5 text-xs text-grafito-600">
+            {participantes.map((p) => (
+              <li key={p.id}>
+                {p.nombres} {p.apellidos} · {p.email} ·{" "}
+                <strong className={p.accesoActivo ? "text-verde-inst-700" : "text-aviso-800"}>
+                  {p.accesoActivo ? "clave creada" : "sin clave"}
+                </strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <Button
+          tamano="sm"
+          variante="contorno"
+          disabled={!validado || enviar.isPending}
+          title={validado ? undefined : "Disponible tras validar la inscripción"}
+          onClick={() =>
+            enviar.mutate(undefined, {
+              onSuccess: (r) => avisar(`Enlace enviado a ${r.destinatarios.join(", ")}`),
+              onError: (e) => avisar(e instanceof Error ? e.message : "No se pudo enviar", "error"),
+            })
+          }
+          type="button"
+        >
+          Enviar enlace de acceso
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 function DocumentosTab({
   etapa,
-  expedienteId,
+  detalle: d,
   items,
+  staff,
 }: {
-  etapa: string;
-  expedienteId: string;
-  items: Array<{
-    tipo: string;
-    nombre: string;
-    estado: string;
-    documentoId: string | null;
-    version: number | null;
-    faltantes: string[];
-  }>;
+  etapa: "E1" | "E2";
+  detalle: ExpedienteDetalleDTO;
+  items: ExpedienteDetalleDTO["checklist"];
+  staff: boolean;
 }) {
+  const generar = useGenerarDocumentos(d.id);
+  const avisar = useToast();
   const cargados = items.filter((c) => c.documentoId !== null).length;
   const pct = items.length > 0 ? Math.round((cargados / items.length) * 100) : 0;
+  const generados = d.generados.filter((g) => g.etapa === etapa);
+  const generadoPorTipo = new Map(generados.map((g) => [g.tipo, g]));
+  // Formatos que no son tarjeta del checklist (carátula del plan, decreto).
+  const extras = generados.filter((g) => !items.some((c) => c.tipo === g.tipo));
+
+  async function onGenerar(): Promise<void> {
+    try {
+      const r = await generar.mutateAsync(etapa);
+      const conPendientes = r.generados.filter((g) => g.pendientes.length > 0).length;
+      avisar(
+        `${r.generados.length} formato(s) generado(s)${conPendientes > 0 ? ` · ${conPendientes} con campos pendientes` : ""}`,
+      );
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudieron generar", "error");
+    }
+  }
+
   return (
     <div className="space-y-3">
       <Card>
@@ -236,30 +473,69 @@ function DocumentosTab({
               />
             </div>
           </div>
-          <button
-            className="rounded-lg bg-guinda-800 px-3 py-2 text-xs font-semibold text-white opacity-50"
-            disabled
-            title="Disponible en Fase 2 (generador documental)"
-            type="button"
-          >
-            INSERTAR DATOS EN DOCUMENTOS
-          </button>
+          {staff && (
+            <Button
+              variante="primario"
+              tamano="sm"
+              disabled={generar.isPending || d.estado === "ANULADO"}
+              onClick={() => void onGenerar()}
+              type="button"
+            >
+              <WandSparkles size={14} />
+              {generar.isPending ? "GENERANDO…" : "INSERTAR DATOS EN DOCUMENTOS"}
+            </Button>
+          )}
         </div>
+        {extras.length > 0 && (
+          <div className="flex flex-wrap gap-2 border-t border-slate-200/70 px-4 py-3 md:px-5">
+            {extras.map((g) => (
+              <Button
+                key={g.id}
+                tamano="sm"
+                variante="contorno"
+                onClick={() =>
+                  void abrirArchivoProtegido(formatoDescargaUrl(g.id)).catch((e: unknown) =>
+                    avisar(e instanceof Error ? e.message : "No se pudo abrir", "error"),
+                  )
+                }
+                title={
+                  g.pendientes.length > 0 ? `Pendiente: ${g.pendientes.join(", ")}` : undefined
+                }
+                type="button"
+              >
+                <FileDown size={14} />
+                {g.nombre} · v{g.version}
+                {g.pendientes.length > 0 && (
+                  <span className="rounded-full bg-aviso-100 px-1.5 text-[10px] font-bold text-aviso-800">
+                    {g.pendientes.length}
+                  </span>
+                )}
+              </Button>
+            ))}
+          </div>
+        )}
       </Card>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        {items.map((c) => (
-          <DocumentoCard
-            key={c.tipo}
-            documentoId={c.documentoId}
-            estado={c.estado}
-            expedienteId={expedienteId}
-            faltantes={c.faltantes}
-            nombre={c.nombre}
-            tipo={c.tipo}
-            version={c.version}
-          />
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <EmptyState titulo="Sin documentos configurados para esta etapa" />
+      ) : (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {items.map((c) => (
+            <DocumentoCard
+              key={c.tipo}
+              documentoId={c.documentoId}
+              estado={c.estado}
+              expedienteId={d.id}
+              faltantes={c.faltantes}
+              nombre={c.nombre}
+              tipo={c.tipo}
+              version={c.version}
+              requeridoEn={c.requeridoEn}
+              subetapaActiva={d.subetapaActiva?.clave ?? null}
+              formato={generadoPorTipo.get(c.tipo) ?? null}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

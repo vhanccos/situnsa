@@ -1,8 +1,8 @@
 import type { ExpedienteDetalleDTO } from "@pis/contracts";
-import { Check, Lock, MessageSquareText, Printer, Send } from "lucide-react";
+import { Check, Forward, Lock, MessageSquareText, Printer, Send } from "lucide-react";
 import { useState } from "react";
 import { usePublicarMensaje } from "../../api/expedientes.js";
-import { useFinalizarSubetapa } from "../../api/seguimiento.js";
+import { useDerivarSubetapa, useFinalizarSubetapa } from "../../api/seguimiento.js";
 import { useSession } from "../../api/session.js";
 import { cn } from "../../utils/cn.js";
 import { Button } from "../ui/button.js";
@@ -12,6 +12,7 @@ import { controlClase } from "../ui/field.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
 import { CierreCard } from "./cierre-card.js";
+import { SemaforoBadge } from "./semaforo-badge.js";
 
 /** Tab Resumen §9 (datos 100% del backend: subetapas + avance + mensajes). */
 export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
@@ -24,14 +25,31 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
   // RN-08: solo el responsable (staff) cierra subetapas.
   const puedeFinalizar = !!sesion && ["ADMIN_FIPS", "SECRETARIA", "DECANO"].includes(sesion.rol);
   const finalizar = useFinalizarSubetapa(detalle.id);
+  const derivar = useDerivarSubetapa(detalle.id);
+  const [derivando, setDerivando] = useState<string | null>(null);
+  const [destino, setDestino] = useState("");
+
+  async function onDerivar(subetapaId: string): Promise<void> {
+    try {
+      const r = await derivar.mutateAsync({ subetapaId, responsable: destino.trim() });
+      avisar(`Subetapa derivada a ${r.responsable}`);
+      setDerivando(null);
+      setDestino("");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudo derivar", "error");
+    }
+  }
 
   async function onFinalizar(subetapaId: string): Promise<void> {
     try {
       const r = await finalizar.mutateAsync(subetapaId);
+      const cambio =
+        r.estadoExpediente !== detalle.estado
+          ? ` · expediente: ${r.estadoExpediente.replace(/_/g, " ")}`
+          : "";
       avisar(
-        r.siguienteId
-          ? `Subetapa finalizada; habilitada la siguiente`
-          : "Subetapa finalizada (etapa completa)",
+        (r.siguienteId ? "Subetapa finalizada; habilitada la siguiente" : "Seguimiento completo") +
+          cambio,
       );
     } catch (e) {
       avisar(e instanceof Error ? e.message : "No se pudo finalizar", "error");
@@ -215,18 +233,58 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
                     <span>Inicio {new Date(s.inicio).toLocaleDateString("es-PE")}</span>
                   ) : null}
                   <StatusBadge estado={s.estado} />
+                  {s.estado === "EN_CURSO" && s.semaforo && s.diasRestantes !== null && (
+                    <span title={s.vencimiento ? `Vence el ${s.vencimiento}` : undefined}>
+                      <SemaforoBadge estado={s.semaforo} dias={s.diasRestantes} />
+                    </span>
+                  )}
+                  {s.estado === "EN_CURSO" && s.vencida && (
+                    <span className="font-semibold text-red-700">Plazo vencido</span>
+                  )}
                   {puedeFinalizar && s.estado === "EN_CURSO" && (
-                    <Button
-                      tamano="xs"
-                      variante="exito"
-                      disabled={finalizar.isPending}
-                      onClick={() => void onFinalizar(s.id)}
-                      type="button"
-                    >
-                      Finalizar
-                    </Button>
+                    <>
+                      <Button
+                        tamano="xs"
+                        variante="contorno"
+                        onClick={() => setDerivando(derivando === s.id ? null : s.id)}
+                        type="button"
+                      >
+                        <Forward size={13} />
+                        Derivar
+                      </Button>
+                      <Button
+                        tamano="xs"
+                        variante="exito"
+                        disabled={finalizar.isPending}
+                        onClick={() => void onFinalizar(s.id)}
+                        type="button"
+                      >
+                        Finalizar
+                      </Button>
+                    </>
                   )}
                 </span>
+                {derivando === s.id && (
+                  <span className="flex w-full flex-wrap items-center gap-2 pt-1">
+                    <input
+                      aria-label="Correo del nuevo responsable"
+                      className={cn(controlClase, "h-8 min-w-56 flex-1 text-xs")}
+                      placeholder="correo del nuevo responsable (ej. fips_usesp@unsa.edu.pe)"
+                      type="email"
+                      value={destino}
+                      onChange={(e) => setDestino(e.target.value)}
+                    />
+                    <Button
+                      tamano="xs"
+                      variante="oscuro"
+                      disabled={derivar.isPending || !destino.includes("@")}
+                      onClick={() => void onDerivar(s.id)}
+                      type="button"
+                    >
+                      Confirmar derivación
+                    </Button>
+                  </span>
+                )}
               </li>
             ))}
           </ol>
@@ -346,6 +404,7 @@ export function ResumenTab({ detalle }: { detalle: ExpedienteDetalleDTO }) {
                     <span className="text-grafito-600"> · DNI {h.actorDni}</span>
                   ) : null}
                 </p>
+                {h.detalle && <p className="text-xs text-navy-950">{h.detalle}</p>}
                 <p className="text-xs tabular-nums text-grafito-600">
                   {new Date(h.createdAt).toLocaleString("es-PE")}
                 </p>

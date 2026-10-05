@@ -2,6 +2,7 @@ import { db, documentos, expedientes } from "@pis/db";
 import { DomainError, fail, ok, type Result } from "@pis/domain";
 import { eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
+import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
 import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
 
 export interface Actor {
@@ -27,7 +28,7 @@ export class VistoBuenoDocumentoUseCase {
       );
     }
     const uow = new DrizzleUnitOfWork(db);
-    return uow.run(async (tx) => {
+    const r = await uow.run(async (tx) => {
       const rows = await tx
         .select()
         .from(documentos)
@@ -61,7 +62,25 @@ export class VistoBuenoDocumentoUseCase {
           ? `V°B° ${doc.tipo} v${doc.version}`
           : `Observado ${doc.tipo} v${doc.version}: ${(input.comentario ?? "").trim().slice(0, 200)}`,
       });
-      return ok({ id: doc.id, estado: nuevo, version: doc.version });
+      return ok({
+        id: doc.id,
+        estado: nuevo,
+        version: doc.version,
+        expedienteId: doc.expedienteId,
+        tipo: doc.tipo,
+      });
     });
+    if (!r.ok) return r;
+    if (r.value.estado === "OBSERVADO") {
+      await enqueueCorreo({
+        expedienteId: r.value.expedienteId,
+        asunto: "Un documento de tu expediente fue observado",
+        titulo: "Documento observado",
+        texto: `El documento ${r.value.tipo} (versión ${r.value.version}) fue observado: ${(input.comentario ?? "").trim()}
+
+Carga una nueva versión corregida desde tu portal.`,
+      });
+    }
+    return ok({ id: r.value.id, estado: r.value.estado, version: r.value.version });
   }
 }

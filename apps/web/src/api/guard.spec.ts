@@ -32,3 +32,15 @@ describe("redirigirSiNoPuede", () => {
     expect(esStaff(null)).toBe(false);
   });
 });
+
+describe("rutas nuevas (activación, restablecimiento, configuración)", () => {
+  it("las pantallas de acceso son públicas", () => {
+    expect(redirigirSiNoPuede(null, "/activar")).toBeNull();
+    expect(redirigirSiNoPuede(null, "/restablecer")).toBeNull();
+  });
+  it("la configuración del proceso es solo de administración (HU-0052)", () => {
+    expect(redirigirSiNoPuede("ADMIN_FIPS", "/configuracion")).toBeNull();
+    expect(redirigirSiNoPuede("SECRETARIA", "/configuracion")).toBe("/admin");
+    expect(redirigirSiNoPuede("TESISTA", "/configuracion")).toBe("/mi-tramite");
+  });
+});

@@ -20,7 +20,7 @@ export class AnularExpedienteUseCase {
     const uow = new DrizzleUnitOfWork(db);
     return uow.run(async (tx) => {
       const actual = await getDetalleById(tx, id);
-      if (!actual) return fail(new DomainError("VALIDACION_FALLIDA", "Expediente no encontrado"));
+      if (!actual) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
       const gate = assertTransition(actual.estado, "ANULADO");
       if (!gate.ok) return fail(gate.error);
       await tx
@@ -36,7 +36,7 @@ export class AnularExpedienteUseCase {
         detalle: motivo?.trim() ? `Anulación: ${motivo.trim()}` : "Anulación (borrado lógico)",
       });
       const detalle = await getDetalleById(tx, id);
-      if (!detalle) return fail(new DomainError("VALIDACION_FALLIDA", "Expediente no encontrado"));
+      if (!detalle) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
       return ok(detalle);
     });
   }

@@ -1,14 +1,28 @@
-import type { Db } from "@pis/db";
+import type { DbExecutor } from "@pis/db";
 import {
   auditoriaTransiciones,
+  catalogoDocsRequeridos,
   documentos,
+  documentosGenerados,
   expedientes,
   mensajes,
   subetapas,
   usuarios,
 } from "@pis/db";
-import { CHECKLIST_COMPLETO, etapaActualDe, FLUJO_TITULACION, TOTAL_SUBETAPAS } from "@pis/domain";
-import { asc, eq } from "drizzle-orm";
+import {
+  CHECKLIST_COMPLETO,
+  type ChecklistDef,
+  type ClaveSubetapa,
+  esClaveSubetapa,
+  etapaActualDe,
+  evaluarPlazo,
+  FLUJO_TITULACION,
+  plantillaDe,
+  type Semaforo,
+  TOTAL_SUBETAPAS,
+} from "@pis/domain";
+import { and, asc, eq, inArray, or, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 export type EstadoLiteral =
   | "REGISTRADO"
@@ -25,6 +39,26 @@ export type EstadoLiteral =
   | "DESAPROBADO_TRUNCO"
   | "ANULADO";
 
+const ESTADOS: ReadonlySet<string> = new Set<EstadoLiteral>([
+  "REGISTRADO",
+  "EN_PLAN",
+  "PLAN_APROBADO",
+  "EN_BORRADOR",
+  "EN_DICTAMEN",
+  "APTO_SUSTENTACION",
+  "SUSTENTADO",
+  "EN_VALIDACION",
+  "EN_APROBACION",
+  "TITULO_EMITIDO",
+  "OBSERVADO",
+  "DESAPROBADO_TRUNCO",
+  "ANULADO",
+]);
+
+function esEstado(v: unknown): v is EstadoLiteral {
+  return typeof v === "string" && ESTADOS.has(v);
+}
+
 type PersonaRow = {
   id: string;
   dni: string;
@@ -39,12 +73,46 @@ type PersonaRow = {
   grado: string | null;
   activo: boolean;
   rol: string;
+  /** El participante puede iniciar sesión (tiene clave configurada). */
+  accesoActivo: boolean;
 };
+
+type EstadoDocumentoLiteral = "PENDIENTE" | "CARGADO" | "OBSERVADO" | "APROBADO" | "RECHAZADO";
+
+export interface SubetapaRow {
+  id: string;
+  clave: string | null;
+  etapa: number;
+  etapaNombre: string;
+  orden: number;
+  nombre: string;
+  plazo: string | null;
+  estado: "NO_INICIADO" | "EN_CURSO" | "FINALIZADO";
+  responsable: string | null;
+  inicio: string | null;
+  fin: string | null;
+  vencimiento: string | null;
+  diasRestantes: number | null;
+  vencida: boolean;
+  semaforo: Semaforo | null;
+}
+
+export interface GeneradoRow {
+  id: string;
+  tipo: string;
+  nombre: string;
+  etapa: "E1" | "E2" | "E6";
+  version: number;
+  pendientes: string[];
+  createdAt: string;
+}
 
 export interface DetalleRow {
   id: string;
   codigo: string;
   estado: EstadoLiteral;
+  /** Estado al que vuelve el expediente al levantar la observación vigente. */
+  observadoDesde: EstadoLiteral | null;
   modalidad: "TESIS" | "TRABAJO_ACADEMICO" | "ARTICULO";
   programa: string;
   titulo: string;
@@ -58,24 +126,16 @@ export interface DetalleRow {
     nombre: string;
     etapa: "E1" | "E2";
     obligatorio: boolean;
-    estado: "PENDIENTE" | "CARGADO" | "OBSERVADO" | "APROBADO" | "RECHAZADO";
+    requeridoEn: string | null;
+    estado: EstadoDocumentoLiteral;
     documentoId: string | null;
     version: number | null;
     updatedAt: string | null;
     faltantes: string[];
   }>;
-  subetapas: Array<{
-    id: string;
-    etapa: number;
-    etapaNombre: string;
-    orden: number;
-    nombre: string;
-    plazo: string | null;
-    estado: "NO_INICIADO" | "EN_CURSO" | "FINALIZADO";
-    responsable: string | null;
-    inicio: string | null;
-    fin: string | null;
-  }>;
+  generados: GeneradoRow[];
+  subetapas: SubetapaRow[];
+  subetapaActiva: { id: string; clave: string | null; etapa: number; orden: number } | null;
   avance: {
     marcados: number;
     total: number;
@@ -88,6 +148,7 @@ export interface DetalleRow {
     estadoAnterior: string | null;
     estadoNuevo: string;
     actorDni: string | null;
+    detalle: string | null;
     createdAt: string;
   }>;
 }
@@ -131,33 +192,103 @@ function toPersona(u: typeof usuarios.$inferSelect): PersonaRow {
     grado: u.grado,
     activo: u.activo,
     rol: u.rol,
+    accesoActivo: u.passwordHash !== null,
   };
+}
+
+/** Estado de origen guardado al observar (`metadata.observadoDesde`). */
+export function observadoDesdeDe(metadata: unknown): EstadoLiteral | null {
+  if (typeof metadata !== "object" || metadata === null) return null;
+  const v = (metadata as { observadoDesde?: unknown }).observadoDesde;
+  return esEstado(v) ? v : null;
+}
+
+/**
+ * Checklist vigente: catálogo en DB (editable, HU-0052) con fallback al
+ * código si la tabla está vacía.
+ */
+export async function leerChecklist(db: DbExecutor): Promise<readonly ChecklistDef[]> {
+  const rows = await db
+    .select()
+    .from(catalogoDocsRequeridos)
+    .orderBy(asc(catalogoDocsRequeridos.etapa));
+  if (rows.length === 0) return CHECKLIST_COMPLETO;
+  const orden = new Map(CHECKLIST_COMPLETO.map((d, i) => [d.tipo, i]));
+  return rows
+    .map(
+      (r): ChecklistDef => ({
+        tipo: r.tipo,
+        nombre: r.nombre,
+        etapa: r.etapa === "E2" ? "E2" : "E1",
+        obligatorio: r.obligatorio,
+        requeridoEn: esClaveSubetapa(r.requeridoEn) ? r.requeridoEn : null,
+      }),
+    )
+    .sort(
+      (a, b) =>
+        a.etapa.localeCompare(b.etapa) ||
+        (orden.get(a.tipo) ?? Number.MAX_SAFE_INTEGER) -
+          (orden.get(b.tipo) ?? Number.MAX_SAFE_INTEGER),
+    );
 }
 
 export function avanceDe(
   subs: Array<{ estado: string; etapa: number; orden: number; nombre: string }>,
   estadoMacro: string,
 ): DetalleRow["avance"] {
+  const total = subs.length > 0 ? subs.length : TOTAL_SUBETAPAS;
   const marcados = subs.filter((s) => s.estado === "FINALIZADO").length;
   const actual =
     subs.find((s) => s.estado === "EN_CURSO") ?? subs.find((s) => s.estado === "NO_INICIADO");
   return {
     marcados,
-    total: TOTAL_SUBETAPAS,
-    pct: Math.round((marcados / TOTAL_SUBETAPAS) * 100),
-    etapaActual: etapaActualDe(estadoMacro),
+    total,
+    pct: Math.round((marcados / total) * 100),
+    // La etapa real es la de la subetapa en curso (el estado macro OBSERVADO
+    // no dice en qué etapa se observó).
+    etapaActual: actual?.etapa ?? etapaActualDe(estadoMacro),
     subetapaActual: actual ? `${actual.etapa}.${actual.orden} ${actual.nombre}` : null,
   };
 }
 
+function subetapaDTO(
+  s: typeof subetapas.$inferSelect,
+  nombresEtapa: ReadonlyMap<number, string>,
+  ahora: Date,
+): SubetapaRow {
+  const plazo = s.estado === "EN_CURSO" && s.inicio ? evaluarPlazo(s.inicio, s.plazo, ahora) : null;
+  return {
+    id: s.id,
+    clave: s.clave,
+    etapa: s.etapa,
+    etapaNombre: nombresEtapa.get(s.etapa) ?? `Etapa ${s.etapa}`,
+    orden: s.orden,
+    nombre: s.nombre,
+    plazo: s.plazo,
+    estado: s.estado,
+    responsable: s.responsable,
+    inicio: s.inicio ? s.inicio.toISOString() : null,
+    fin: s.fin ? s.fin.toISOString() : null,
+    vencimiento: plazo ? plazo.vencimiento.toISOString().slice(0, 10) : null,
+    diasRestantes: plazo ? plazo.diasRestantes : null,
+    vencida: plazo?.vencido ?? false,
+    semaforo: plazo?.semaforo ?? null,
+  };
+}
+
+const NOMBRES_ETAPA: ReadonlyMap<number, string> = new Map(
+  FLUJO_TITULACION.map((e) => [e.numero, e.nombre]),
+);
+
 /** Lectura del detalle: expediente + personas + checklist + seguimiento + mensajes + historial. */
-export async function getDetalleById(db: Db, id: string): Promise<DetalleRow | null> {
+export async function getDetalleById(
+  db: DbExecutor,
+  id: string,
+  ahora: Date = new Date(),
+): Promise<DetalleRow | null> {
   const exp = await db.select().from(expedientes).where(eq(expedientes.id, id)).limit(1);
   const row = exp[0];
   if (!row) return null;
-
-  const personas = await db.select().from(usuarios);
-  const porId = new Map(personas.map((p) => [p.id, toPersona(p)]));
 
   const docs = await db.select().from(documentos).where(eq(documentos.expedienteId, id));
   const porTipo = new Map<string, typeof documentos.$inferSelect>();
@@ -165,19 +296,34 @@ export async function getDetalleById(db: Db, id: string): Promise<DetalleRow | n
     const prev = porTipo.get(d.tipo);
     if (!prev || d.version > prev.version) porTipo.set(d.tipo, d);
   }
+  const generadosRows = await db
+    .select()
+    .from(documentosGenerados)
+    .where(eq(documentosGenerados.expedienteId, id))
+    .orderBy(asc(documentosGenerados.tipo));
+  const generadoPorTipo = new Map(generadosRows.map((g) => [g.tipo, g]));
 
-  const checklist = CHECKLIST_COMPLETO.map((def) => {
+  const catalogo = await leerChecklist(db);
+  const checklist = catalogo.map((def) => {
     const doc = porTipo.get(def.tipo);
+    const generado = generadoPorTipo.get(def.tipo);
+    const faltantes = doc
+      ? []
+      : [
+          "Falta adjuntar el archivo",
+          ...(generado?.pendientes ?? []).map((p) => `Campo pendiente en el formato: ${p}`),
+        ];
     return {
       tipo: def.tipo,
       nombre: def.nombre,
       etapa: def.etapa,
       obligatorio: def.obligatorio,
-      estado: doc?.estado ?? ("PENDIENTE" as const),
+      requeridoEn: def.requeridoEn,
+      estado: (doc?.estado ?? "PENDIENTE") as EstadoDocumentoLiteral,
       documentoId: doc?.id ?? null,
       version: doc?.version ?? null,
       updatedAt: doc?.createdAt ? doc.createdAt.toISOString() : null,
-      faltantes: doc ? [] : ["Falta adjuntar el archivo"],
+      faltantes,
     };
   });
 
@@ -198,11 +344,27 @@ export async function getDetalleById(db: Db, id: string): Promise<DetalleRow | n
       estadoAnterior: auditoriaTransiciones.estadoAnterior,
       estadoNuevo: auditoriaTransiciones.estadoNuevo,
       actorId: auditoriaTransiciones.actorId,
+      actorDni: auditoriaTransiciones.actorDni,
+      detalle: auditoriaTransiciones.detalle,
       createdAt: auditoriaTransiciones.createdAt,
     })
     .from(auditoriaTransiciones)
     .where(eq(auditoriaTransiciones.expedienteId, id))
     .orderBy(asc(auditoriaTransiciones.createdAt));
+
+  // Solo las personas que aparecen en el detalle (no toda la tabla usuarios).
+  const ids = new Set<string>();
+  for (const v of [row.participante1Id, row.participante2Id, row.asesorId]) if (v) ids.add(v);
+  for (const m of msgs) if (m.autorId) ids.add(m.autorId);
+  for (const h of hist) if (h.actorId) ids.add(h.actorId);
+  const personas =
+    ids.size > 0
+      ? await db
+          .select()
+          .from(usuarios)
+          .where(inArray(usuarios.id, [...ids]))
+      : [];
+  const porId = new Map(personas.map((p) => [p.id, toPersona(p)]));
 
   const datosAdmin: Record<string, string | null> = {};
   for (const k of CAMPOS_ADMIN) {
@@ -211,10 +373,14 @@ export async function getDetalleById(db: Db, id: string): Promise<DetalleRow | n
       v instanceof Date ? v.toISOString().slice(0, 10) : ((v as string | null) ?? null);
   }
 
+  const subetapasDTO = subs.map((s) => subetapaDTO(s, NOMBRES_ETAPA, ahora));
+  const activa = subs.find((s) => s.estado === "EN_CURSO") ?? null;
+
   return {
     id: row.id,
     codigo: row.codigo,
     estado: row.estado as EstadoLiteral,
+    observadoDesde: row.estado === "OBSERVADO" ? observadoDesdeDe(row.metadata) : null,
     modalidad: row.modalidad as DetalleRow["modalidad"],
     programa: row.programa,
     titulo: row.titulo,
@@ -224,18 +390,19 @@ export async function getDetalleById(db: Db, id: string): Promise<DetalleRow | n
     asesor: row.asesorId ? (porId.get(row.asesorId) ?? null) : null,
     datosAdmin,
     checklist,
-    subetapas: subs.map((s) => ({
-      id: s.id,
-      etapa: s.etapa,
-      etapaNombre: FLUJO_TITULACION.find((e) => e.numero === s.etapa)?.nombre ?? `Etapa ${s.etapa}`,
-      orden: s.orden,
-      nombre: s.nombre,
-      plazo: s.plazo,
-      estado: s.estado,
-      responsable: s.responsable,
-      inicio: s.inicio ? s.inicio.toISOString() : null,
-      fin: s.fin ? s.fin.toISOString() : null,
+    generados: generadosRows.map((g) => ({
+      id: g.id,
+      tipo: g.tipo,
+      nombre: plantillaDe(g.tipo)?.nombre ?? g.tipo,
+      etapa: g.etapa === "E2" || g.etapa === "E6" ? g.etapa : "E1",
+      version: g.version,
+      pendientes: g.pendientes,
+      createdAt: g.createdAt.toISOString(),
     })),
+    subetapas: subetapasDTO,
+    subetapaActiva: activa
+      ? { id: activa.id, clave: activa.clave, etapa: activa.etapa, orden: activa.orden }
+      : null,
     avance: avanceDe(
       subs.map((s) => ({ estado: s.estado, etapa: s.etapa, orden: s.orden, nombre: s.nombre })),
       row.estado,
@@ -249,10 +416,27 @@ export async function getDetalleById(db: Db, id: string): Promise<DetalleRow | n
     historial: hist.map((h) => ({
       estadoAnterior: h.estadoAnterior,
       estadoNuevo: h.estadoNuevo,
-      actorDni: h.actorId ? (porId.get(h.actorId)?.dni ?? null) : null,
+      actorDni: h.actorDni ?? (h.actorId ? (porId.get(h.actorId)?.dni ?? null) : null),
+      detalle: h.detalle,
       createdAt: h.createdAt.toISOString(),
     })),
   };
+}
+
+/** Clave de la subetapa EN_CURSO (para RN-06 en la carga del tesista). */
+export async function subetapaActivaDe(
+  db: DbExecutor,
+  expedienteId: string,
+): Promise<{ id: string; clave: ClaveSubetapa | null } | null> {
+  const rows = await db
+    .select({ id: subetapas.id, clave: subetapas.clave })
+    .from(subetapas)
+    .where(and(eq(subetapas.expedienteId, expedienteId), eq(subetapas.estado, "EN_CURSO")))
+    .orderBy(asc(subetapas.etapa), asc(subetapas.orden))
+    .limit(1);
+  const r = rows[0];
+  if (!r) return null;
+  return { id: r.id, clave: esClaveSubetapa(r.clave) ? r.clave : null };
 }
 
 export interface ResumenRow {
@@ -268,18 +452,25 @@ export interface ResumenRow {
   updatedAt: string;
 }
 
-/** Dashboard §4: tabla con filtros + indicadores agregados (una sola lectura). */
+/** Alcance del listado (permissions-matrix RN-06/RN-07). */
+export type AlcanceListado =
+  | { tipo: "TODO" }
+  | { tipo: "PARTICIPANTE"; dni: string }
+  | { tipo: "ASESOR"; dni: string };
+
+/**
+ * Dashboard §4: tabla con filtros + indicadores. El alcance se aplica en SQL
+ * y los indicadores se calculan solo sobre lo que el actor puede ver.
+ */
 export async function listarExpedientes(
-  db: Db,
+  db: DbExecutor,
   filtros: {
     q?: string | undefined;
     estado?: string | undefined;
     orden?: string | undefined;
-    vista?: string | undefined;
     page?: number | undefined;
     limit?: number | undefined;
-    actorDni?: string | undefined;
-    actorRol?: string | undefined;
+    alcance: AlcanceListado;
   },
 ): Promise<{
   items: ResumenRow[];
@@ -288,44 +479,87 @@ export async function listarExpedientes(
   page: number;
   limit: number;
 }> {
-  const exps = await db.select().from(expedientes).orderBy(asc(expedientes.codigo));
-  const personas = await db.select().from(usuarios);
-  const porId = new Map(personas.map((p) => [p.id, p]));
-  const todasSubs = await db.select().from(subetapas);
-
-  let items: Array<ResumenRow & { p2dni: string | null; asesorDni: string | null }> = exps.map(
-    (row) => {
-      const p1 = row.participante1Id ? porId.get(row.participante1Id) : undefined;
-      const subs = todasSubs
-        .filter((s) => s.expedienteId === row.id)
-        .map((s) => ({ estado: s.estado, etapa: s.etapa, orden: s.orden, nombre: s.nombre }));
-      const av = avanceDe(subs, row.estado);
-      return {
-        id: row.id,
-        codigo: row.codigo,
-        tesista: p1 ? `${p1.nombres} ${p1.apellidos}` : "—",
-        dni: p1?.dni ?? "—",
-        programa: row.programa,
-        etapaActual: av.etapaActual,
-        subetapaActual: av.subetapaActual,
-        estado: row.estado as EstadoLiteral,
-        avancePct: av.pct,
-        updatedAt: row.updatedAt.toISOString(),
-        p2dni: row.participante2Id ? (porId.get(row.participante2Id)?.dni ?? null) : null,
-        asesorDni: row.asesorId ? (porId.get(row.asesorId)?.dni ?? null) : null,
-      };
-    },
-  );
-
-  // vista=mis: el actor solo ve lo suyo (permissions-matrix RN-06/RN-07).
-  if (filtros.vista === "mis" && filtros.actorDni) {
-    const dni = filtros.actorDni;
-    if (filtros.actorRol === "TESISTA") {
-      items = items.filter((i) => i.dni === dni || i.p2dni === dni);
-    } else if (filtros.actorRol === "ASESOR" || filtros.actorRol === "JURADO") {
-      items = items.filter((i) => i.asesorDni === dni);
-    }
+  const p1 = alias(usuarios, "p1");
+  const p2 = alias(usuarios, "p2");
+  const asesor = alias(usuarios, "asesor");
+  const condiciones: SQL[] = [];
+  if (filtros.alcance.tipo === "PARTICIPANTE") {
+    const c = or(eq(p1.dni, filtros.alcance.dni), eq(p2.dni, filtros.alcance.dni));
+    if (c) condiciones.push(c);
+  } else if (filtros.alcance.tipo === "ASESOR") {
+    condiciones.push(eq(asesor.dni, filtros.alcance.dni));
   }
+  const exps = await db
+    .select({
+      id: expedientes.id,
+      codigo: expedientes.codigo,
+      estado: expedientes.estado,
+      programa: expedientes.programa,
+      updatedAt: expedientes.updatedAt,
+      p1Nombres: p1.nombres,
+      p1Apellidos: p1.apellidos,
+      p1Dni: p1.dni,
+    })
+    .from(expedientes)
+    .leftJoin(p1, eq(expedientes.participante1Id, p1.id))
+    .leftJoin(p2, eq(expedientes.participante2Id, p2.id))
+    .leftJoin(asesor, eq(expedientes.asesorId, asesor.id))
+    .where(condiciones.length > 0 ? and(...condiciones) : undefined)
+    .orderBy(asc(expedientes.codigo));
+
+  const ids = exps.map((e) => e.id);
+  const subsRows =
+    ids.length > 0
+      ? await db
+          .select({
+            expedienteId: subetapas.expedienteId,
+            estado: subetapas.estado,
+            etapa: subetapas.etapa,
+            orden: subetapas.orden,
+            nombre: subetapas.nombre,
+          })
+          .from(subetapas)
+          .where(inArray(subetapas.expedienteId, ids))
+          .orderBy(asc(subetapas.etapa), asc(subetapas.orden))
+      : [];
+  const subsPorExp = new Map<string, typeof subsRows>();
+  for (const s of subsRows) {
+    const arr = subsPorExp.get(s.expedienteId) ?? [];
+    arr.push(s);
+    subsPorExp.set(s.expedienteId, arr);
+  }
+
+  let items: ResumenRow[] = exps.map((row) => {
+    const av = avanceDe(subsPorExp.get(row.id) ?? [], row.estado);
+    return {
+      id: row.id,
+      codigo: row.codigo,
+      tesista: row.p1Nombres ? `${row.p1Nombres} ${row.p1Apellidos ?? ""}`.trim() : "—",
+      dni: row.p1Dni ?? "—",
+      programa: row.programa,
+      etapaActual: av.etapaActual,
+      subetapaActual: av.subetapaActual,
+      estado: row.estado as EstadoLiteral,
+      avancePct: av.pct,
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  });
+
+  // Indicadores sobre el universo visible del actor (INC-03), antes de q/estado.
+  const es = (e: string): "curso" | "fin" | "sin" | "otro" =>
+    e === "TITULO_EMITIDO"
+      ? "fin"
+      : e === "REGISTRADO"
+        ? "sin"
+        : e === "ANULADO" || e === "DESAPROBADO_TRUNCO"
+          ? "otro"
+          : "curso";
+  const resumen = {
+    total: items.length,
+    enCurso: items.filter((e) => es(e.estado) === "curso").length,
+    finalizados: items.filter((e) => es(e.estado) === "fin").length,
+    sinIniciar: items.filter((e) => es(e.estado) === "sin").length,
+  };
 
   const q = (filtros.q ?? "").trim().toLowerCase();
   if (q) {
@@ -351,20 +585,5 @@ export async function listarExpedientes(
   const page = Math.max(filtros.page ?? 1, 1);
   const limit = Math.min(Math.max(filtros.limit ?? 20, 1), 100);
   const total = items.length;
-  const pagina = items.slice((page - 1) * limit, page * limit);
-
-  const es = (e: string): "curso" | "fin" | "sin" =>
-    e === "TITULO_EMITIDO" ? "fin" : e === "REGISTRADO" ? "sin" : "curso";
-  return {
-    items: pagina,
-    total,
-    page,
-    limit,
-    resumen: {
-      total: exps.length,
-      enCurso: exps.filter((e) => es(e.estado) === "curso").length,
-      finalizados: exps.filter((e) => es(e.estado) === "fin").length,
-      sinIniciar: exps.filter((e) => es(e.estado) === "sin").length,
-    },
-  };
+  return { items: items.slice((page - 1) * limit, page * limit), total, page, limit, resumen };
 }

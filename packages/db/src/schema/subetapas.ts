@@ -12,10 +12,14 @@ export const subetapas = pgTable("subetapas", {
   orden: integer("orden").notNull(),
   nombre: text("nombre").notNull(),
   plazo: varchar("plazo", { length: 120 }),
+  /** Clave estable (reglas de avance); null = subetapa personalizada (HU-0052). */
+  clave: varchar("clave", { length: 40 }),
   estado: estadoSubetapaEnum("estado").notNull().default("NO_INICIADO"),
   responsable: varchar("responsable", { length: 255 }),
   inicio: timestamp("inicio", { withTimezone: true }),
   fin: timestamp("fin", { withTimezone: true }),
+  /** Alerta de plazo vencido ya enviada (HU-0055: una sola vez por subetapa). */
+  alertadaAt: timestamp("alertada_at", { withTimezone: true }),
 });
 
 export type Subetapa = typeof subetapas.$inferSelect;

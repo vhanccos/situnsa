@@ -64,6 +64,8 @@ export const PersonaDTOSchema = z.object({
   grado: z.string().nullable(),
   activo: z.boolean(),
   rol: z.string(),
+  /** Tiene clave configurada (puede ingresar a su portal). */
+  accesoActivo: z.boolean(),
 });
 
 /** Etiquetas del ComboBox legacy (RN-L10, HU-0069 catálogos). */
@@ -109,6 +111,8 @@ export const ChecklistItemDTOSchema = z.object({
   nombre: z.string(),
   etapa: z.enum(["E1", "E2"]),
   obligatorio: z.boolean(),
+  /** Clave de la subetapa que lo exige (y en la que lo carga el tesista, RN-06). */
+  requeridoEn: z.string().nullable(),
   estado: z.enum(["PENDIENTE", "CARGADO", "OBSERVADO", "APROBADO", "RECHAZADO"]),
   documentoId: z.string().uuid().nullable(),
   version: z.number().nullable(),
@@ -116,8 +120,12 @@ export const ChecklistItemDTOSchema = z.object({
   faltantes: z.array(z.string()),
 });
 
+export const SemaforoSchema = z.enum(["VERDE", "AMARILLO", "ROJO"]);
+
 export const SubetapaDTOSchema = z.object({
   id: z.string().uuid(),
+  /** Clave estable (reglas de avance); null = subetapa personalizada. */
+  clave: z.string().nullable(),
   etapa: z.number(),
   etapaNombre: z.string(),
   orden: z.number(),
@@ -127,6 +135,11 @@ export const SubetapaDTOSchema = z.object({
   responsable: z.string().nullable(),
   inicio: z.string().nullable(),
   fin: z.string().nullable(),
+  /** Plazo de la subetapa EN_CURSO en días hábiles (RN-PLZ-07). */
+  vencimiento: z.string().nullable(),
+  diasRestantes: z.number().nullable(),
+  vencida: z.boolean(),
+  semaforo: SemaforoSchema.nullable(),
 });
 
 export const AvanceDTOSchema = z.object({
@@ -148,17 +161,40 @@ export const AuditoriaItemDTOSchema = z.object({
   estadoAnterior: z.string().nullable(),
   estadoNuevo: z.string(),
   actorDni: z.string().nullable(),
+  detalle: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+/** Formato generado por "Insertar datos" (HU-0017/0018) con sus campos pendientes. */
+export const DocumentoGeneradoDTOSchema = z.object({
+  id: z.string().uuid(),
+  tipo: z.string(),
+  nombre: z.string(),
+  etapa: z.enum(["E1", "E2", "E6"]),
+  version: z.number(),
+  pendientes: z.array(z.string()),
   createdAt: z.string(),
 });
 
 /** Detalle completo: pestañas Datos/Documentos/Resumen + mensajes. */
 export const ExpedienteDetalleDTOSchema = ExpedienteDTOSchema.extend({
+  /** Estado al que se vuelve al levantar la observación vigente. */
+  observadoDesde: EstadoExpedienteSchema.nullable(),
   participante1: PersonaDTOSchema.nullable(),
   participante2: PersonaDTOSchema.nullable(),
   asesor: PersonaDTOSchema.nullable(),
   datosAdmin: DatosAdminDTOSchema,
   checklist: z.array(ChecklistItemDTOSchema),
+  generados: z.array(DocumentoGeneradoDTOSchema),
   subetapas: z.array(SubetapaDTOSchema),
+  subetapaActiva: z
+    .object({
+      id: z.string().uuid(),
+      clave: z.string().nullable(),
+      etapa: z.number(),
+      orden: z.number(),
+    })
+    .nullable(),
   avance: AvanceDTOSchema,
   mensajes: z.array(MensajeDTOSchema),
   historial: z.array(AuditoriaItemDTOSchema),
@@ -242,6 +278,7 @@ export const expedientesContract = c.router({
       400: ErrorEnvelopeSchema,
       401: ErrorEnvelopeSchema,
       403: ErrorEnvelopeSchema,
+      409: ErrorEnvelopeSchema,
     },
     summary: "§10 Registro de Nuevo Expediente (crea REGISTRADO; admite Idempotency-Key)",
   },
@@ -258,6 +295,34 @@ export const expedientesContract = c.router({
       404: ErrorEnvelopeSchema,
     },
     summary: "§12 Validar inscripción → EN_PLAN + genera seguimiento",
+  },
+  levantarObservacion: {
+    method: "POST",
+    path: "/api/expedientes/:id/levantar-observacion",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: z.object({ comentario: z.string().max(2000).optional() }),
+    responses: {
+      200: z.object({ id: z.string().uuid(), estado: EstadoExpedienteSchema }),
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "OBSERVADO → estado de origen (subsanación verificada por el área)",
+  },
+  enviarAcceso: {
+    method: "POST",
+    path: "/api/expedientes/:id/enviar-acceso",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: z.object({}),
+    responses: {
+      200: z.object({ enviados: z.number(), destinatarios: z.array(z.string()) }),
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "Envía a los participantes el enlace de activación de su portal (HU-0002)",
   },
   publicarMensaje: {
     method: "POST",
@@ -309,7 +374,7 @@ export const expedientesContract = c.router({
       401: ErrorEnvelopeSchema,
       403: ErrorEnvelopeSchema,
       404: ErrorEnvelopeSchema,
-      409: ErrorEnvelopeSchema.extend({ updatedAt: z.string() }),
+      409: ErrorEnvelopeSchema.extend({ updatedAt: z.string().optional() }),
     },
     summary: "Autoguardado de Datos (§6 INTERFACES)",
   },

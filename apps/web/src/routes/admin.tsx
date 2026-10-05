@@ -1,7 +1,9 @@
+import { EstadoExpedienteSchema } from "@pis/contracts";
 import { Link } from "@tanstack/react-router";
 import {
   CircleDashed,
   FilePlus,
+  FileSpreadsheet,
   Files,
   Hourglass,
   ListChecks,
@@ -9,9 +11,11 @@ import {
   Search,
 } from "lucide-react";
 import { useState } from "react";
-import { useListarExpedientes } from "../api/expedientes.js";
+import { apiBaseUrl } from "../api/client.js";
+import { descargarArchivoProtegido, useListarExpedientes } from "../api/expedientes.js";
+import { useSession } from "../api/session.js";
 import { AppShell } from "../components/layout/app-shell.js";
-import { botonClases } from "../components/ui/button.js";
+import { Button, botonClases } from "../components/ui/button.js";
 import { Card, CardEncabezado } from "../components/ui/card.js";
 import { DataTable } from "../components/ui/data-table.js";
 import { controlClase } from "../components/ui/field.js";
@@ -19,11 +23,15 @@ import { PageHeader } from "../components/ui/page-header.js";
 import { Select } from "../components/ui/select.js";
 import { StatCard } from "../components/ui/stat-card.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
+import { useToast } from "../components/ui/toast.js";
 import { Tooltip } from "../components/ui/tooltip.js";
 import { cn } from "../utils/cn.js";
 
 const ETAPAS = ["", "1", "2", "3", "4", "5", "6", "7"];
-const ESTADOS = ["", "REGISTRADO", "EN_PLAN", "OBSERVADO", "TITULO_EMITIDO"];
+/** Todos los estados del expediente (fuente única: el contrato). */
+const ESTADOS = EstadoExpedienteSchema.options;
+/** Roles con `reportes.exportar` (HU-0046). */
+const ROLES_REPORTES = ["ADMIN_FIPS", "DECANO"];
 const ORDENES = [
   { v: "recientes", l: "Más recientes" },
   { v: "antiguos", l: "Más antiguos" },
@@ -41,8 +49,39 @@ function hace(iso: string): string {
   return meses === 1 ? "hace 1 mes" : `hace ${meses} meses`;
 }
 
+/** Excel para la sesión del Consejo de Facultad (HU-0046, RN-07.1). */
+function ExportarConsejo() {
+  const avisar = useToast();
+  const [cargando, setCargando] = useState(false);
+
+  async function exportar(): Promise<void> {
+    setCargando(true);
+    try {
+      await descargarArchivoProtegido(
+        `${apiBaseUrl}/api/reportes/consejo-facultad?alcance=consejo`,
+        "consejo-facultad.xlsx",
+      );
+      avisar("Listado para el Consejo de Facultad descargado");
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudo exportar el listado", "error");
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  return (
+    <Tooltip texto="Expedientes con la subetapa «Consejo de Facultad» en curso, con casilleros de votación">
+      <Button disabled={cargando} onClick={() => void exportar()} type="button" variante="contorno">
+        <FileSpreadsheet size={16} />
+        {cargando ? "Exportando…" : "Listado para Consejo"}
+      </Button>
+    </Tooltip>
+  );
+}
+
 /** §4 Dashboard Administrativo: indicadores + filtros + tabla + TRÁMITE. */
 export function AdminPage() {
+  const { sesion } = useSession();
   const [q, setQ] = useState("");
   const [etapa, setEtapa] = useState("");
   const [estado, setEstado] = useState("");
@@ -81,10 +120,13 @@ export function AdminPage() {
         titulo="Panel de administración"
         descripcion="Consulta, filtros e historial operativo de los expedientes."
         acciones={
-          <Link className={cn(botonClases({ variante: "primario" }))} to="/expedientes/nuevo">
-            <FilePlus size={16} />
-            Nuevo Expediente
-          </Link>
+          <>
+            {sesion && ROLES_REPORTES.includes(sesion.rol) && <ExportarConsejo />}
+            <Link className={cn(botonClases({ variante: "primario" }))} to="/expedientes/nuevo">
+              <FilePlus size={16} />
+              Nuevo Expediente
+            </Link>
+          </>
         }
       />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -155,9 +197,9 @@ export function AdminPage() {
             </Select>
             <Select ariaLabel="Estado" value={estado} onChange={conPagina1(setEstado)}>
               <option value="">Todos los estados</option>
-              {ESTADOS.filter(Boolean).map((e) => (
+              {ESTADOS.map((e) => (
                 <option key={e} value={e}>
-                  {e.replace("_", " ")}
+                  {e.replace(/_/g, " ")}
                 </option>
               ))}
             </Select>

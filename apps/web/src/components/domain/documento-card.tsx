@@ -1,6 +1,12 @@
-import { AlertTriangle, Eye, FileText, Stamp, UploadCloud } from "lucide-react";
+import { cargaHabilitadaTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
+import { AlertTriangle, Eye, FileDown, FileText, Stamp, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
-import { documentoDescargaUrl, useSubirDocumento } from "../../api/expedientes.js";
+import {
+  abrirArchivoProtegido,
+  documentoDescargaUrl,
+  formatoDescargaUrl,
+  useSubirDocumento,
+} from "../../api/expedientes.js";
 import { useVistoBueno } from "../../api/seguimiento.js";
 import { useSession } from "../../api/session.js";
 import { cn } from "../../utils/cn.js";
@@ -18,9 +24,17 @@ interface Props {
   version: number | null;
   faltantes: string[];
   documentoId: string | null;
+  /** Subetapa que exige el documento (RN-06). */
+  requeridoEn?: string | null;
+  /** Clave de la subetapa en curso del expediente. */
+  subetapaActiva?: string | null;
+  /** Formato generado por "Insertar datos" (si existe). */
+  formato?: { id: string; version: number; pendientes: string[] } | null;
 }
 
-/** Tarjeta documental §§7–8: estado + faltantes + VER + ADJUNTAR/REEMPLAZAR + dropzone. */
+const PERSONAL = ["ADMIN_FIPS", "SECRETARIA", "DECANO"];
+
+/** Tarjeta documental §§7–8: estado + faltantes + VER + formato + ADJUNTAR/REEMPLAZAR + V°B°. */
 export function DocumentoCard(p: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const subir = useSubirDocumento(p.expedienteId);
@@ -30,12 +44,32 @@ export function DocumentoCard(p: Props) {
   const [error, setError] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const [pendiente, setPendiente] = useState<File | null>(null);
-  // V°B°: asesor asignado o staff; solo sobre documento cargado u observado.
+  const esPersonal = !!sesion && PERSONAL.includes(sesion.rol);
+  const esTesista = sesion?.rol === "TESISTA";
+  // RN-06: el tesista solo carga lo de su subetapa activa (o lo observado) y
+  // nunca reemplaza un documento aprobado. El servidor lo vuelve a validar.
+  const puedeCargar = esPersonal
+    ? true
+    : esTesista &&
+      p.estado !== "APROBADO" &&
+      cargaHabilitadaTesista(
+        { tipo: p.tipo, requeridoEn: p.requeridoEn ?? null, estado: p.estado },
+        p.subetapaActiva ?? null,
+      );
+  // V°B°: asesor asignado o personal; solo sobre documento cargado u observado.
   const puedeVisar =
     !!p.documentoId &&
     (p.estado === "CARGADO" || p.estado === "OBSERVADO") &&
     !!sesion &&
-    ["ASESOR", "ADMIN_FIPS", "SECRETARIA", "DECANO"].includes(sesion.rol);
+    ["ASESOR", ...PERSONAL].includes(sesion.rol);
+
+  async function abrir(url: string): Promise<void> {
+    try {
+      await abrirArchivoProtegido(url);
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : "No se pudo abrir el documento", "error");
+    }
+  }
 
   async function visar(aprobado: boolean): Promise<void> {
     if (!p.documentoId) return;
@@ -58,14 +92,15 @@ export function DocumentoCard(p: Props) {
   async function ejecutar(file: File): Promise<void> {
     setError(null);
     try {
-      await subir.mutateAsync({ tipo: p.tipo, file });
+      const r = await subir.mutateAsync({ tipo: p.tipo, file });
+      avisar(`${p.nombre}: versión ${r.version} cargada`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al subir");
     }
   }
 
   function onFile(file: File | undefined): void {
-    if (!file) return;
+    if (!file || !puedeCargar) return;
     if (p.version !== null) {
       setPendiente(file);
       return;
@@ -80,6 +115,7 @@ export function DocumentoCard(p: Props) {
         arrastrando && "border-dashed border-navy-800 bg-navy-950/[0.03]",
       )}
       onDragOver={(e) => {
+        if (!puedeCargar) return;
         e.preventDefault();
         setArrastrando(true);
       }}
@@ -120,15 +156,15 @@ export function DocumentoCard(p: Props) {
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/70 pt-3">
         {p.documentoId ? (
-          <a
-            className={cn(botonClases({ variante: "oscuro", tamano: "sm" }))}
-            href={documentoDescargaUrl(p.documentoId)}
-            target="_blank"
-            rel="noreferrer"
+          <Button
+            tamano="sm"
+            variante="oscuro"
+            onClick={() => void abrir(documentoDescargaUrl(p.documentoId ?? ""))}
+            type="button"
           >
             <Eye size={14} />
             VER
-          </a>
+          </Button>
         ) : (
           <span
             className={cn(
@@ -141,15 +177,41 @@ export function DocumentoCard(p: Props) {
             VER
           </span>
         )}
-        <button
-          className={cn(botonClases({ variante: "contorno", tamano: "sm" }))}
-          disabled={subir.isPending}
-          onClick={() => inputRef.current?.click()}
-          type="button"
-        >
-          <UploadCloud size={14} />
-          {subir.isPending ? "SUBIENDO…" : p.version === null ? "ADJUNTAR" : "REEMPLAZAR"}
-        </button>
+        {p.formato && (
+          <Button
+            tamano="sm"
+            variante="contorno"
+            onClick={() => void abrir(formatoDescargaUrl(p.formato?.id ?? ""))}
+            title={
+              p.formato.pendientes.length > 0
+                ? `Campos pendientes: ${p.formato.pendientes.join(", ")}`
+                : "Formato con todos los datos insertados"
+            }
+            type="button"
+          >
+            <FileDown size={14} />
+            FORMATO v{p.formato.version}
+          </Button>
+        )}
+        {puedeCargar ? (
+          <button
+            className={cn(botonClases({ variante: "contorno", tamano: "sm" }))}
+            disabled={subir.isPending}
+            onClick={() => inputRef.current?.click()}
+            type="button"
+          >
+            <UploadCloud size={14} />
+            {subir.isPending ? "SUBIENDO…" : p.version === null ? "ADJUNTAR" : "REEMPLAZAR"}
+          </button>
+        ) : (
+          esTesista && (
+            <span className="text-xs text-grafito-600">
+              {p.estado === "APROBADO"
+                ? "Documento aprobado"
+                : "Se carga en la subetapa correspondiente"}
+            </span>
+          )
+        )}
         {puedeVisar && (
           <span className="flex gap-1.5">
             <Button

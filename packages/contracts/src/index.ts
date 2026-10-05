@@ -2,6 +2,7 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { authContract } from "./auth.contract.js";
 import { cierreContract } from "./cierre.contract.js";
+import { configuracionContract } from "./configuracion.contract.js";
 import { documentosContract } from "./documentos.contract.js";
 import { expedientesContract } from "./expedientes.contract.js";
 import { gruposContract, reportesContract } from "./grupos-pagos.contract.js";
@@ -23,6 +24,7 @@ export const appContract = c.router({
   grupos: gruposContract,
   reportes: reportesContract,
   cierre: cierreContract,
+  configuracion: configuracionContract,
   programas: programasContract,
   health: {
     method: "GET",
@@ -35,11 +37,13 @@ export const appContract = c.router({
 export * from "./api-conventions.js";
 export * from "./auth.contract.js";
 export * from "./cierre.contract.js";
+export * from "./configuracion.contract.js";
 export * from "./documentos.contract.js";
 export * from "./enums.js";
 export * from "./expedientes.contract.js";
 export * from "./grupos-pagos.contract.js";
 export * from "./programas.contract.js";
+export * from "./reportes.contract.js";
 export * from "./seguimiento.contract.js";
 export * from "./seguridad.contract.js";
 export * from "./talleres.contract.js";

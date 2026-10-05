@@ -6,17 +6,21 @@ import {
   RouterProvider,
   redirect,
 } from "@tanstack/react-router";
+import { reintentarConsulta } from "./api/errores.js";
 import { redirigirSiNoPuede, rolGuardado } from "./api/guard.js";
 import { SessionProvider } from "./api/session.js";
 import { ToastProvider } from "./components/ui/toast.js";
+import { ActivarPage } from "./routes/activar.js";
 import { AdminPage } from "./routes/admin.js";
 import { AsesorPage } from "./routes/asesor.js";
+import { ConfiguracionPage } from "./routes/configuracion.js";
 import { ExpedienteDetallePage } from "./routes/expedientes.$id.js";
 import { NuevoExpedientePage } from "./routes/expedientes-nuevo.js";
 import { HomePage } from "./routes/index.js";
 import { InscripcionesPage } from "./routes/inscripciones.js";
 import { LoginPage } from "./routes/login.js";
 import { MiTramitePage } from "./routes/mi-tramite.js";
+import { RestablecerPage } from "./routes/restablecer.js";
 import { AsesoresPage, TalleresPage } from "./routes/talleres-asesores.js";
 
 const rootRoute = createRootRoute();
@@ -33,6 +37,22 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   component: LoginPage,
+});
+const activarRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/activar",
+  component: ActivarPage,
+});
+const restablecerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/restablecer",
+  component: RestablecerPage,
+});
+const configuracionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/configuracion",
+  beforeLoad: guard("/configuracion"),
+  component: ConfiguracionPage,
 });
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -85,6 +105,9 @@ const asesoresRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
+  activarRoute,
+  restablecerRoute,
+  configuracionRoute,
   adminRoute,
   miTramiteRoute,
   asesorRoute,
@@ -102,7 +125,10 @@ declare module "@tanstack/react-router" {
   }
 }
 
-const queryClient = new QueryClient();
+// INC-07: un 403/404 no se reintenta (antes la vista quedaba "cargando" varios segundos).
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: reintentarConsulta } },
+});
 
 export function App() {
   return (

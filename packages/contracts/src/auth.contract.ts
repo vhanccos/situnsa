@@ -24,6 +24,23 @@ export const ParSesionSchema = z.object({
   expiraEn: z.number(),
 });
 
+/** Política de clave (S-FIPS): mínimo 8 caracteres con letras y números. */
+export const ClaveNuevaSchema = z
+  .string()
+  .min(8, "La clave debe tener al menos 8 caracteres")
+  .max(128)
+  .regex(/[A-Za-zÁÉÍÓÚáéíóúÑñ]/, "La clave debe incluir letras")
+  .regex(/\d/, "La clave debe incluir números");
+
+export const ActivarCuentaSchema = z.object({
+  token: z.string().min(20).max(200),
+  password: ClaveNuevaSchema,
+});
+
+export const SolicitarRestablecimientoSchema = z.object({
+  identificador: z.string().min(2).max(255).describe("DNI, CUI o correo"),
+});
+
 const c = initContract();
 
 export const authContract = c.router({
@@ -57,6 +74,23 @@ export const authContract = c.router({
     body: z.object({}),
     responses: { 200: z.object({ ok: z.literal(true) }) },
     summary: "Revoca la sesión actual",
+  },
+  activar: {
+    method: "POST",
+    path: "/api/auth/activar",
+    body: ActivarCuentaSchema,
+    responses: {
+      200: z.object({ ok: z.literal(true), dni: z.string() }),
+      400: ErrorEnvelopeSchema,
+    },
+    summary: "Fija la clave con un enlace de un solo uso (activación o restablecimiento)",
+  },
+  solicitarRestablecimiento: {
+    method: "POST",
+    path: "/api/auth/restablecer",
+    body: SolicitarRestablecimientoSchema,
+    responses: { 202: z.object({ ok: z.literal(true) }) },
+    summary: "Envía un enlace de restablecimiento (respuesta idéntica exista o no la cuenta)",
   },
   sesion: {
     method: "GET",

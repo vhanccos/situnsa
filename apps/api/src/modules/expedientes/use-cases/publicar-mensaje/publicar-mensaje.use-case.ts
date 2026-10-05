@@ -2,6 +2,7 @@ import { db, expedientes, mensajes } from "@pis/db";
 import { DomainError, fail, ok, type Result } from "@pis/domain";
 import { eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
+import { enqueueCorreo } from "../../../../infra/jobs/colas.js";
 
 export interface Actor {
   id: string;
@@ -20,13 +21,13 @@ export class PublicarMensajeUseCase {
     const clean = texto.trim();
     if (clean.length < 2) return fail(new DomainError("VALIDACION_FALLIDA", "Mensaje vacío"));
     const uow = new DrizzleUnitOfWork(db);
-    return uow.run(async (tx) => {
+    const r = await uow.run(async (tx) => {
       const exp = await tx
         .select({ id: expedientes.id })
         .from(expedientes)
         .where(eq(expedientes.id, expedienteId))
         .limit(1);
-      if (!exp[0]) return fail(new DomainError("VALIDACION_FALLIDA", "Expediente no encontrado"));
+      if (!exp[0]) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
       const inserted = await tx
         .insert(mensajes)
         .values({ expedienteId, autorId: actor.id, texto: clean })
@@ -41,5 +42,15 @@ export class PublicarMensajeUseCase {
         createdAt: row.createdAt.toISOString(),
       });
     });
+    if (r.ok) {
+      // HU-0058: el mensaje del área también llega por correo al tesista.
+      await enqueueCorreo({
+        expedienteId,
+        asunto: "Nuevo mensaje del área de titulación",
+        titulo: "Tienes un mensaje sobre tu trámite",
+        texto: clean,
+      });
+    }
+    return r;
   }
 }

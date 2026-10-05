@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiBaseUrl } from "./client.js";
+import { errorDeRespuesta } from "./errores.js";
 import { expedienteKey, expedientesKey, leerMensajeError } from "./expedientes.js";
 import { apiFetch } from "./session.js";
 
@@ -82,7 +83,32 @@ export function useFinalizarSubetapa(expedienteId: string) {
         orden: number;
         estado: string;
         siguienteId: string | null;
+        estadoExpediente: string;
       };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: expedienteKey(expedienteId) });
+      qc.invalidateQueries({ queryKey: ["cierre", expedienteId] });
+      qc.invalidateQueries({ queryKey: expedientesKey });
+    },
+  });
+}
+
+/** POST /api/subetapas/:id/derivar — cambia el responsable (HU-0054). */
+export function useDerivarSubetapa(expedienteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { subetapaId: string; responsable: string; motivo?: string }) => {
+      const res = await apiFetch(`${apiBaseUrl}/api/subetapas/${input.subetapaId}/derivar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          responsable: input.responsable,
+          ...(input.motivo ? { motivo: input.motivo } : {}),
+        }),
+      });
+      if (!res.ok) throw await errorDeRespuesta(res, "No se pudo derivar");
+      return (await res.json()) as { id: string; responsable: string };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: expedienteKey(expedienteId) });
@@ -129,8 +155,11 @@ export interface JuradoCierre {
   dni: string;
   nombres: string;
   grado: string | null;
+  /** TERNA = revisión del plan (E1); JURADO = jurado sorteado (E3–E4). */
+  instancia: "TERNA" | "JURADO";
   rol: string;
   dictamen: string;
+  comentario: string | null;
 }
 
 export interface SustentacionCierre {
@@ -142,10 +171,21 @@ export interface SustentacionCierre {
   actaVeredicto: string | null;
 }
 
+/** Rango de fechas propuesto por el alumno (HU-0038). */
+export interface PropuestaFechas {
+  id: string;
+  desde: string;
+  hasta: string;
+  comentario: string | null;
+  propuestaPor: string | null;
+  createdAt: string;
+}
+
 export interface ValidacionCierre {
   id: string;
   instancia: string;
   estado: string;
+  porcentaje: number | null;
   detalle: string | null;
 }
 
@@ -154,15 +194,17 @@ export interface Cierre {
   estado: string;
   jurados: JuradoCierre[];
   sustentacion: SustentacionCierre | null;
+  propuesta: PropuestaFechas | null;
   validaciones: ValidacionCierre[];
 }
 
-export function useCierre(expedienteId: string) {
+export function useCierre(expedienteId: string, enabled = true) {
   return useQuery({
     queryKey: ["cierre", expedienteId],
+    enabled,
     queryFn: async (): Promise<Cierre> => {
       const res = await apiFetch(`${apiBaseUrl}/api/expedientes/${expedienteId}/cierre`);
-      if (!res.ok) throw new Error("No se pudo cargar el cierre");
+      if (!res.ok) throw await errorDeRespuesta(res, "No se pudo cargar el cierre");
       return (await res.json()) as Cierre;
     },
   });
@@ -174,11 +216,15 @@ async function mutarCierre<T>(path: string, method: string, body: unknown): Prom
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const b = (await res.json().catch(() => null)) as unknown;
-    throw new Error(leerMensajeError(b, "Operación fallida"));
-  }
+  if (!res.ok) throw await errorDeRespuesta(res, "Operación fallida");
   return (await res.json()) as T;
+}
+
+/** Las acciones de cierre pueden mover el estado: refresca cierre, detalle y listado. */
+function refrescar(qc: ReturnType<typeof useQueryClient>, expedienteId: string): void {
+  qc.invalidateQueries({ queryKey: ["cierre", expedienteId] });
+  qc.invalidateQueries({ queryKey: expedienteKey(expedienteId) });
+  qc.invalidateQueries({ queryKey: expedientesKey });
 }
 
 export function useDesignarJurado(expedienteId: string) {
@@ -190,10 +236,11 @@ export function useDesignarJurado(expedienteId: string) {
       apellidos: string;
       grado?: string;
       rol: string;
+      instancia?: "TERNA" | "JURADO";
     }): Promise<JuradoCierre> =>
       mutarCierre<JuradoCierre>(`/api/expedientes/${expedienteId}/jurados`, "POST", input).then(
         (out) => {
-          qc.invalidateQueries({ queryKey: ["cierre", expedienteId] });
+          refrescar(qc, expedienteId);
           return out;
         },
       ),
@@ -209,7 +256,7 @@ export function useDictaminar(expedienteId: string) {
         "POST",
         { dictamen: input.dictamen, comentario: input.comentario },
       ).then((out) => {
-        qc.invalidateQueries({ queryKey: ["cierre", expedienteId] });
+        refrescar(qc, expedienteId);
         return out;
       }),
   });
@@ -229,7 +276,26 @@ export function useProgramarSustentacion(expedienteId: string) {
         "POST",
         input,
       ).then((out) => {
-        qc.invalidateQueries({ queryKey: ["cierre", expedienteId] });
+        refrescar(qc, expedienteId);
+        return out;
+      }),
+  });
+}
+
+export function useProponerFechas(expedienteId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      desde: string;
+      hasta: string;
+      comentario?: string;
+    }): Promise<PropuestaFechas> =>
+      mutarCierre<PropuestaFechas>(
+        `/api/expedientes/${expedienteId}/sustentacion/propuesta`,
+        "POST",
+        input,
+      ).then((out) => {
+        refrescar(qc, expedienteId);
         return out;
       }),
   });
@@ -244,8 +310,7 @@ export function useRegistrarActa(expedienteId: string) {
         "POST",
         { veredicto },
       ).then((out) => {
-        qc.invalidateQueries({ queryKey: ["cierre", expedienteId] });
-        qc.invalidateQueries({ queryKey: expedienteKey(expedienteId) });
+        refrescar(qc, expedienteId);
         return out;
       }),
   });
@@ -254,13 +319,18 @@ export function useRegistrarActa(expedienteId: string) {
 export function useRegistrarValidacion(expedienteId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { instancia: string; estado: string; detalle?: string }) =>
+    mutationFn: (input: {
+      instancia: string;
+      estado: string;
+      porcentaje?: number;
+      detalle?: string;
+    }) =>
       mutarCierre<ValidacionCierre>(
         `/api/expedientes/${expedienteId}/validaciones`,
         "POST",
         input,
       ).then((out) => {
-        qc.invalidateQueries({ queryKey: ["cierre", expedienteId] });
+        refrescar(qc, expedienteId);
         return out;
       }),
   });

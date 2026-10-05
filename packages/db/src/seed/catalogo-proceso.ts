@@ -32,6 +32,7 @@ export async function seedCatalogoProceso(db: Db): Promise<void> {
         await db.insert(catalogoSubetapas).values({
           etapaNumero: etapa.numero,
           orden: s.orden,
+          clave: s.clave,
           nombre: s.nombre,
           plazo: s.plazo,
           obligatoria: true,
@@ -42,7 +43,13 @@ export async function seedCatalogoProceso(db: Db): Promise<void> {
   for (const d of CHECKLIST_COMPLETO) {
     await db
       .insert(catalogoDocsRequeridos)
-      .values({ etapa: d.etapa, tipo: d.tipo, nombre: d.nombre, obligatorio: d.obligatorio })
+      .values({
+        etapa: d.etapa,
+        tipo: d.tipo,
+        nombre: d.nombre,
+        obligatorio: d.obligatorio,
+        requeridoEn: d.requeridoEn,
+      })
       .onConflictDoNothing({ target: catalogoDocsRequeridos.tipo });
   }
   console.log("Catálogo del proceso (7 etapas, 38 subetapas, checklist)");

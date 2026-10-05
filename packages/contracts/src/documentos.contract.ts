@@ -32,6 +32,24 @@ export const SubirDocumentoResponseSchema = z.object({
   estado: z.string(),
 });
 
+/** "Insertar datos en documentos" (HU-0017/0018/0020/0030). */
+export const GenerarDocumentosSchema = z.object({
+  /** E1/E2: formatos del tesista · E6: informe para Secretaría Académica (HU-0045). */
+  etapa: z.enum(["E1", "E2", "E6"]),
+});
+
+export const GenerarDocumentosDTOSchema = z.object({
+  generados: z.array(
+    z.object({
+      id: z.string().uuid(),
+      tipo: z.string(),
+      nombre: z.string(),
+      version: z.number(),
+      pendientes: z.array(z.string()),
+    }),
+  ),
+});
+
 const c = initContract();
 
 export const documentosContract = c.router({
@@ -58,6 +76,32 @@ export const documentosContract = c.router({
       404: ErrorEnvelopeSchema,
     },
     summary: "Descarga protegida vía X-Accel-Redirect (Nginx)",
+  },
+  generar: {
+    method: "POST",
+    path: "/api/expedientes/:id/documentos/generar",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: GenerarDocumentosSchema,
+    responses: {
+      200: GenerarDocumentosDTOSchema,
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "Genera los formatos de la etapa con los datos del expediente (PDF)",
+  },
+  descargarGenerado: {
+    method: "GET",
+    path: "/api/documentos-generados/:id/descargar",
+    pathParams: z.object({ id: z.string().uuid() }),
+    responses: {
+      200: z.unknown(),
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "Descarga del formato generado (PDF)",
   },
   vistoBueno: {
     method: "POST",

@@ -2,6 +2,12 @@ import { FLUJO_TITULACION, hashTransicion } from "@pis/domain";
 import { desc, eq } from "drizzle-orm";
 import type { Db } from "../client.js";
 import { auditoriaTransiciones } from "../schema/auditoria-transiciones.js";
+import {
+  jurados,
+  juradosExpediente,
+  sustentaciones,
+  validacionesInstitucionales,
+} from "../schema/cierre.js";
 import { expedientes } from "../schema/expedientes.js";
 import { mensajes } from "../schema/mensajes.js";
 import { subetapas } from "../schema/subetapas.js";
@@ -44,6 +50,7 @@ async function auditar(
   await db.insert(auditoriaTransiciones).values({
     expedienteId: input.expedienteId,
     actorId: input.actorId,
+    actorDni: input.actorDni,
     estadoAnterior: input.anterior,
     estadoNuevo: input.nuevo,
     hashPrevio,
@@ -93,6 +100,7 @@ async function generarSeguimiento(
         expedienteId,
         etapa: etapa.numero,
         orden: s.orden,
+        clave: s.clave,
         nombre: s.nombre,
         plazo: s.plazo,
         estado: p.estado,
@@ -326,6 +334,12 @@ export async function seedDemo(db: Db): Promise<void> {
         asesorId: ASESOR_ID,
         asesorNombre: "DR. ASESOR PRUEBA",
         nroDecreto: "009",
+        presidente: "DR. PRESIDENTE TERNA",
+        secretario: "MG. SECRETARIO TERNA",
+        decanal: "RESOLUCIÓN DECANAL 058-2026",
+        presidenteE2: "DR. PRESIDENTE JURADO",
+        secretarioE2: "MG. SECRETARIO JURADO",
+        suplenteE2: "MG. SUPLENTE JURADO",
         fechaApertura: "2026-06-01",
         fechaPresentacion: "2026-06-15",
       },
@@ -381,6 +395,8 @@ export async function seedDemo(db: Db): Promise<void> {
     }
   }
 
+  await seedCierreDemo(db);
+
   const tall = await db.select({ id: talleres.id }).from(talleres);
   if (tall.length === 0) {
     await db.insert(talleres).values([
@@ -405,4 +421,103 @@ export async function seedDemo(db: Db): Promise<void> {
 
   const rows = await db.select({ codigo: expedientes.codigo }).from(expedientes);
   console.log(`Seed demo OK. Expedientes: ${rows.map((r) => r.codigo).join(", ")}`);
+}
+
+type DefJurado = { dni: string; nombres: string; apellidos: string; grado: string };
+
+const TERNA_DEMO: Array<DefJurado & { rol: string }> = [
+  { dni: "29000101", nombres: "Presidente", apellidos: "Terna", grado: "DR.", rol: "PRESIDENTE" },
+  { dni: "29000102", nombres: "Secretario", apellidos: "Terna", grado: "MG.", rol: "SECRETARIO" },
+  { dni: "87654321", nombres: "Asesor", apellidos: "Prueba", grado: "DR.", rol: "VOCAL" },
+];
+
+const JURADO_DEMO: Array<DefJurado & { rol: string }> = [
+  { dni: "29000201", nombres: "Presidente", apellidos: "Jurado", grado: "DR.", rol: "PRESIDENTE" },
+  { dni: "29000202", nombres: "Secretario", apellidos: "Jurado", grado: "MG.", rol: "SECRETARIO" },
+  { dni: "29000203", nombres: "Vocal", apellidos: "Jurado", grado: "MG.", rol: "VOCAL" },
+  { dni: "29000204", nombres: "Suplente", apellidos: "Jurado", grado: "MG.", rol: "SUPLENTE" },
+];
+
+async function designar(
+  db: Db,
+  expedienteId: string,
+  instancia: "TERNA" | "JURADO",
+  lista: Array<DefJurado & { rol: string }>,
+  dictamen: (rol: string) => string,
+): Promise<void> {
+  for (const j of lista) {
+    await db
+      .insert(jurados)
+      .values({ dni: j.dni, nombres: j.nombres, apellidos: j.apellidos, grado: j.grado })
+      .onConflictDoNothing({ target: jurados.dni });
+    const fila = await db.select({ id: jurados.id }).from(jurados).where(eq(jurados.dni, j.dni));
+    const juradoId = fila[0]?.id;
+    if (!juradoId) continue;
+    const d = dictamen(j.rol);
+    await db.insert(juradosExpediente).values({
+      juradoId,
+      expedienteId,
+      instancia,
+      rol: j.rol,
+      dictamen: d,
+      comentario: d === "OBSERVADO" ? "Precisar la metodología del capítulo III" : null,
+    });
+  }
+}
+
+/**
+ * Cierre demo coherente con el estado de cada fixture (idempotente):
+ * SET004 completo (terna, jurados, acta, validaciones) y SET007 en dictamen
+ * con una observación del jurado pendiente de levantar.
+ */
+async function seedCierreDemo(db: Db): Promise<void> {
+  const ya = await db
+    .select({ id: juradosExpediente.id })
+    .from(juradosExpediente)
+    .where(eq(juradosExpediente.expedienteId, SET007_ID))
+    .limit(1);
+  if (ya.length > 0) return;
+
+  await designar(db, SET004_ID, "TERNA", TERNA_DEMO, () => "FAVORABLE");
+  await designar(db, SET004_ID, "JURADO", JURADO_DEMO, () => "FAVORABLE");
+  await db
+    .insert(sustentaciones)
+    .values({
+      expedienteId: SET004_ID,
+      fecha: "2025-11-20",
+      hora: "10:00",
+      lugar: "AUDITORIO FIPS",
+      modalidad: "PRESENCIAL",
+      actaVeredicto: "UNANIMIDAD",
+      actaFecha: new Date("2025-11-20T15:00:00Z"),
+    })
+    .onConflictDoNothing({ target: sustentaciones.expedienteId });
+  const instancias: Array<[string, number | null, string | null]> = [
+    ["OTI_SIMILITUD", 12, "Reporte Turnitin conforme"],
+    ["REPOSITORIO", null, "https://repositorio.unsa.edu.pe/handle/UNSA/0004"],
+    ["SECRETARIA", null, null],
+    ["COMISION", null, null],
+    ["CONSEJO_FACULTAD", null, null],
+    ["RESOLUCION", null, null],
+    ["SISGRAD", null, null],
+    ["DECANO", null, null],
+    ["GRADOS_TITULOS", null, null],
+    ["CONSEJO_UNIVERSITARIO", null, null],
+    ["COLACION", null, null],
+    ["SUNEDU", null, null],
+  ];
+  for (const [instancia, porcentaje, detalle] of instancias) {
+    await db.insert(validacionesInstitucionales).values({
+      expedienteId: SET004_ID,
+      instancia,
+      estado: "APROBADO",
+      porcentaje,
+      detalle,
+    });
+  }
+
+  await designar(db, SET007_ID, "TERNA", TERNA_DEMO, () => "FAVORABLE");
+  await designar(db, SET007_ID, "JURADO", JURADO_DEMO, (rol) =>
+    rol === "SECRETARIO" ? "OBSERVADO" : "FAVORABLE",
+  );
 }

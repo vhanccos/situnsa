@@ -2,13 +2,18 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorEnvelopeSchema } from "./api-conventions.js";
 
+export const InstanciaJuradoSchema = z.enum(["TERNA", "JURADO"]);
+
 export const JuradoDTOSchema = z.object({
   id: z.string().uuid(),
   dni: z.string(),
   nombres: z.string(),
   grado: z.string().nullable(),
+  /** TERNA = revisión del plan (E1); JURADO = jurado sorteado (E3–E4). */
+  instancia: InstanciaJuradoSchema,
   rol: z.string(),
   dictamen: z.string(),
+  comentario: z.string().nullable(),
 });
 
 export const DesignarJuradoSchema = z.object({
@@ -17,6 +22,8 @@ export const DesignarJuradoSchema = z.object({
   apellidos: z.string().min(2).max(160),
   grado: z.string().max(16).optional(),
   rol: z.enum(["PRESIDENTE", "SECRETARIO", "VOCAL", "SUPLENTE"]).default("VOCAL"),
+  /** Por defecto se deduce del estado: E1 → TERNA, E2/E3 → JURADO. */
+  instancia: InstanciaJuradoSchema.optional(),
 });
 
 export const DictamenSchema = z.object({
@@ -34,10 +41,29 @@ export const SustentacionDTOSchema = z.object({
 });
 
 export const ProgramarSustentacionSchema = z.object({
-  fecha: z.string().min(4).max(32),
-  hora: z.string().min(2).max(16),
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha en formato AAAA-MM-DD"),
+  hora: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora en formato HH:MM"),
   lugar: z.string().min(3).max(500),
   modalidad: z.enum(["PRESENCIAL", "VIRTUAL"]).default("PRESENCIAL"),
+});
+
+const FechaSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha en formato AAAA-MM-DD");
+
+/** HU-0038 (RN-05.1): el alumno propone un rango, nunca una fecha única. */
+export const ProponerFechasSchema = z.object({
+  desde: FechaSchema,
+  hasta: FechaSchema,
+  comentario: z.string().max(500).optional(),
+});
+
+export const PropuestaFechasDTOSchema = z.object({
+  id: z.string().uuid(),
+  desde: z.string(),
+  hasta: z.string(),
+  comentario: z.string().nullable(),
+  /** Nombre de quien registró la propuesta (el tesista o el área en su nombre). */
+  propuestaPor: z.string().nullable(),
+  createdAt: z.string(),
 });
 
 export const ActaSchema = z.object({
@@ -48,6 +74,7 @@ export const ValidacionDTOSchema = z.object({
   id: z.string().uuid(),
   instancia: z.string(),
   estado: z.string(),
+  porcentaje: z.number().nullable(),
   detalle: z.string().nullable(),
 });
 
@@ -67,6 +94,8 @@ export const RegistrarValidacionSchema = z.object({
     "SUNEDU",
   ]),
   estado: z.enum(["PENDIENTE", "APROBADO", "OBSERVADO"]).default("APROBADO"),
+  /** % Turnitin: obligatorio para OTI_SIMILITUD (el estado se deriva, HU-0042). */
+  porcentaje: z.number().int().min(0).max(100).optional(),
   detalle: z.string().max(2000).optional(),
 });
 
@@ -75,6 +104,8 @@ export const CierreDTOSchema = z.object({
   estado: z.string(),
   jurados: z.array(JuradoDTOSchema),
   sustentacion: SustentacionDTOSchema.nullable(),
+  /** Propuesta de fechas vigente del alumno (HU-0038). */
+  propuesta: PropuestaFechasDTOSchema.nullable(),
   validaciones: z.array(ValidacionDTOSchema),
 });
 
@@ -135,6 +166,20 @@ export const cierreContract = c.router({
       404: ErrorEnvelopeSchema,
     },
     summary: "Programar sustentación (RF-05, sin acta aún)",
+  },
+  proponerFechas: {
+    method: "POST",
+    path: "/api/expedientes/:id/sustentacion/propuesta",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: ProponerFechasSchema,
+    responses: {
+      201: PropuestaFechasDTOSchema,
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "Propuesta de rango de fechas de sustentación (HU-0038: tesista o área)",
   },
   registrarActa: {
     method: "POST",

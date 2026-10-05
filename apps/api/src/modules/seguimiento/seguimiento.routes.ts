@@ -1,69 +1,85 @@
 import { seguimientoContract } from "@pis/contracts";
-import { db } from "@pis/db";
+import { db, subetapas } from "@pis/db";
 import { initServer } from "@ts-rest/fastify";
 import { eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import { autorizar } from "../../infra/auth/autorizacion.js";
-import { errorEnvelope } from "../../infra/http/errores.js";
+import { autorizar, denegado } from "../../infra/auth/autorizacion.js";
+import { errorEnvelope, respuestaError } from "../../infra/http/errores.js";
+import { OPCIONES_TS_REST } from "../../infra/http/manejador-errores.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import { getDetalleById } from "../expedientes/expedientes.repository.js";
-import { ObservarInscripcionUseCase } from "../expedientes/use-cases/observar-inscripcion/observar-inscripcion.use-case.js";
+import { ObservarExpedienteUseCase } from "../expedientes/use-cases/observar-expediente/observar-expediente.use-case.js";
+import { DerivarSubetapaUseCase } from "./use-cases/derivar-subetapa.use-case.js";
 import { FinalizarSubetapaUseCase } from "./use-cases/finalizar-subetapa.use-case.js";
 
 const s = initServer();
 
-/** Operación del proceso (B1+B2): observar, finalizar, seguimiento, historial. */
+async function expedienteDeSubetapa(subetapaId: string): Promise<string | null> {
+  const rows = await db
+    .select({ expedienteId: subetapas.expedienteId })
+    .from(subetapas)
+    .where(eq(subetapas.id, subetapaId))
+    .limit(1);
+  return rows[0]?.expedienteId ?? null;
+}
+
+/** Operación del proceso: observar, finalizar/derivar subetapas, seguimiento, historial. */
 export function registerSeguimientoRoutes(app: FastifyInstance): void {
   const router = s.router(seguimientoContract, {
     observar: async ({ params, body, request }) => {
+      // Inscripción (validador del taller) o cualquier etapa (responsables).
       const a = await autorizar(request.actor, {
-        permiso: ["inscripciones", "aprobar"],
+        permiso: ["seguimiento", "editar"],
+        alternativas: [["inscripciones", "aprobar"]],
         expedienteId: params.id,
       });
-      if (!a.ok) {
-        if (a.status === 401) return { status: 401 as const, body: a.body };
-        if (a.status === 404) return { status: 404 as const, body: a.body };
-        return { status: 403 as const, body: a.body };
-      }
+      if (!a.ok) return denegado(a);
       const actor = request.actor ?? { id: "", dni: "desconocido" };
-      const uc = new ObservarInscripcionUseCase();
-      const r = await uc.execute(params.id, body.motivo, actor);
-      if (!r.ok) {
-        if (r.error.code === "NO_ENCONTRADO")
-          return { status: 404 as const, body: errorEnvelope(r.error.code, r.error.message) };
-        return { status: 400 as const, body: errorEnvelope(r.error.code, r.error.message) };
-      }
+      const r = await new ObservarExpedienteUseCase().execute(params.id, body.motivo, actor);
+      if (!r.ok) return respuestaError(r.error);
       return { status: 200 as const, body: r.value };
     },
     finalizarSubetapa: async ({ params, request }) => {
-      // El alcance se deriva de la subetapa → expediente dentro del use-case;
-      // aquí se exige el permiso de cierre (RN-08: solo responsable/staff).
-      const { subetapas } = await import("@pis/db");
-      const rows = await db
-        .select({ expedienteId: subetapas.expedienteId })
-        .from(subetapas)
-        .where(eq(subetapas.id, params.id))
-        .limit(1);
-      const expedienteId = rows[0]?.expedienteId ?? null;
-      const a = await autorizar(
-        request.actor,
-        expedienteId
-          ? { permiso: ["seguimiento", "aprobar"], expedienteId }
-          : { permiso: ["seguimiento", "aprobar"] },
-      );
-      if (!a.ok) {
-        if (a.status === 401) return { status: 401 as const, body: a.body };
-        if (a.status === 404) return { status: 404 as const, body: a.body };
-        return { status: 403 as const, body: a.body };
+      // RN-08: solo el responsable (permiso de cierre) finaliza subetapas.
+      const expedienteId = await expedienteDeSubetapa(params.id);
+      if (!expedienteId) {
+        return {
+          status: 404 as const,
+          body: errorEnvelope("NO_ENCONTRADO", "Subetapa no encontrada"),
+        };
       }
+      const a = await autorizar(request.actor, {
+        permiso: ["seguimiento", "aprobar"],
+        expedienteId,
+      });
+      if (!a.ok) return denegado(a);
       const actor = request.actor ?? { id: "", dni: "desconocido" };
-      const uc = new FinalizarSubetapaUseCase();
-      const r = await uc.execute(params.id, actor);
-      if (!r.ok) {
-        if (r.error.code === "NO_ENCONTRADO")
-          return { status: 404 as const, body: errorEnvelope(r.error.code, r.error.message) };
-        return { status: 400 as const, body: errorEnvelope(r.error.code, r.error.message) };
+      const r = await new FinalizarSubetapaUseCase().execute(params.id, actor);
+      if (!r.ok) return respuestaError(r.error);
+      return { status: 200 as const, body: r.value };
+    },
+    derivarSubetapa: async ({ params, body, request }) => {
+      const expedienteId = await expedienteDeSubetapa(params.id);
+      if (!expedienteId) {
+        return {
+          status: 404 as const,
+          body: errorEnvelope("NO_ENCONTRADO", "Subetapa no encontrada"),
+        };
       }
+      const a = await autorizar(request.actor, {
+        permiso: ["seguimiento", "editar"],
+        expedienteId,
+      });
+      if (!a.ok) return denegado(a);
+      const actor = request.actor ?? { id: "", dni: "desconocido" };
+      const r = await new DerivarSubetapaUseCase().execute(
+        params.id,
+        body.motivo !== undefined
+          ? { responsable: body.responsable, motivo: body.motivo }
+          : { responsable: body.responsable },
+        actor,
+      );
+      if (!r.ok) return respuestaError(r.error);
       return { status: 200 as const, body: r.value };
     },
     seguimiento: async ({ params, request }) => {
@@ -71,11 +87,7 @@ export function registerSeguimientoRoutes(app: FastifyInstance): void {
         permiso: ["seguimiento", "ver"],
         expedienteId: params.id,
       });
-      if (!a.ok) {
-        if (a.status === 401) return { status: 401 as const, body: a.body };
-        if (a.status === 404) return { status: 404 as const, body: a.body };
-        return { status: 403 as const, body: a.body };
-      }
+      if (!a.ok) return denegado(a);
       const detalle = await getDetalleById(db, params.id);
       if (!detalle)
         return {
@@ -92,11 +104,7 @@ export function registerSeguimientoRoutes(app: FastifyInstance): void {
         permiso: ["auditoria", "ver"],
         expedienteId: params.id,
       });
-      if (!a.ok) {
-        if (a.status === 401) return { status: 401 as const, body: a.body };
-        if (a.status === 404) return { status: 404 as const, body: a.body };
-        return { status: 403 as const, body: a.body };
-      }
+      if (!a.ok) return denegado(a);
       const detalle = await getDetalleById(db, params.id);
       if (!detalle)
         return {
@@ -115,6 +123,6 @@ export function registerSeguimientoRoutes(app: FastifyInstance): void {
   });
   void app.register(async (scoped) => {
     scoped.addHook("preHandler", requireAuth);
-    scoped.register(s.plugin(router));
+    await scoped.register(s.plugin(router), OPCIONES_TS_REST);
   });
 }

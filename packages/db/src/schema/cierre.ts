@@ -1,5 +1,18 @@
-import { boolean, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  boolean,
+  check,
+  date,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { expedientes } from "./expedientes.js";
+import { usuarios } from "./usuarios.js";
 
 /**
  * Cierre del trámite (Oleada D, RF-04…RF-07):
@@ -26,6 +39,8 @@ export const juradosExpediente = pgTable("jurados_expediente", {
   expedienteId: uuid("expediente_id")
     .notNull()
     .references(() => expedientes.id),
+  /** TERNA = revisión del plan (E1); JURADO = jurado sorteado (E3–E4). */
+  instancia: varchar("instancia", { length: 8 }).notNull().default("JURADO"),
   rol: varchar("rol", { length: 16 }).notNull().default("VOCAL"),
   dictamen: varchar("dictamen", { length: 16 }).notNull().default("PENDIENTE"),
   comentario: text("comentario"),
@@ -46,6 +61,30 @@ export const sustentaciones = pgTable("sustentaciones", {
   actaFecha: timestamp("acta_fecha", { withTimezone: true }),
 });
 
+/**
+ * Rangos de fechas propuestos por el alumno para sustentar (HU-0038, RN-05.1).
+ * Solo inserción: la propuesta vigente es la más reciente; las anteriores
+ * quedan como historial de la renegociación (RN-05.2).
+ */
+export const propuestasSustentacion = pgTable(
+  "propuestas_sustentacion",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    expedienteId: uuid("expediente_id")
+      .notNull()
+      .references(() => expedientes.id),
+    desde: date("desde", { mode: "string" }).notNull(),
+    hasta: date("hasta", { mode: "string" }).notNull(),
+    comentario: text("comentario"),
+    propuestaPor: uuid("propuesta_por").references(() => usuarios.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("propuestas_sustentacion_expediente_idx").on(t.expedienteId, t.createdAt),
+    check("propuestas_sustentacion_rango", sql`${t.hasta} > ${t.desde}`),
+  ],
+);
+
 export const validacionesInstitucionales = pgTable("validaciones_institucionales", {
   id: uuid("id").primaryKey().defaultRandom(),
   expedienteId: uuid("expediente_id")
@@ -53,6 +92,8 @@ export const validacionesInstitucionales = pgTable("validaciones_institucionales
     .references(() => expedientes.id),
   instancia: varchar("instancia", { length: 32 }).notNull(),
   estado: varchar("estado", { length: 16 }).notNull().default("PENDIENTE"),
+  /** % de similitud Turnitin (solo OTI_SIMILITUD, HU-0041/0042). */
+  porcentaje: integer("porcentaje"),
   detalle: text("detalle"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -60,4 +101,5 @@ export const validacionesInstitucionales = pgTable("validaciones_institucionales
 export type Jurado = typeof jurados.$inferSelect;
 export type JuradoExpediente = typeof juradosExpediente.$inferSelect;
 export type Sustentacion = typeof sustentaciones.$inferSelect;
+export type PropuestaSustentacion = typeof propuestasSustentacion.$inferSelect;
 export type ValidacionInstitucional = typeof validacionesInstitucionales.$inferSelect;

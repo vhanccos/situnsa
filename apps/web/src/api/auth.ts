@@ -17,8 +17,52 @@ export async function loginRequest(identificador: string, password: string): Pro
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ identificador, password }),
   });
-  if (!res.ok) throw new Error("Credenciales inválidas o usuario inactivo");
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as {
+      error?: { codigo?: string; mensaje?: string };
+    } | null;
+    const codigo = body?.error?.codigo;
+    if (codigo === "CUENTA_BLOQUEADA") {
+      throw new Error(body?.error?.mensaje ?? "Cuenta bloqueada temporalmente");
+    }
+    if (codigo === "SIN_CLAVE") {
+      throw new Error(
+        "Tu cuenta aún no tiene clave: usa el enlace del correo de activación o solicita uno nuevo en «¿Primera vez u olvidaste tu clave?».",
+      );
+    }
+    throw new Error("Credenciales inválidas o usuario inactivo");
+  }
   return ParSesionSchema.parse(await res.json());
+}
+
+/** Fija la clave con el enlace de un solo uso (activación o restablecimiento). */
+export async function activarCuentaRequest(
+  token: string,
+  password: string,
+): Promise<{ dni: string }> {
+  const res = await fetch(`${apiBaseUrl}/api/auth/activar`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+  const body = (await res.json().catch(() => null)) as {
+    dni?: string;
+    error?: { mensaje?: string };
+  } | null;
+  if (!res.ok) throw new Error(body?.error?.mensaje ?? "No se pudo activar la cuenta");
+  return { dni: body?.dni ?? "" };
+}
+
+/** Solicita un enlace de restablecimiento (respuesta idéntica exista o no la cuenta). */
+export async function solicitarRestablecimientoRequest(identificador: string): Promise<void> {
+  const res = await fetch(`${apiBaseUrl}/api/auth/restablecer`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identificador }),
+  });
+  if (!res.ok && res.status !== 202) throw new Error("No se pudo procesar la solicitud");
 }
 
 /** Refresh rotativo con la cookie; null si no hay sesión. */

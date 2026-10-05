@@ -1,4 +1,4 @@
-import { Gavel, ScrollText } from "lucide-react";
+import { CalendarRange, Gavel, ScrollText } from "lucide-react";
 import { useState } from "react";
 import {
   useCierre,
@@ -17,6 +17,7 @@ import { controlClase } from "../ui/field.js";
 import { Select } from "../ui/select.js";
 import { StatusBadge } from "../ui/status-badge.js";
 import { useToast } from "../ui/toast.js";
+import { InformeSecretaria } from "./informe-secretaria.js";
 
 const INSTANCIAS = [
   "OTI_SIMILITUD",
@@ -49,10 +50,23 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
   const acta = useRegistrarActa(expedienteId);
   const validar = useRegistrarValidacion(expedienteId);
 
-  const [j, setJ] = useState({ dni: "", nombres: "", apellidos: "", grado: "", rol: "VOCAL" });
+  const [j, setJ] = useState({
+    dni: "",
+    nombres: "",
+    apellidos: "",
+    grado: "",
+    rol: "VOCAL",
+    instancia: "",
+  });
   const [s, setS] = useState({ fecha: "", hora: "", lugar: "", modalidad: "PRESENCIAL" });
   const [veredicto, setVeredicto] = useState("UNANIMIDAD");
-  const [v, setV] = useState({ instancia: "OTI_SIMILITUD", estado: "APROBADO", detalle: "" });
+  const [v, setV] = useState({
+    instancia: "OTI_SIMILITUD",
+    estado: "APROBADO",
+    porcentaje: "",
+    detalle: "",
+  });
+  const esSimilitud = v.instancia === "OTI_SIMILITUD";
   const [comentario, setComentario] = useState<Record<string, string>>({});
 
   async function onDesignar(): Promise<void> {
@@ -67,9 +81,10 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
         apellidos: j.apellidos.trim(),
         ...(j.grado.trim() ? { grado: j.grado.trim() } : {}),
         rol: j.rol,
+        ...(j.instancia === "TERNA" || j.instancia === "JURADO" ? { instancia: j.instancia } : {}),
       });
-      setJ({ dni: "", nombres: "", apellidos: "", grado: "", rol: "VOCAL" });
-      avisar("Jurado designado");
+      setJ({ dni: "", nombres: "", apellidos: "", grado: "", rol: "VOCAL", instancia: "" });
+      avisar("Miembro designado");
     } catch (e) {
       avisar(e instanceof Error ? e.message : "No se pudo designar", "error");
     }
@@ -108,13 +123,19 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
   }
 
   async function onValidar(): Promise<void> {
+    const porcentaje = Number.parseInt(v.porcentaje, 10);
+    if (esSimilitud && (Number.isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100)) {
+      avisar("Ingresa el porcentaje de similitud (0–100)", "error");
+      return;
+    }
     try {
-      await validar.mutateAsync({
+      const r = await validar.mutateAsync({
         instancia: v.instancia,
         estado: v.estado,
+        ...(esSimilitud ? { porcentaje } : {}),
         ...(v.detalle.trim() ? { detalle: v.detalle.trim() } : {}),
       });
-      avisar(`${v.instancia}: ${v.estado}`);
+      avisar(`${v.instancia.replace(/_/g, " ")}: ${r.estado}`);
     } catch (e) {
       avisar(e instanceof Error ? e.message : "No se pudo registrar", "error");
     }
@@ -127,8 +148,10 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
     dni: string;
     nombres: string;
     grado: string | null;
+    instancia: string;
     rol: string;
     dictamen: string;
+    comentario: string | null;
   };
 
   return (
@@ -145,7 +168,7 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
       <div className="space-y-4 p-4 md:p-5">
         <section>
           <h3 className="mb-2 text-xs font-bold tracking-wider text-grafito-600 uppercase">
-            Jurados designados
+            Terna (revisión del plan) y jurado (sustentación)
           </h3>
           <DataTable
             cargando={cierre.isPending}
@@ -164,14 +187,33 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
                   </span>
                 ),
               },
-              { encabezado: "Rol", celda: (x) => x.rol },
-              { encabezado: "Dictamen", celda: (x) => <StatusBadge estado={x.dictamen} /> },
+              {
+                encabezado: "Instancia / rol",
+                celda: (x) => (
+                  <span className="text-xs">
+                    <strong>{x.instancia}</strong> · {x.rol}
+                  </span>
+                ),
+              },
+              {
+                encabezado: "Dictamen",
+                celda: (x) => (
+                  <span>
+                    <StatusBadge estado={x.dictamen} />
+                    {x.comentario && (
+                      <span className="mt-1 block max-w-56 text-xs text-grafito-600">
+                        {x.comentario}
+                      </span>
+                    )}
+                  </span>
+                ),
+              },
               ...(esStaff
                 ? [
                     {
                       encabezado: "Acción",
                       celda: (x: JuradoFila) =>
-                        x.dictamen === "PENDIENTE" ? (
+                        x.dictamen !== "FAVORABLE" ? (
                           <span className="flex flex-wrap items-center gap-1.5">
                             <Button
                               tamano="xs"
@@ -211,7 +253,7 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
             filas={(datos?.jurados ?? []).map((x) => ({ ...x }))}
           />
           {esStaff && (
-            <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-[110px_1fr_1fr_90px_130px_auto]">
+            <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-[110px_1fr_1fr_80px_130px_150px_auto]">
               <input
                 aria-label="DNI del jurado"
                 className={cn(controlClase, "h-9")}
@@ -247,6 +289,15 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
                   </option>
                 ))}
               </Select>
+              <Select
+                ariaLabel="Instancia"
+                value={j.instancia}
+                onChange={(instancia) => setJ({ ...j, instancia })}
+              >
+                <option value="">Según la etapa</option>
+                <option value="TERNA">Terna (E1)</option>
+                <option value="JURADO">Jurado (E3)</option>
+              </Select>
               <Button
                 variante="contorno"
                 disabled={designar.isPending}
@@ -277,19 +328,42 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
               {cierre.isPending ? "Cargando…" : "Sin programar."}
             </p>
           )}
+          {datos?.propuesta ? (
+            <p className="mt-2 rounded-lg border border-navy-100 bg-white px-3 py-2 text-xs text-navy-950">
+              <CalendarRange size={13} className="mr-1 inline" aria-hidden />
+              Propuesta del tesista: del <strong>{datos.propuesta.desde}</strong> al{" "}
+              <strong>{datos.propuesta.hasta}</strong>
+              {datos.propuesta.comentario && <> · {datos.propuesta.comentario}</>}
+              {datos.propuesta.propuestaPor && (
+                <span className="text-grafito-600">
+                  {" "}
+                  · registrada por {datos.propuesta.propuestaPor}
+                </span>
+              )}
+            </p>
+          ) : (
+            datos?.estado === "APTO_SUSTENTACION" &&
+            !tieneActa && (
+              <p className="mt-2 text-xs text-grafito-600">
+                El tesista aún no propone su rango de fechas (E4.1).
+              </p>
+            )
+          )}
           {esStaff && !tieneActa && (
             <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-[130px_100px_1fr_130px_auto_auto]">
               <input
                 aria-label="Fecha"
                 className={cn(controlClase, "h-9")}
-                placeholder="AAAA-MM-DD"
+                max={datos?.propuesta?.hasta}
+                min={datos?.propuesta?.desde}
+                type="date"
                 value={s.fecha}
                 onChange={(e) => setS({ ...s, fecha: e.target.value })}
               />
               <input
                 aria-label="Hora"
                 className={cn(controlClase, "h-9")}
-                placeholder="10:00"
+                type="time"
                 value={s.hora}
                 onChange={(e) => setS({ ...s, hora: e.target.value })}
               />
@@ -348,6 +422,10 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
               { encabezado: "Instancia", celda: (x) => x.instancia.replace(/_/g, " ") },
               { encabezado: "Estado", celda: (x) => <StatusBadge estado={x.estado} /> },
               {
+                encabezado: "%",
+                celda: (x) => (x.porcentaje !== null ? `${x.porcentaje} %` : "—"),
+              },
+              {
                 encabezado: "Detalle",
                 celda: (x) => <span className="text-xs">{x.detalle ?? "—"}</span>,
               },
@@ -367,17 +445,32 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
                   </option>
                 ))}
               </Select>
-              <Select
-                ariaLabel="Estado"
-                value={v.estado}
-                onChange={(estado) => setV({ ...v, estado })}
-              >
-                {["PENDIENTE", "APROBADO", "OBSERVADO"].map((e) => (
-                  <option key={e} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </Select>
+              {esSimilitud ? (
+                <input
+                  aria-label="Porcentaje de similitud"
+                  className={cn(controlClase, "h-9")}
+                  inputMode="numeric"
+                  max={100}
+                  min={0}
+                  placeholder="% similitud"
+                  title="Menor a 20 % es conforme (HU-0042)"
+                  type="number"
+                  value={v.porcentaje}
+                  onChange={(e) => setV({ ...v, porcentaje: e.target.value })}
+                />
+              ) : (
+                <Select
+                  ariaLabel="Estado"
+                  value={v.estado}
+                  onChange={(estado) => setV({ ...v, estado })}
+                >
+                  {["PENDIENTE", "APROBADO", "OBSERVADO"].map((e) => (
+                    <option key={e} value={e}>
+                      {e}
+                    </option>
+                  ))}
+                </Select>
+              )}
               <input
                 aria-label="Detalle"
                 className={cn(controlClase, "h-9")}
@@ -396,6 +489,9 @@ export function CierreCard({ expedienteId }: { expedienteId: string }) {
             </div>
           )}
         </section>
+        {esStaff && (datos?.estado === "EN_APROBACION" || datos?.estado === "TITULO_EMITIDO") && (
+          <InformeSecretaria expedienteId={expedienteId} />
+        )}
       </div>
     </Card>
   );

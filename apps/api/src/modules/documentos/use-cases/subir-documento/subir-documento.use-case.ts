@@ -1,10 +1,19 @@
 import { db, documentos, expedientes } from "@pis/db";
-import { CHECKLIST_COMPLETO, DomainError, fail, ok, type Result } from "@pis/domain";
-import { and, eq } from "drizzle-orm";
+import {
+  CHECKLIST_COMPLETO,
+  type ChecklistDef,
+  cargaHabilitadaTesista,
+  DomainError,
+  fail,
+  ok,
+  type Result,
+} from "@pis/domain";
+import { and, desc, eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import type { AlmacenamientoPort } from "../../../../infra/storage/almacenamiento.port.js";
 import { LocalStorageService } from "../../../../infra/storage/local-storage.service.js";
 import { appendAuditoria } from "../../../expedientes/expedientes.auditoria.js";
+import { leerChecklist, subetapaActivaDe } from "../../../expedientes/expedientes.repository.js";
 
 const MAX_BYTES = 50 * 1024 * 1024; // R2: tesis de 20–50MB
 
@@ -22,6 +31,8 @@ export interface SubirDocumentoInput {
   filename: string;
   bytes: Uint8Array;
   actor: { id: string; dni: string };
+  /** true = el actor es el tesista (RN-06: solo su subetapa activa). */
+  comoTesista?: boolean;
 }
 
 export interface DocumentoSubido {
@@ -32,82 +43,113 @@ export interface DocumentoSubido {
   estado: string;
 }
 
-/** Upload real: valida → disco → versionado → auditoría hash (un COMMIT). */
+/**
+ * Upload real: valida → disco → nueva versión (historial íntegro) →
+ * auditoría hash, en un COMMIT. El tesista solo carga lo de su subetapa
+ * activa o lo observado (RN-06) y no reemplaza un documento aprobado.
+ */
 export class SubirDocumentoUseCase {
-  constructor(private readonly storage: AlmacenamientoPort = new LocalStorageService()) {}
+  constructor(
+    private readonly storage: AlmacenamientoPort = new LocalStorageService(),
+    private readonly catalogo?: readonly ChecklistDef[],
+  ) {}
 
   async execute(input: SubirDocumentoInput): Promise<Result<DocumentoSubido, DomainError>> {
-    const def = CHECKLIST_COMPLETO.find((d) => d.tipo === input.tipo);
-    if (!def) return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
+    // Validaciones puras primero: un archivo inválido nunca toca la DB ni el disco.
     if (!input.filename.toLowerCase().endsWith(".pdf")) {
       return fail(new DomainError("DOCUMENTO_INVALIDO", "Solo se admiten archivos PDF"));
+    }
+    if (input.bytes.length === 0 || input.bytes.length > MAX_BYTES) {
+      return fail(new DomainError("DOCUMENTO_INVALIDO", "El archivo debe pesar entre 1B y 50MB"));
     }
     if (!esPdfReal(input.bytes)) {
       return fail(
         new DomainError("DOCUMENTO_INVALIDO", "El archivo no es un PDF válido (cabecera)"),
       );
     }
-    if (input.bytes.length === 0 || input.bytes.length > MAX_BYTES) {
-      return fail(new DomainError("DOCUMENTO_INVALIDO", "El archivo debe pesar entre 1B y 50MB"));
+    const enCodigo = CHECKLIST_COMPLETO.find((d) => d.tipo === input.tipo);
+    if (this.catalogo && !this.catalogo.some((d) => d.tipo === input.tipo)) {
+      return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
     }
     const uow = new DrizzleUnitOfWork(db);
     return uow.run(async (tx) => {
+      const catalogo = this.catalogo ?? (await leerChecklist(tx));
+      const def = catalogo.find((d) => d.tipo === input.tipo) ?? enCodigo;
+      if (!def)
+        return fail(new DomainError("DOCUMENTO_INVALIDO", `Tipo desconocido: ${input.tipo}`));
       const exp = await tx
-        .select({ id: expedientes.id })
+        .select({ id: expedientes.id, estado: expedientes.estado })
         .from(expedientes)
         .where(eq(expedientes.id, input.expedienteId))
         .limit(1);
-      if (!exp[0]) return fail(new DomainError("VALIDACION_FALLIDA", "Expediente no encontrado"));
+      const expediente = exp[0];
+      if (!expediente) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
+      if (expediente.estado === "ANULADO") {
+        return fail(new DomainError("TRANSICION_INVALIDA", "El expediente está anulado"));
+      }
       const previos = await tx
-        .select()
+        .select({ version: documentos.version, estado: documentos.estado })
         .from(documentos)
         .where(
           and(eq(documentos.expedienteId, input.expedienteId), eq(documentos.tipo, input.tipo)),
+        )
+        .orderBy(desc(documentos.version))
+        .limit(1);
+      const ultimo = previos[0] ?? null;
+      if (input.comoTesista) {
+        const activa = await subetapaActivaDe(tx, input.expedienteId);
+        const habilitado = cargaHabilitadaTesista(
+          { tipo: def.tipo, requeridoEn: def.requeridoEn, estado: ultimo?.estado ?? "PENDIENTE" },
+          activa?.clave ?? null,
         );
-      const version = (previos.length > 0 ? Math.max(...previos.map((p) => p.version)) : 0) + 1;
+        if (!habilitado) {
+          return fail(
+            new DomainError(
+              "PERMISO_DENEGADO",
+              "Este documento no corresponde a la subetapa en curso de tu trámite (RN-06)",
+            ),
+          );
+        }
+        if (ultimo?.estado === "APROBADO") {
+          return fail(
+            new DomainError(
+              "PERMISO_DENEGADO",
+              "El documento ya fue aprobado; no puede reemplazarse",
+            ),
+          );
+        }
+      }
+      const version = (ultimo?.version ?? 0) + 1;
       const nombre = `${input.tipo}_v${version}.pdf`;
       const { ruta, sha256 } = await this.storage.save(input.expedienteId, nombre, input.bytes);
-      let docId: string;
-      if (previos.length > 0) {
-        const actual = previos.find((p) => p.version === version - 1) ?? previos[0];
-        if (!actual) return fail(new DomainError("VALIDACION_FALLIDA", "Documento no encontrado"));
-        await tx
-          .update(documentos)
-          .set({ ruta, version, sha256, estado: "CARGADO" })
-          .where(eq(documentos.id, actual.id));
-        docId = actual.id;
-      } else {
-        const inserted = await tx
-          .insert(documentos)
-          .values({
-            expedienteId: input.expedienteId,
-            tipo: input.tipo,
-            etapa: def.etapa,
-            ruta,
-            version,
-            sha256,
-            estado: "CARGADO",
-          })
-          .returning({ id: documentos.id });
-        const first = inserted[0];
-        if (!first)
-          return fail(new DomainError("VALIDACION_FALLIDA", "No se pudo registrar el documento"));
-        docId = first.id;
-      }
-      const estadoExp = await tx
-        .select({ estado: expedientes.estado })
-        .from(expedientes)
-        .where(eq(expedientes.id, input.expedienteId))
-        .limit(1);
+      const inserted = await tx
+        .insert(documentos)
+        .values({
+          expedienteId: input.expedienteId,
+          tipo: input.tipo,
+          etapa: def.etapa,
+          ruta,
+          version,
+          sha256,
+          estado: "CARGADO",
+        })
+        .returning({ id: documentos.id });
+      const doc = inserted[0];
+      if (!doc)
+        return fail(new DomainError("VALIDACION_FALLIDA", "No se pudo registrar el documento"));
+      await tx
+        .update(expedientes)
+        .set({ updatedAt: new Date() })
+        .where(eq(expedientes.id, input.expedienteId));
       await appendAuditoria(tx, {
         expedienteId: input.expedienteId,
         actorId: input.actor.id,
         actorDni: input.actor.dni,
-        estadoAnterior: estadoExp[0]?.estado ?? null,
-        estadoNuevo: estadoExp[0]?.estado ?? "REGISTRADO",
-        detalle: `Documento ${input.tipo} v${version} cargado`,
+        estadoAnterior: expediente.estado,
+        estadoNuevo: expediente.estado,
+        detalle: `Documento ${input.tipo} v${version} cargado (sha256 ${sha256.slice(0, 12)}…)`,
       });
-      return ok({ id: docId, tipo: input.tipo, version, sha256, estado: "CARGADO" });
+      return ok({ id: doc.id, tipo: input.tipo, version, sha256, estado: "CARGADO" });
     });
   }
 }

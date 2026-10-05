@@ -9,7 +9,7 @@ import {
   PROGRAMAS_OFICIALES,
   type Result,
 } from "@pis/domain";
-import { eq } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../../infra/db/unit-of-work.js";
 import { appendAuditoria } from "../../expedientes.auditoria.js";
 import { type DetalleRow, getDetalleById } from "../../expedientes.repository.js";
@@ -64,7 +64,9 @@ function patchPersona(
   const patch: Record<string, unknown> = {};
   for (const [sufijo, columna] of CAMPOS_PERSONA) {
     const v = input[`${prefijo}${sufijo}` as keyof ActualizarDatosInput];
-    if (v !== undefined) patch[columna] = v === "" ? null : v;
+    if (v === undefined) continue;
+    if (v === "") patch[columna] = null;
+    else patch[columna] = columna === "email" && typeof v === "string" ? v.trim().toLowerCase() : v;
   }
   return patch;
 }
@@ -84,7 +86,7 @@ export class ActualizarDatosUseCase {
     let patch: ActualizarDatosInput = input;
     if (actor.rol === "TESISTA") {
       const actual = await getDetalleById(db, id);
-      if (!actual) return fail(new DomainError("VALIDACION_FALLIDA", "Expediente no encontrado"));
+      if (!actual) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
       const propio =
         actual.participante1?.dni === actor.dni
           ? "participante1"
@@ -115,7 +117,7 @@ export class ActualizarDatosUseCase {
     const uow = new DrizzleUnitOfWork(db);
     return uow.run(async (tx) => {
       const actual = await getDetalleById(tx, id);
-      if (!actual) return fail(new DomainError("VALIDACION_FALLIDA", "Expediente no encontrado"));
+      if (!actual) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
       if (patch.expectedUpdatedAt && patch.expectedUpdatedAt !== actual.updatedAt) {
         return fail(
           new DomainError(
@@ -131,6 +133,32 @@ export class ActualizarDatosUseCase {
       }
       if (canon) patchExp.modalidad = canon;
       await tx.update(expedientes).set(patchExp).where(eq(expedientes.id, id));
+      // INC-02: un correo de otra persona se informa como conflicto (409),
+      // nunca como error SQL de la restricción única.
+      for (const [persona, correo] of [
+        [actual.participante1, patch.participante1Email],
+        [actual.participante2, patch.participante2Email],
+      ] as const) {
+        if (!persona || !correo) continue;
+        const otro = await tx
+          .select({ id: usuarios.id })
+          .from(usuarios)
+          .where(
+            and(
+              sql`lower(${usuarios.email}) = ${correo.trim().toLowerCase()}`,
+              ne(usuarios.id, persona.id),
+            ),
+          )
+          .limit(1);
+        if (otro.length > 0) {
+          return fail(
+            new DomainError(
+              "DATOS_DUPLICADOS",
+              `El correo ${correo} ya está registrado para otra persona`,
+            ),
+          );
+        }
+      }
       if (actual.participante1) {
         const p1 = patchPersona(patch, "participante1");
         if (Object.keys(p1).length > 0) {
@@ -152,7 +180,7 @@ export class ActualizarDatosUseCase {
         detalle: "Actualización de datos (autoguardado)",
       });
       const detalle = await getDetalleById(tx, id);
-      if (!detalle) return fail(new DomainError("VALIDACION_FALLIDA", "Expediente no encontrado"));
+      if (!detalle) return fail(new DomainError("NO_ENCONTRADO", "Expediente no encontrado"));
       return ok(detalle);
     });
   }

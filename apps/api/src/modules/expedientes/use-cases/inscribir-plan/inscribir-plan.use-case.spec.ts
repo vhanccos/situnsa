@@ -13,12 +13,37 @@ const base = {
   },
 };
 
-describe("InscribirPlanUseCase", () => {
-  it("rechaza DNIs duplicados sin tocar DB (refine de contrato lo impediría antes)", async () => {
-    const uc = new InscribirPlanUseCase();
-    // Doble participante con mismo DNI: el use-case no valida duplicados
-    // (lo hace el schema Zod); aquí solo verificamos que la firma existe.
-    expect(typeof uc.execute).toBe("function");
-    expect(base.participante1.dni).toHaveLength(8);
+describe("InscribirPlanUseCase (validaciones puras, sin DB)", () => {
+  const uc = new InscribirPlanUseCase();
+
+  it("rechaza un programa fuera del catálogo oficial (INC-01)", async () => {
+    const r = await uc.execute({ ...base, programa: "Seleccione" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.code).toBe("VALIDACION_FALLIDA");
+      expect(r.error.message).toContain("13 programas oficiales");
+    }
+  });
+
+  it("rechaza dos participantes con el mismo DNI", async () => {
+    const r = await uc.execute({
+      ...base,
+      participante2: { ...base.participante1, email: "otro@unsa.edu.pe" },
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.message).toContain("mismo DNI");
+  });
+
+  it("rechaza dos participantes con el mismo correo", async () => {
+    const r = await uc.execute({
+      ...base,
+      participante2: {
+        ...base.participante1,
+        dni: "87654320",
+        email: "TESISTA.prueba@unsa.edu.pe",
+      },
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.message).toContain("propio correo");
   });
 });

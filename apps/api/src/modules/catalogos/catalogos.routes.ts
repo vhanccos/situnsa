@@ -3,6 +3,7 @@ import { db, programas } from "@pis/db";
 import { initServer } from "@ts-rest/fastify";
 import { asc } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
+import { OPCIONES_TS_REST } from "../../infra/http/manejador-errores.js";
 
 const s = initServer();
 
@@ -14,5 +15,5 @@ export function registerProgramasRoutes(app: FastifyInstance): void {
       return { status: 200 as const, body: { items: rows } };
     },
   });
-  app.register(s.plugin(router));
+  void app.register(s.plugin(router), OPCIONES_TS_REST);
 }

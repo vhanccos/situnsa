@@ -3,7 +3,7 @@ import { boolean, integer, pgTable, text, uuid, varchar } from "drizzle-orm/pg-c
 /**
  * Proceso configurable como datos (port S-FIPS ADR-0004, Oleada B3).
  * Siembra inicial = FLUJO_TITULACION actual (38 subetapas); el dominio lee
- * de aquí con fallback al catálogo en código. La UI admin editable es P2.
+ * de aquí con fallback al catálogo en código; la UI admin (HU-0052) lo edita.
  */
 
 export const catalogoEtapas = pgTable("catalogo_etapas", {
@@ -20,6 +20,8 @@ export const catalogoSubetapas = pgTable("catalogo_subetapas", {
     .notNull()
     .references(() => catalogoEtapas.numero),
   orden: integer("orden").notNull(),
+  /** Clave estable de reglas-avance; null = subetapa agregada por el admin (sin guardas). */
+  clave: varchar("clave", { length: 40 }),
   nombre: text("nombre").notNull(),
   plazo: varchar("plazo", { length: 120 }),
   obligatoria: boolean("obligatoria").notNull().default(true),
@@ -31,6 +33,8 @@ export const catalogoDocsRequeridos = pgTable("catalogo_docs_requeridos", {
   tipo: varchar("tipo", { length: 64 }).notNull().unique(),
   nombre: text("nombre").notNull(),
   obligatorio: boolean("obligatorio").notNull().default(true),
+  /** Clave de la subetapa que exige el documento (guarda + carga del tesista, RN-06). */
+  requeridoEn: varchar("requerido_en", { length: 40 }),
 });
 
 export type CatalogoEtapa = typeof catalogoEtapas.$inferSelect;

@@ -1,5 +1,9 @@
-import { FileBadge, Flag, Gauge, MessagesSquare } from "lucide-react";
+import { cargaHabilitadaTesista } from "@pis/domain/dist/expediente/checklist-catalogo.js";
+import { FileBadge, Flag, Gauge, MessageSquareWarning, MessagesSquare } from "lucide-react";
 import { useExpedienteDetalle, useListarExpedientes } from "../api/expedientes.js";
+import { DocumentoCard } from "../components/domain/documento-card.js";
+import { PropuestaFechasCard } from "../components/domain/propuesta-fechas-card.js";
+import { SemaforoBadge } from "../components/domain/semaforo-badge.js";
 import { AppShell } from "../components/layout/app-shell.js";
 import { Acordeon, AcordeonItem } from "../components/ui/accordion.js";
 import { Card, CardEncabezado } from "../components/ui/card.js";
@@ -71,6 +75,19 @@ export function MiTramitePage() {
     porEtapa.set(s.etapa, arr);
   }
   const etapas = [...porEtapa.keys()].sort((a, b) => a - b);
+  const activa = d.subetapas.find((s) => s.estado === "EN_CURSO") ?? null;
+  // RN-06: documentos que el tesista debe cargar ahora (subetapa activa u observados).
+  const porCargar = d.checklist.filter((c) =>
+    cargaHabilitadaTesista(
+      { tipo: c.tipo, requeridoEn: c.requeridoEn, estado: c.estado },
+      d.subetapaActiva?.clave ?? null,
+    ),
+  );
+  const generadoPorTipo = new Map(d.generados.map((g) => [g.tipo, g]));
+  const ultimaObservacion =
+    d.estado === "OBSERVADO"
+      ? [...d.mensajes].reverse().find((m) => /Observaci|Similitud/i.test(m.texto))
+      : undefined;
 
   return (
     <AppShell activo="/mi-tramite">
@@ -114,6 +131,75 @@ export function MiTramitePage() {
           acento="bg-slate-300"
         />
       </div>
+      {d.estado === "OBSERVADO" && (
+        <section
+          className="flex gap-2 rounded-xl border border-yellow-300 bg-aviso-100 p-4 text-sm text-aviso-800"
+          aria-label="Observación vigente"
+        >
+          <MessageSquareWarning size={18} className="mt-0.5 shrink-0" aria-hidden />
+          <div>
+            <p className="font-bold">Tu expediente tiene una observación por subsanar</p>
+            {ultimaObservacion && <p className="mt-0.5">{ultimaObservacion.texto}</p>}
+            <p className="mt-1 text-xs">
+              Corrige lo indicado y vuelve a cargar los documentos observados en «Mis documentos».
+            </p>
+          </div>
+        </section>
+      )}
+      {activa && (
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 md:px-5">
+            <div>
+              <p className="text-xs font-bold tracking-wider text-grafito-600 uppercase">
+                Subetapa en curso
+              </p>
+              <p className="text-sm font-bold text-navy-950">
+                {activa.etapa}.{activa.orden} {activa.nombre}
+              </p>
+              <p className="text-xs text-grafito-600">
+                Plazo: {activa.plazo ?? "—"}
+                {activa.vencimiento ? ` · vence el ${activa.vencimiento}` : ""}
+              </p>
+            </div>
+            {activa.semaforo && activa.diasRestantes !== null && (
+              <SemaforoBadge estado={activa.semaforo} dias={activa.diasRestantes} />
+            )}
+          </div>
+        </Card>
+      )}
+      {d.estado === "APTO_SUSTENTACION" && <PropuestaFechasCard expedienteId={d.id} />}
+      <Card>
+        <CardEncabezado
+          titulo="Mis documentos"
+          descripcion="Documentos que corresponde cargar en la subetapa actual (PDF, máx. 50 MB)"
+        />
+        <div className="p-4 md:p-5">
+          {porCargar.length === 0 ? (
+            <p className="text-sm text-grafito-600">
+              No tienes documentos por cargar en esta subetapa. Te avisaremos por correo cuando
+              corresponda.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {porCargar.map((c) => (
+                <DocumentoCard
+                  key={c.tipo}
+                  documentoId={c.documentoId}
+                  estado={c.estado}
+                  expedienteId={d.id}
+                  faltantes={c.documentoId ? [] : ["Falta adjuntar el archivo"]}
+                  nombre={c.nombre}
+                  tipo={c.tipo}
+                  version={c.version}
+                  requeridoEn={c.requeridoEn}
+                  subetapaActiva={d.subetapaActiva?.clave ?? null}
+                  formato={generadoPorTipo.get(c.tipo) ?? null}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </Card>
       <Card>
         <CardEncabezado
           titulo="Avance del trámite"

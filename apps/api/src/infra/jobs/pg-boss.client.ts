@@ -12,7 +12,11 @@ export async function getBoss(): Promise<PgBoss> {
   return boss;
 }
 
-export async function enqueue(queue: string, payload: unknown): Promise<void> {
+export async function enqueue(
+  queue: string,
+  payload: unknown,
+  opciones: { retryLimit?: number; retryDelay?: number } = {},
+): Promise<void> {
   const b = await getBoss();
-  await b.send(queue, payload as Record<string, unknown>);
+  await b.send(queue, payload as Record<string, unknown>, opciones);
 }

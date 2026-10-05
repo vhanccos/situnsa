@@ -3,7 +3,12 @@ import { authContract } from "@pis/contracts";
 import { initServer } from "@ts-rest/fastify";
 import type { FastifyInstance } from "fastify";
 import { errorEnvelope } from "../../infra/http/errores.js";
+import { OPCIONES_TS_REST } from "../../infra/http/manejador-errores.js";
 import { NOMBRE_COOKIE_REFRESH, opcionesCookieRefresh, verificarAcceso } from "./sesiones.js";
+import {
+  ActivarCuentaUseCase,
+  SolicitarRestablecimientoUseCase,
+} from "./use-cases/acceso/activar-cuenta.use-case.js";
 import { LoginGoogleUseCase } from "./use-cases/login-google/login-google.use-case.js";
 import { LoginLocalUseCase } from "./use-cases/login-local/login-local.use-case.js";
 import {
@@ -85,6 +90,21 @@ export function registerAuthRoutes(app: FastifyInstance): void {
       reply.clearCookie(NOMBRE_COOKIE_REFRESH, { path: "/api/auth" });
       return { status: 200 as const, body: { ok: true as const } };
     },
+    activar: async ({ body }) => {
+      const r = await new ActivarCuentaUseCase().execute(body.token, body.password);
+      if (!r.ok) {
+        return { status: 400 as const, body: errorEnvelope(r.error.code, r.error.message) };
+      }
+      return { status: 200 as const, body: { ok: true as const, dni: r.value.dni } };
+    },
+    solicitarRestablecimiento: async ({ body }) => {
+      // Respuesta idéntica exista o no la cuenta (anti-enumeración); el
+      // trabajo real (token + correo) no altera el tiempo de respuesta visible.
+      void new SolicitarRestablecimientoUseCase()
+        .execute(body.identificador)
+        .catch((err: unknown) => console.error("[auth] restablecimiento falló", err));
+      return { status: 202 as const, body: { ok: true as const } };
+    },
     sesion: async ({ request }) => {
       const auth = request.headers.authorization;
       const token =
@@ -116,6 +136,6 @@ export function registerAuthRoutes(app: FastifyInstance): void {
   // el rate-limit cubre ráfagas. Encapsulado: no afecta al resto de la API.
   void app.register(async (scoped) => {
     await scoped.register(rateLimit, { max: 60, timeWindow: "1 minute" });
-    scoped.register(s.plugin(router));
+    await scoped.register(s.plugin(router), OPCIONES_TS_REST);
   });
 }

@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { GraduationCap, LockKeyhole } from "lucide-react";
 import { useId, useState } from "react";
 import { destinoPorRol } from "../api/auth.js";
@@ -30,8 +30,9 @@ export function LoginPage() {
     try {
       const s = await entrar(identificador.trim(), password);
       void navigate({ to: destinoPorRol(s.rol) });
-    } catch {
-      setError("Credenciales inválidas o usuario inactivo");
+    } catch (err) {
+      // Mensaje del servidor solo para bloqueo/cuenta sin clave; el resto es genérico.
+      setError(err instanceof Error ? err.message : "Credenciales inválidas o usuario inactivo");
     } finally {
       setCargando(false);
     }
@@ -104,6 +105,11 @@ export function LoginPage() {
             <LockKeyhole size={16} />
             {cargando ? "Validando credenciales…" : "Ingresar"}
           </Button>
+          <p className="text-center text-xs">
+            <Link className="font-semibold text-navy-800 hover:underline" to="/restablecer">
+              ¿Primera vez u olvidaste tu clave?
+            </Link>
+          </p>
         </form>
         <p className="mt-5 text-center text-[11px] text-navy-100/70">
           Uso institucional · Segunda Especialidad FIPS — UNSA

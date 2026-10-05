@@ -5,6 +5,7 @@ import { eq, inArray } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { autorizar } from "../../infra/auth/autorizacion.js";
 import { errorEnvelope } from "../../infra/http/errores.js";
+import { OPCIONES_TS_REST } from "../../infra/http/manejador-errores.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 
 const s = initServer();
@@ -117,6 +118,6 @@ export function registerSeguridadRoutes(app: FastifyInstance): void {
   });
   void app.register(async (scoped) => {
     scoped.addHook("preHandler", requireAuth);
-    scoped.register(s.plugin(router));
+    await scoped.register(s.plugin(router), OPCIONES_TS_REST);
   });
 }

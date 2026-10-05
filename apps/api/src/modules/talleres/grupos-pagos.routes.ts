@@ -5,6 +5,7 @@ import { and, eq, lt } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { autorizar } from "../../infra/auth/autorizacion.js";
 import { errorEnvelope } from "../../infra/http/errores.js";
+import { OPCIONES_TS_REST } from "../../infra/http/manejador-errores.js";
 import { requireAuth } from "../../middleware/require-auth.js";
 import {
   AgregarMiembroUseCase,
@@ -186,7 +187,7 @@ export function registerGruposRoutes(app: FastifyInstance): void {
   });
   void app.register(async (scoped) => {
     scoped.addHook("preHandler", requireAuth);
-    scoped.register(s.plugin(router));
+    await scoped.register(s.plugin(router), OPCIONES_TS_REST);
   });
 }
 
@@ -199,7 +200,8 @@ export function registerReportesRoutes(app: FastifyInstance): void {
         if (a.status === 401) return { status: 401 as const, body: a.body };
         return { status: 403 as const, body: a.body };
       }
-      const hoy = new Date().toISOString().slice(0, 10);
+      // Fecha civil de Arequipa: en UTC, desde las 19:00 ya sería "mañana".
+      const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Lima" });
       const vencidas = await db
         .select()
         .from(cronogramaPensiones)
@@ -247,6 +249,6 @@ export function registerReportesRoutes(app: FastifyInstance): void {
   });
   void app.register(async (scoped) => {
     scoped.addHook("preHandler", requireAuth);
-    scoped.register(s.plugin(router));
+    await scoped.register(s.plugin(router), OPCIONES_TS_REST);
   });
 }

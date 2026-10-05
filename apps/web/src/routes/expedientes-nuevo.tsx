@@ -44,7 +44,7 @@ export function NuevoExpedientePage() {
   const [dos, setDos] = useState(false);
   const [titulo, setTitulo] = useState("");
   const programas = useProgramas();
-  const [programa, setPrograma] = useState("Seleccione");
+  const [programa, setPrograma] = useState("");
   const [modalidad, setModalidad] = useState<"TESIS" | "TRABAJO_ACADEMICO" | "ARTICULO">("TESIS");
   const [p1, setP1] = useState<Participante>(VACIO);
   const [p2, setP2] = useState<Participante>(VACIO);
@@ -85,6 +85,11 @@ export function NuevoExpedientePage() {
     }
     if (titulo.trim().length < 10) {
       setError("El título debe tener al menos 10 caracteres");
+      return;
+    }
+    // INC-01: el programa es obligatorio y debe ser uno del catálogo oficial.
+    if (!programa) {
+      setError("Selecciona el programa de segunda especialidad");
       return;
     }
     setPaso(0);
@@ -208,7 +213,9 @@ export function NuevoExpedientePage() {
         )}
         <div className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select label="PROGRAMA" value={programa} onChange={setPrograma}>
-            <option value="Seleccione">Seleccione</option>
+            <option value="" disabled>
+              Seleccione un programa
+            </option>
             {(programas.data ?? []).map((p) => (
               <option key={p.codigo} value={p.nombre}>
                 {p.nombre}
@@ -287,8 +294,8 @@ function BloqueParticipante({
       ayuda={n === 1 ? "Datos del primer tesista." : "Datos del segundo tesista."}
     >
       <div className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {campo("nombres", "NOMBRES", "Ej. Pérez Quispe")}
-        {campo("apellidos", "APELLIDOS", "Ej. Juan Carlos")}
+        {campo("nombres", "NOMBRES", "Ej. Juan Carlos")}
+        {campo("apellidos", "APELLIDOS", "Ej. Pérez Quispe")}
         {campo("dni", "DNI *", "8 dígitos")}
         {campo("cui", "CUI / Código universitario", "20240001")}
         {campo("email", "CORREO ELECTRÓNICO *", "correo@ejemplo.com")}
