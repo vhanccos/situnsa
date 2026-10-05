@@ -5,19 +5,77 @@ on:
   push:
     branches: [main]
 
+# La versión de pnpm sale de "packageManager" (package.json): fijarla también
+# aquí hace fallar a pnpm/action-setup («Multiple versions of pnpm specified»).
+# pnpm 11 exige Node >= 22.13 (misma base que deploy/Dockerfile.render).
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
         with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm biome check .
       - run: pnpm typecheck
       - run: pnpm test
+
+  # Regresión de API sin navegador: un expediente recorre el trámite completo
+  # (REGISTRADO → TITULO_EMITIDO) contra Postgres real y Mailpit.
+  e2e-api:
+    needs: verify
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pis
+          POSTGRES_PASSWORD: pis_dev
+          POSTGRES_DB: pis_titulacion
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pis -d pis_titulacion"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.21
+        ports: ["1025:1025", "8025:8025"]
+    env:
+      DATABASE_URL: postgres://pis:pis_dev@localhost:5432/pis_titulacion
+      JWT_SECRET: ci-secret-solo-para-pruebas-e2e-0123456789
+      DEMO_PASSWORD: x
+      AUTH_STUB: "0"
+      APP_URL: http://localhost:3001
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      DOCS_ENTREGA: stream
+      E2E_BASE_URL: http://localhost:3001
+      E2E_MAILPIT_URL: http://localhost:8025
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @pis/db db:migrate
+      - run: pnpm --filter @pis/db db:seed
+      - name: Arrancar API
+        run: |
+          DOCS_VOLUME_PATH="$RUNNER_TEMP/docs" nohup node apps/api/dist/server.js > "$RUNNER_TEMP/api.log" 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3001/api/health && exit 0
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/api.log"
+          exit 1
+      - run: pnpm --filter pis-e2e test flujo-titulacion
+      # La cadena de custodia de todo lo creado por el flujo debe verificarse íntegra.
+      - run: pnpm --filter @pis/api verificar-auditoria
+      - name: Log de la API
+        if: failure()
+        run: cat "$RUNNER_TEMP/api.log"
