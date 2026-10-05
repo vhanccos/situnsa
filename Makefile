@@ -1,4 +1,4 @@
-.PHONY: install dev build lint format test typecheck check prod prod-local prod-down db-push db-seed
+.PHONY: install dev build lint format test typecheck check prod prod-local prod-down backup restore db-push db-seed
 
 install: ## Instala dependencias con pnpm
 	pnpm install
@@ -36,6 +36,18 @@ prod-local prod: ## Emulación 100% fiel de producción (Nginx + API + DB)
 
 prod-down:
 	docker compose -f deploy/docker-compose.prod.yml down
+
+PROD = docker compose -f deploy/docker-compose.prod.yml
+
+backup: ## Respaldo inmediato (BD + documentos) en deploy/backups/ (RNF-03)
+	$(PROD) --profile backup run --rm backup /bin/sh /opt/backup/respaldo.sh
+
+restore: ## Restaura un respaldo y verifica la cadena: make restore SELLO=20261005T070000Z
+	@test -n "$(SELLO)" || (echo "Uso: make restore SELLO=<sello del respaldo>"; exit 1)
+	$(PROD) stop web
+	$(PROD) --profile backup run --rm backup /bin/sh /opt/backup/restaurar.sh $(SELLO)
+	$(PROD) start web
+	$(PROD) exec web node apps/api/dist/scripts/verificar-auditoria.js
 
 db-push: ## Atajo de prototipado (NO auditable; prefiere db-migrate)
 	pnpm --filter @pis/db db:push

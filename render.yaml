@@ -27,6 +27,14 @@ services:
         value: "0"
       - key: NODE_ENV
         value: production
+      # Enlaces de los correos (activación, Mi Trámite): sin APP_URL la API
+      # usa RENDER_EXTERNAL_URL, la URL pública que Render inyecta. Definir
+      # APP_URL solo con un dominio propio.
+      # Correo real: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS y SMTP_SECURE
+      # se cargan como secretos en el Dashboard (no se versionan). Sin
+      # SMTP_HOST los correos solo se registran en el log del servicio.
+      - key: MAIL_FROM
+        value: no-reply@fips.unsa.edu.pe
 
 databases:
   - name: situnsa-db

@@ -24,6 +24,8 @@ playwright/.cache/
 # Uploads dev (volumen documental)
 var/
 apps/api/var/
+# Respaldos de make backup (contienen datos personales: nunca versionar)
+deploy/backups/
 
 # Solo local: TODO operativo, PDFs fuente e insumos de entrevista (no versionar).
 # Las especificaciones procesadas viven en docs/ (eso sí se versiona).

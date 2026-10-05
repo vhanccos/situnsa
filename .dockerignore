@@ -1,5 +1,5 @@
 # Contexto Docker: solo lo necesario para el build (el COPY es selectivo,
-// pero sin esto se envían GBs de node_modules/.git al daemon).
+# pero sin esto se envían GBs de node_modules/.git al daemon).
 node_modules
 **/node_modules
 **/dist
