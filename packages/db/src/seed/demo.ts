@@ -14,6 +14,7 @@ import { subetapas } from "../schema/subetapas.js";
 import { talleres } from "../schema/talleres.js";
 import { usuarios } from "../schema/usuarios.js";
 import { asignarRolesLegacy, fijarClavesDemo } from "./roles-permisos.js";
+import { JORGE_ID, seedTallerFlujo } from "./taller-demo.js";
 
 export const TESISTA_ID = "11111111-1111-4111-8111-111111111111";
 export const ASESOR_ID = "22222222-2222-4222-8222-222222222222";
@@ -186,6 +187,14 @@ export async function seedDemo(db: Db): Promise<void> {
         apellidos: "Mamani Condori",
         rol: "TESISTA",
       },
+      {
+        id: JORGE_ID,
+        dni: "44556677",
+        email: "jorge.ramos@unsa.edu.pe",
+        nombres: "Jorge",
+        apellidos: "Ramos Cutipa",
+        rol: "TESISTA",
+      },
     ])
     .onConflictDoNothing({ target: usuarios.dni });
   await db.update(usuarios).set({ id: TESISTA_ID }).where(eq(usuarios.dni, "12345678"));
@@ -197,6 +206,7 @@ export async function seedDemo(db: Db): Promise<void> {
   await db.update(usuarios).set({ id: TESISTA2_ID }).where(eq(usuarios.dni, "11223344"));
   await db.update(usuarios).set({ id: P2A_ID }).where(eq(usuarios.dni, "22334455"));
   await db.update(usuarios).set({ id: P2B_ID }).where(eq(usuarios.dni, "33445566"));
+  await db.update(usuarios).set({ id: JORGE_ID }).where(eq(usuarios.dni, "44556677"));
 
   // ---- SET005 (en plan, grupo 1) ----
   await db
@@ -406,6 +416,27 @@ export async function seedDemo(db: Db): Promise<void> {
     ]);
   }
 
+  // ---- SET008 (Jorge, en plan: inscripción validada para el taller) ----
+  await db
+    .insert(expedientes)
+    .values([
+      {
+        codigo: "SET008",
+        estado: "EN_PLAN",
+        modalidad: "TESIS",
+        programa: "SEGUNDA ESPECIALIDAD EN INGENIERÍA DE SISTEMAS",
+        titulo: "gestión de pensiones en talleres de tesis con trazabilidad",
+        participante1Id: JORGE_ID,
+        asesorId: ASESOR_ID,
+        fechaApertura: "2026-09-15",
+        fechaPresentacion: "2026-09-20",
+      },
+    ])
+    .onConflictDoNothing({ target: expedientes.codigo });
+
+  // ---- Flujo demo del taller (TALLER 06 + grupos + fases + avance + pase) ----
+  await seedTallerFlujo(db);
+
   // Claves demo (bcrypt coste 12) + roles nuevos según rol legacy.
   await fijarClavesDemo(db, [
     "00000001",
@@ -415,6 +446,7 @@ export async function seedDemo(db: Db): Promise<void> {
     "11223344",
     "22334455",
     "33445566",
+    "44556677",
     "99990001",
   ]);
   await asignarRolesLegacy(db);

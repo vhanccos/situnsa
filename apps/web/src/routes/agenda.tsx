@@ -49,7 +49,7 @@ export function AgendaPage({ id }: { id: string }) {
     <AppShell activo="/mis-talleres">
       <PageHeader
         titulo={t ? `Agenda · ${t.nombre}` : "Agenda del taller"}
-        descripcion="Fases y cumplimiento · RF-0208, RF-0210"
+        descripcion="Fases y cumplimiento"
       />
       {!t && !taller.isPending ? (
         <EmptyState titulo="Taller no encontrado" />
@@ -136,7 +136,7 @@ function FasesCard({
             <input
               aria-label="Nombre de la fase"
               className={cn(controlClase, "h-9")}
-              placeholder="Marco teórico"
+              placeholder="Nombre de la fase"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
             />
@@ -179,6 +179,7 @@ interface FilaPase {
   nombres: string;
   elegible: boolean;
   validacionAsesor: boolean;
+  avisos: string[];
   pase: { validadoPor: string; validadoDni: string; createdAt: string } | null;
 }
 
@@ -353,12 +354,7 @@ function CondicionesCard({
     usuarioDni: string;
     celdas: Array<{ faseId: string; estado: "PENDIENTE" | "CUMPLIDA" | "OBSERVADA" }>;
   }>;
-  fila: FilaPase & {
-    asistenciaPct?: number;
-    cuotasAlDia?: boolean | null;
-    faltantes?: string[];
-    avisos?: string[];
-  };
+  fila: FilaPase;
 }) {
   const avisar = useToast();
   const revertir = useRevertirPase(tallerId);
@@ -404,9 +400,9 @@ function CondicionesCard({
           Fases completas: {fasesTexto} · Validación del asesor:{" "}
           {fila.validacionAsesor ? "registrada" : "pendiente"}
         </p>
-        <p className="text-sm text-grafito-600">
-          Por confirmar con el cliente: asistencia mínima y pagos al día.
-        </p>
+        {fila.avisos.length > 0 && (
+          <p className="text-sm text-grafito-600">{fila.avisos.join(" · ")}</p>
+        )}
         {fila.pase && esAdmin && (
           <span className="flex flex-wrap items-center gap-2 pt-1">
             <input
@@ -476,7 +472,7 @@ function AvancesPanel({ tallerId }: { tallerId: string }) {
           <input
             aria-label="Qué debe entregar"
             className={cn(controlClase, "h-9")}
-            placeholder="Entregar el capítulo II…"
+            placeholder="Qué debe entregar el alumno"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
           />

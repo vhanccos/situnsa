@@ -17,7 +17,7 @@ export function MisPagosPage() {
 
   return (
     <AppShell activo="/mis-pagos">
-      <PageHeader titulo="Mis pagos" descripcion="Cuotas de tu taller · RF-0211" />
+      <PageHeader titulo="Mis pagos" descripcion="Cuotas de tu taller" />
       {talleres.isPending ? (
         <output aria-label="Cargando" className="block space-y-2">
           {[0].map((i) => (

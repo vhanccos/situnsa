@@ -21,7 +21,7 @@ export function MisTalleresPage() {
 
   return (
     <AppShell activo="/mis-talleres">
-      <PageHeader titulo="Mis Talleres" descripcion="Talleres y alumnos a tu cargo · RF-0207" />
+      <PageHeader titulo="Mis Talleres" descripcion="Talleres y alumnos a tu cargo" />
       {items.length === 0 && !query.isPending ? (
         <EmptyState titulo="Aún no tienes talleres asignados" />
       ) : (

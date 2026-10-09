@@ -43,7 +43,7 @@ export function TalleresPage() {
     <AppShell activo="/talleres">
       <PageHeader
         titulo="Talleres de Tesis"
-        descripcion="Administración de inscripciones, talleres, asesores, avance y asistencia. · RF-0200"
+        descripcion="Administración de inscripciones, talleres, asesores, avance y asistencia."
         acciones={
           <Link className={cn("inline-flex")} to="/talleres/nuevo">
             <Button variante="exito" type="button">

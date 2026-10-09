@@ -252,7 +252,7 @@ function AlumnosTab({ id }: { id: string }) {
   return (
     <Card>
       <CardEncabezado
-        titulo="Alumnos del taller · RF-0212, RF-0213"
+        titulo="Alumnos del taller"
         accion={
           <Button
             tamano="sm"
@@ -317,8 +317,8 @@ function AlumnosTab({ id }: { id: string }) {
           filas={filas.map((f) => ({ ...f, id: f.usuarioDni }))}
         />
         <p className="mt-2 text-xs text-grafito-600">
-          Asignar alumno pide DNI y grupo, y avisa si el cupo está lleno. Sesiones es la pantalla
-          P4; Grupos y pensiones es la sección actual, movida aquí.
+          Pide DNI y grupo. El alumno debe tener su inscripción validada; si el cupo está lleno,
+          avisa y no permite asignar.
         </p>
       </div>
     </Card>
@@ -709,7 +709,7 @@ function GruposTab() {
       <Card>
         <CardEncabezado
           titulo="Grupos del taller"
-          descripcion="La sección actual, movida aquí (P3)."
+          descripcion="Miembros, cuotas y estado de cada grupo."
         />
         <div className="p-4">
           <DataTable

@@ -34,7 +34,7 @@ export function PagosTallerPage() {
 
   return (
     <AppShell activo="/pagos-taller">
-      <PageHeader titulo="Pagos del taller" descripcion="RF-0211, RF-0215, RF-0216" />
+      <PageHeader titulo="Pagos del taller" descripcion="Cronograma, comprobantes y deudores" />
       <Card>
         <div className="grid grid-cols-1 gap-2 p-4 md:grid-cols-3 md:p-5">
           <Select label="TALLER" value={tallerId} onChange={setTallerId}>
@@ -58,7 +58,7 @@ export function PagosTallerPage() {
             />
           </label>
           <Select label="GRUPO" value={grupoSel ?? ""} onChange={setGrupoId}>
-            <option value="">Primero de la lista</option>
+            <option value="">Elige un grupo</option>
             {gruposDelTaller.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.nombre} · {g.tallerNombre}
@@ -249,7 +249,9 @@ function DeudoresPanel({ tallerId, periodo }: { tallerId: string; periodo: strin
           ]}
           filas={filas}
         />
-        <p className="mt-2 text-xs text-grafito-600">Filtros nuevos: por taller y por período.</p>
+        <p className="mt-2 text-xs text-grafito-600">
+          Alumnos con cuotas vencidas. Usa los filtros de taller y período para acotar la lista.
+        </p>
       </div>
     </Card>
   );

@@ -41,10 +41,10 @@ export function TalleresNuevoPage() {
     horaInicio: "09:00",
     horaFin: "11:00",
     totalSesiones: "12",
-    cupoMax: "30",
+    cupoMax: "",
     enlace: "",
   });
-  const [dias, setDias] = useState<number[]>([6, 7]);
+  const [dias, setDias] = useState<number[]>([]);
   const [error, setError] = useState("");
 
   function armar(): CrearTallerInput {
@@ -114,17 +114,14 @@ export function TalleresNuevoPage() {
 
   return (
     <AppShell activo="/talleres">
-      <PageHeader
-        titulo="Nuevo taller"
-        descripcion="Talleres de Tesis / Nuevo taller · RF-0200, RF-0201"
-      />
+      <PageHeader titulo="Nuevo taller" descripcion="Talleres de Tesis / Nuevo taller" />
       <Card>
         <div className="grid grid-cols-1 gap-3 p-4 md:grid-cols-3 md:p-5">
           <Field etiqueta="Nombre *">
             <input
               aria-label="Nombre del taller"
               className={cn(controlClase, "h-10")}
-              placeholder="TALLER 06"
+              placeholder="Nombre del taller"
               value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
             />
@@ -133,7 +130,7 @@ export function TalleresNuevoPage() {
             <input
               aria-label="Período"
               className={cn(controlClase, "h-10")}
-              placeholder="2026-II"
+              placeholder="Período académico"
               value={form.periodo}
               onChange={(e) => setForm({ ...form, periodo: e.target.value })}
             />
@@ -235,8 +232,8 @@ export function TalleresNuevoPage() {
         </div>
         {vista && (
           <p className="mx-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-grafito-700 md:mx-5">
-            Vista previa (ejemplo): se generarán <strong>{vista.sesiones} sesiones</strong>.
-            Primera: {fechaLarga(vista.primera)} · Última: {fechaLarga(vista.ultima)}.
+            Vista previa: se generarán <strong>{vista.sesiones} sesiones</strong>. Primera:{" "}
+            {fechaLarga(vista.primera)} · Última: {fechaLarga(vista.ultima)}.
           </p>
         )}
         {error && (
