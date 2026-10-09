@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { generarSesiones, hashTransicion } from "@pis/domain";
 import { and, desc, eq } from "drizzle-orm";
 import type { Db } from "../client.js";
@@ -17,6 +21,53 @@ import { ADMIN_ID, ASESOR_ID } from "./demo.js";
 
 export const JORGE_ID = "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaa1";
 const TALLER06 = "TALLER 06";
+
+/** Base documental: la misma que resuelve la API (ver cargar-env). */
+function docsBase(): string {
+  if (process.env.DOCS_VOLUME_PATH) return resolve(process.env.DOCS_VOLUME_PATH);
+  const raiz = fileURLToPath(new URL("../../../..", import.meta.url));
+  return join(raiz, "var", "data", "titulacion-docs");
+}
+
+/** Comprobante demo: PDF mínimo válido de una página. */
+function pdfDemo(titulo: string): Uint8Array {
+  const texto = `BT /F1 12 Tf 50 750 Td (${titulo}) Tj ET`;
+  const objs = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    `<< /Length ${texto.length} >>\nstream\n${texto}\nendstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let out = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objs.forEach((o, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${o}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) out += `${String(off).padStart(10, "0")} 00000 n \n`;
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return new TextEncoder().encode(out);
+}
+
+/** Guarda un comprobante como lo haría SubirComprobanteUseCase. */
+async function guardarComprobante(
+  tallerId: string,
+  cuotaId: string,
+  nroCuota: number,
+  titulo: string,
+): Promise<{ ruta: string; sha256: string; fecha: Date }> {
+  const bytes = pdfDemo(titulo);
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const nombre = `cuota_${nroCuota}_${cuotaId.slice(0, 8)}.pdf`;
+  const dir = join(docsBase(), tallerId, "comprobantes");
+  await mkdir(dir, { recursive: true });
+  const ruta = join(dir, nombre);
+  await writeFile(ruta, bytes);
+  return { ruta, sha256, fecha: new Date() };
+}
 
 /** Hoy en Lima (AAAA-MM-DD). Las fechas del demo son relativas: el seed no se pudre. */
 function hoyLima(): string {
@@ -173,7 +224,7 @@ export async function seedTallerFlujo(db: Db): Promise<void> {
   )[0];
   inicio = t0?.fechaInicio ?? proximoSabado();
   const sesiones = await db
-    .select({ id: tallerSesiones.id })
+    .select({ id: tallerSesiones.id, nro: tallerSesiones.nro, fecha: tallerSesiones.fecha })
     .from(tallerSesiones)
     .where(eq(tallerSesiones.tallerId, tallerId));
 
@@ -236,6 +287,104 @@ export async function seedTallerFlujo(db: Db): Promise<void> {
     .set({ inscritos: new Set(conteo.map((c) => c.usuarioId)).size })
     .where(eq(talleres.id, tallerId));
 
+  // ---- Sesiones con estados variados: 1 realizada, 2 abierta, 3 cancelada ----
+  const porNro = new Map(sesiones.map((s) => [s.nro, s]));
+  const uid = async (dni: string): Promise<string | null> => {
+    const u = (
+      await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.dni, dni)).limit(1)
+    )[0];
+    return u?.id ?? null;
+  };
+  const s1 = porNro.get(1);
+  if (s1) {
+    const actual = (
+      await db
+        .select({ estado: tallerSesiones.estado })
+        .from(tallerSesiones)
+        .where(eq(tallerSesiones.id, s1.id))
+        .limit(1)
+    )[0];
+    if (actual?.estado === "PROGRAMADA") {
+      await db
+        .update(tallerSesiones)
+        .set({ estado: "REALIZADA" })
+        .where(eq(tallerSesiones.id, s1.id));
+      const marcas: Array<{
+        dni: string;
+        estado: "PRESENTE" | "FALTA" | "JUSTIFICADA";
+        motivo: string | null;
+      }> = [
+        { dni: "11223344", estado: "PRESENTE", motivo: null },
+        { dni: "22334455", estado: "PRESENTE", motivo: null },
+        { dni: "33445566", estado: "FALTA", motivo: null },
+        { dni: "44556677", estado: "JUSTIFICADA", motivo: "Cita médica familiar" },
+      ];
+      for (const m of marcas) {
+        const id = await uid(m.dni);
+        if (!id) continue;
+        await db
+          .insert(tallerAsistencias)
+          .values({
+            sesionId: s1.id,
+            usuarioId: id,
+            estado: m.estado,
+            marcadaAt: m.estado === "FALTA" ? null : new Date(`${s1.fecha}T09:35:00-05:00`),
+            motivo: m.motivo,
+            actualizadaPor: m.estado === "JUSTIFICADA" ? ASESOR_ID : null,
+          })
+          .onConflictDoUpdate({
+            target: [tallerAsistencias.sesionId, tallerAsistencias.usuarioId],
+            set: {
+              estado: m.estado,
+              marcadaAt: m.estado === "FALTA" ? null : new Date(`${s1.fecha}T09:35:00-05:00`),
+              motivo: m.motivo,
+              actualizadaPor: m.estado === "JUSTIFICADA" ? ASESOR_ID : null,
+            },
+          });
+      }
+      await auditarTaller(db, { tallerId, accion: "ABRIR_ASISTENCIA", detalle: `Sesión ${s1.id}` });
+      await auditarTaller(db, {
+        tallerId,
+        accion: "CERRAR_ASISTENCIA",
+        detalle: `Sesión ${s1.id}`,
+      });
+    }
+  }
+  const s2 = porNro.get(2);
+  if (s2) {
+    const actual = (
+      await db
+        .select({ estado: tallerSesiones.estado })
+        .from(tallerSesiones)
+        .where(eq(tallerSesiones.id, s2.id))
+        .limit(1)
+    )[0];
+    if (actual?.estado === "PROGRAMADA") {
+      await db
+        .update(tallerSesiones)
+        .set({ estado: "ABIERTA" })
+        .where(eq(tallerSesiones.id, s2.id));
+      await auditarTaller(db, { tallerId, accion: "ABRIR_ASISTENCIA", detalle: `Sesión ${s2.id}` });
+    }
+  }
+  const s3 = porNro.get(3);
+  if (s3) {
+    const actual = (
+      await db
+        .select({ estado: tallerSesiones.estado })
+        .from(tallerSesiones)
+        .where(eq(tallerSesiones.id, s3.id))
+        .limit(1)
+    )[0];
+    if (actual?.estado === "PROGRAMADA") {
+      await db
+        .update(tallerSesiones)
+        .set({ estado: "CANCELADA", motivo: "Feriado local" })
+        .where(eq(tallerSesiones.id, s3.id));
+      await auditarTaller(db, { tallerId, accion: "CANCELAR_SESION", detalle: `Sesión ${s3.id}` });
+    }
+  }
+
   // ---- Pensiones: 4 cuotas de S/150 por miembro ----
   const primerVto = sumarDias(inicio, 28);
   for (const grupoId of Object.values(grupos)) {
@@ -266,6 +415,105 @@ export async function seedTallerFlujo(db: Db): Promise<void> {
     }
   }
 
+  // ---- Cuotas con estados variados (P8/P9 con ejemplos reales) ----
+  async function cuotaDe(
+    grupoId: string,
+    dni: string,
+    nro: number,
+  ): Promise<{ id: string; estado: string } | null> {
+    const u = (
+      await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.dni, dni)).limit(1)
+    )[0];
+    if (!u) return null;
+    const c = (
+      await db
+        .select({ id: cronogramaPensiones.id, estado: cronogramaPensiones.estado })
+        .from(cronogramaPensiones)
+        .where(
+          and(
+            eq(cronogramaPensiones.grupoId, grupoId),
+            eq(cronogramaPensiones.usuarioId, u.id),
+            eq(cronogramaPensiones.nroCuota, nro),
+          ),
+        )
+        .limit(1)
+    )[0];
+    return c ?? null;
+  }
+  // Carlos, cuota 1 vencida (sigue PENDIENTE → deudor con atraso).
+  const carlos1 = await cuotaDe(grupos["Grupo A"] ?? "", "22334455", 1);
+  if (carlos1 && carlos1.estado === "PENDIENTE") {
+    await db
+      .update(cronogramaPensiones)
+      .set({ vencimiento: sumarDias(hoyLima(), -12) })
+      .where(eq(cronogramaPensiones.id, carlos1.id));
+  }
+  // María, cuota 1 validada con comprobante.
+  const maria1 = await cuotaDe(grupos["Grupo A"] ?? "", "11223344", 1);
+  if (maria1 && maria1.estado === "PENDIENTE") {
+    const comp = await guardarComprobante(tallerId, maria1.id, 1, "Comprobante María T. cuota 1");
+    await db
+      .update(cronogramaPensiones)
+      .set({
+        estado: "VALIDADO",
+        comprobanteRuta: comp.ruta,
+        comprobanteSha256: comp.sha256,
+        comprobanteFecha: comp.fecha,
+        motivo: null,
+      })
+      .where(eq(cronogramaPensiones.id, maria1.id));
+    await auditarTaller(db, {
+      tallerId,
+      accion: "SUBIR_COMPROBANTE",
+      detalle: "Cuota 1 en revisión",
+    });
+    await auditarTaller(db, { tallerId, accion: "VALIDAR_COMPROBANTE", detalle: "Cuota 1 pagada" });
+  }
+  // Lucía, cuota 1 observada con comprobante y motivo.
+  const lucia1 = await cuotaDe(grupos["Grupo B"] ?? "", "33445566", 1);
+  if (lucia1 && lucia1.estado === "PENDIENTE") {
+    const comp = await guardarComprobante(tallerId, lucia1.id, 1, "Comprobante Lucía M. cuota 1");
+    await db
+      .update(cronogramaPensiones)
+      .set({
+        estado: "OBSERVADO",
+        comprobanteRuta: comp.ruta,
+        comprobanteSha256: comp.sha256,
+        comprobanteFecha: comp.fecha,
+        motivo: "La imagen no se lee",
+      })
+      .where(eq(cronogramaPensiones.id, lucia1.id));
+    await auditarTaller(db, {
+      tallerId,
+      accion: "SUBIR_COMPROBANTE",
+      detalle: "Cuota 1 en revisión",
+    });
+    await auditarTaller(db, {
+      tallerId,
+      accion: "OBSERVAR_COMPROBANTE",
+      detalle: "Cuota 1 observada",
+    });
+  }
+  // Jorge, cuota 2 en revisión con comprobante.
+  const jorge2 = await cuotaDe(grupos["Grupo B"] ?? "", "44556677", 2);
+  if (jorge2 && jorge2.estado === "PENDIENTE") {
+    const comp = await guardarComprobante(tallerId, jorge2.id, 2, "Comprobante Jorge R. cuota 2");
+    await db
+      .update(cronogramaPensiones)
+      .set({
+        estado: "EN_REVISION",
+        comprobanteRuta: comp.ruta,
+        comprobanteSha256: comp.sha256,
+        comprobanteFecha: comp.fecha,
+        motivo: null,
+      })
+      .where(eq(cronogramaPensiones.id, jorge2.id));
+    await auditarTaller(db, {
+      tallerId,
+      accion: "SUBIR_COMPROBANTE",
+      detalle: "Cuota 2 en revisión",
+    });
+  }
   // ---- Fases + cumplimiento ----
   const fases = await db
     .select({ id: tallerFases.id, orden: tallerFases.orden })

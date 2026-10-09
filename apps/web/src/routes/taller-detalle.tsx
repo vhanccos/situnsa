@@ -21,6 +21,7 @@ import { AppShell } from "../components/layout/app-shell.js";
 import { Button } from "../components/ui/button.js";
 import { Card, CardEncabezado } from "../components/ui/card.js";
 import { DataTable } from "../components/ui/data-table.js";
+import { Dialogo } from "../components/ui/dialog.js";
 import { controlClase } from "../components/ui/field.js";
 import { PageHeader } from "../components/ui/page-header.js";
 import { StatusBadge } from "../components/ui/status-badge.js";
@@ -341,50 +342,59 @@ function SesionesTab({ id }: { id: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="grid items-start gap-3 xl:grid-cols-[1fr_380px]">
-        <Card>
-          <div className="p-4">
-            <DataTable
-              cargando={sesiones.isPending}
-              vacio="Sin sesiones: el taller aún no genera su cronograma."
-              columnas={[
-                { encabezado: "N°", celda: (f) => f.nro },
-                { encabezado: "Fecha", celda: (f) => fechaCorta(f.fecha) },
-                { encabezado: "Hora", celda: (f) => `${f.horaInicio}-${f.horaFin}` },
-                {
-                  encabezado: "Estado",
-                  celda: (f) => (
-                    <StatusBadge estado={f.estado} etiqueta={estadoSesionEtiqueta(f.estado)} />
-                  ),
-                },
-                {
-                  encabezado: "Acciones",
-                  celda: (f) => (
-                    <AccionesSesion
-                      sesion={f}
-                      tallerId={id}
-                      seleccionada={sel === f.id}
-                      onVer={() => setSel(sel === f.id ? null : f.id)}
-                      onReprogramar={() =>
-                        setReprog({
-                          id: f.id,
-                          fecha: f.fecha,
-                          horaInicio: f.horaInicio,
-                          horaFin: f.horaFin,
-                          motivo: "",
-                        })
-                      }
-                      onCancelar={() => setCancel({ id: f.id, motivo: "" })}
-                    />
-                  ),
-                },
-              ]}
-              filas={filas.map((f) => ({ ...f, id: f.id }))}
-            />
-          </div>
-        </Card>
-        {selSesion && <AsistenciaPanel sesion={selSesion} />}
-      </div>
+      <Card>
+        <div className="p-4">
+          <DataTable
+            cargando={sesiones.isPending}
+            vacio="Sin sesiones: el taller aún no genera su cronograma."
+            columnas={[
+              { encabezado: "N°", celda: (f) => f.nro },
+              { encabezado: "Fecha", celda: (f) => fechaCorta(f.fecha) },
+              { encabezado: "Hora", celda: (f) => `${f.horaInicio}-${f.horaFin}` },
+              {
+                encabezado: "Estado",
+                celda: (f) => (
+                  <StatusBadge estado={f.estado} etiqueta={estadoSesionEtiqueta(f.estado)} />
+                ),
+              },
+              {
+                encabezado: "Acciones",
+                celda: (f) => (
+                  <AccionesSesion
+                    sesion={f}
+                    tallerId={id}
+                    onVer={() => setSel(f.id)}
+                    onReprogramar={() =>
+                      setReprog({
+                        id: f.id,
+                        fecha: f.fecha,
+                        horaInicio: f.horaInicio,
+                        horaFin: f.horaFin,
+                        motivo: "",
+                      })
+                    }
+                    onCancelar={() => setCancel({ id: f.id, motivo: "" })}
+                  />
+                ),
+              },
+            ]}
+            filas={filas.map((f) => ({ ...f, id: f.id }))}
+          />
+        </div>
+      </Card>
+      {selSesion && (
+        <Dialogo
+          abierto
+          onAbierto={(v) => {
+            if (!v) setSel(null);
+          }}
+          titulo={`Asistencia · Sesión ${selSesion.nro}`}
+          descripcion={`Sesión del ${fechaCorta(selSesion.fecha)} · ${selSesion.horaInicio}-${selSesion.horaFin}`}
+          ancho="max-w-2xl"
+        >
+          <AsistenciaContenido sesion={selSesion} />
+        </Dialogo>
+      )}
       {reprog && (
         <Card>
           <CardEncabezado
@@ -442,7 +452,6 @@ function SesionesTab({ id }: { id: string }) {
           </div>
         </Card>
       )}
-      {selSesion && <AsistenciaPanel sesion={selSesion} />}
     </div>
   );
 }
@@ -450,14 +459,12 @@ function SesionesTab({ id }: { id: string }) {
 function AccionesSesion({
   sesion,
   tallerId,
-  seleccionada,
   onVer,
   onReprogramar,
   onCancelar,
 }: {
   sesion: TallerSesionDTO;
   tallerId: string;
-  seleccionada: boolean;
   onVer: () => void;
   onReprogramar: () => void;
   onCancelar: () => void;
@@ -478,7 +485,7 @@ function AccionesSesion({
   return (
     <span className="flex flex-wrap gap-1">
       <Button tamano="xs" variante="contorno" onClick={onVer} type="button">
-        {seleccionada ? "Ocultar" : "Ver asistencia"}
+        Ver asistencia
       </Button>
       {sesion.estado === "PROGRAMADA" && (
         <>
@@ -583,7 +590,7 @@ function ReprogBoton({
   );
 }
 
-function AsistenciaPanel({ sesion }: { sesion: TallerSesionDTO }) {
+function AsistenciaContenido({ sesion }: { sesion: TallerSesionDTO }) {
   const avisar = useToast();
   const query = useAsistencia(sesion.id);
   const corregir = useCorregirAsistencia(sesion.id);
@@ -607,89 +614,85 @@ function AsistenciaPanel({ sesion }: { sesion: TallerSesionDTO }) {
   }
 
   return (
-    <Card>
-      <CardEncabezado
-        titulo={`Asistencia · Sesión ${sesion.nro}`}
-        accion={
-          sesion.estado === "ABIERTA" ? (
-            <StatusBadge estado="ABIERTA" etiqueta={`Abierta hasta ${sesion.horaFin}`} />
-          ) : undefined
-        }
-      />
-      <div className="p-4">
-        <DataTable
-          cargando={query.isPending}
-          vacio="Sin alumnos registrados en la sesión."
-          columnas={[
-            { encabezado: "Alumno", celda: (f) => f.nombres },
-            { encabezado: "Estado", celda: (f) => <StatusBadge estado={f.estado} /> },
-            {
-              encabezado: "",
-              celda: (f) => {
-                if (editando === f.usuarioDni) {
-                  const destino = f.estado === "FALTA" ? "JUSTIFICADA" : "PRESENTE";
-                  return (
-                    <span className="flex flex-wrap items-center gap-1">
-                      <input
-                        aria-label={`Motivo para ${f.nombres}`}
-                        className={cn(controlClase, "h-8 max-w-40")}
-                        placeholder="Motivo…"
-                        value={motivo}
-                        onChange={(e) => setMotivo(e.target.value)}
-                      />
-                      <Button
-                        tamano="xs"
-                        variante="oscuro"
-                        disabled={corregir.isPending}
-                        onClick={() => void onConfirmar(f.usuarioDni, destino)}
-                        type="button"
-                      >
-                        Confirmar
-                      </Button>
-                    </span>
-                  );
-                }
-                if (f.estado === "FALTA") {
-                  return (
-                    <Button
-                      tamano="xs"
-                      variante="contorno"
-                      onClick={() => {
-                        setEditando(f.usuarioDni);
-                        setMotivo("");
-                      }}
-                      type="button"
-                    >
-                      Justificar
-                    </Button>
-                  );
-                }
-                if (f.estado === "JUSTIFICADA" || f.estado === "PRESENTE") {
-                  return (
-                    <Button
-                      tamano="xs"
-                      variante="contorno"
-                      onClick={() => {
-                        setEditando(f.usuarioDni);
-                        setMotivo("");
-                      }}
-                      type="button"
-                    >
-                      Corregir
-                    </Button>
-                  );
-                }
-                return <span className="text-grafito-600">—</span>;
-              },
-            },
-          ]}
-          filas={filas.map((f) => ({ ...f, id: f.usuarioDni }))}
-        />
-        <p className="mt-2 text-xs text-grafito-600">
-          Al cerrar la asistencia, los pendientes pasan a falta.
-        </p>
+    <div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <StatusBadge estado={sesion.estado} etiqueta={estadoSesionEtiqueta(sesion.estado)} />
+        {sesion.estado === "ABIERTA" && (
+          <StatusBadge estado="ABIERTA" etiqueta={`Abierta hasta ${sesion.horaFin}`} />
+        )}
       </div>
-    </Card>
+      <DataTable
+        cargando={query.isPending}
+        vacio="Sin alumnos registrados en la sesión."
+        columnas={[
+          { encabezado: "Alumno", celda: (f) => f.nombres },
+          { encabezado: "Estado", celda: (f) => <StatusBadge estado={f.estado} /> },
+          {
+            encabezado: "",
+            celda: (f) => {
+              if (editando === f.usuarioDni) {
+                const destino = f.estado === "FALTA" ? "JUSTIFICADA" : "PRESENTE";
+                return (
+                  <span className="flex flex-wrap items-center gap-1">
+                    <input
+                      aria-label={`Motivo para ${f.nombres}`}
+                      className={cn(controlClase, "h-8 max-w-40")}
+                      placeholder="Motivo…"
+                      value={motivo}
+                      onChange={(e) => setMotivo(e.target.value)}
+                    />
+                    <Button
+                      tamano="xs"
+                      variante="oscuro"
+                      disabled={corregir.isPending}
+                      onClick={() => void onConfirmar(f.usuarioDni, destino)}
+                      type="button"
+                    >
+                      Confirmar
+                    </Button>
+                  </span>
+                );
+              }
+              if (f.estado === "FALTA") {
+                return (
+                  <Button
+                    tamano="xs"
+                    variante="contorno"
+                    onClick={() => {
+                      setEditando(f.usuarioDni);
+                      setMotivo("");
+                    }}
+                    type="button"
+                  >
+                    Justificar
+                  </Button>
+                );
+              }
+              if (f.estado === "JUSTIFICADA" || f.estado === "PRESENTE") {
+                return (
+                  <Button
+                    tamano="xs"
+                    variante="contorno"
+                    onClick={() => {
+                      setEditando(f.usuarioDni);
+                      setMotivo("");
+                    }}
+                    type="button"
+                  >
+                    Corregir
+                  </Button>
+                );
+              }
+              return <span className="text-grafito-600">—</span>;
+            },
+          },
+        ]}
+        filas={filas.map((f) => ({ ...f, id: f.usuarioDni }))}
+      />
+      <p className="mt-2 text-xs text-grafito-600">
+        Al cerrar la asistencia, los pendientes pasan a falta.
+      </p>
+    </div>
   );
 }
 
