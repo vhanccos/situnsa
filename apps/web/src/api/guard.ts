@@ -19,10 +19,16 @@ const REGLAS: Array<{ prefijo: string; roles: Set<string> | "*" }> = [
   { prefijo: "/admin", roles: STAFF },
   { prefijo: "/inscripciones", roles: STAFF },
   { prefijo: "/talleres", roles: STAFF },
+  { prefijo: "/taller", roles: new Set(["ASESOR", "JURADO", ...STAFF]) },
   { prefijo: "/asesores", roles: STAFF },
+  { prefijo: "/pagos-taller", roles: STAFF },
   { prefijo: "/expedientes/nuevo", roles: STAFF },
   { prefijo: "/asesor", roles: new Set(["ASESOR", "JURADO", ...STAFF]) },
+  { prefijo: "/mis-talleres", roles: new Set(["ASESOR", "JURADO", ...STAFF]) },
+  { prefijo: "/agenda", roles: new Set(["ASESOR", "JURADO", ...STAFF]) },
   { prefijo: "/mi-tramite", roles: new Set(["TESISTA", ...STAFF]) },
+  { prefijo: "/mi-taller", roles: new Set(["TESISTA", ...STAFF]) },
+  { prefijo: "/mis-pagos", roles: new Set(["TESISTA", ...STAFF]) },
   { prefijo: "/expedientes/", roles: "*" },
 ];
 

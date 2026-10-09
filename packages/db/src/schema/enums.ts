@@ -72,9 +72,9 @@ export const estadoSubetapaEnum = pgEnum("estado_subetapa", [
 
 export type EstadoSubetapa = "NO_INICIADO" | "EN_CURSO" | "FINALIZADO";
 
-export const estadoTallerEnum = pgEnum("estado_taller", ["ACTIVO", "CERRADO"]);
+export const estadoTallerEnum = pgEnum("estado_taller", ["ACTIVO", "CERRADO", "CANCELADO"]);
 
-export type EstadoTaller = "ACTIVO" | "CERRADO";
+export type EstadoTaller = "ACTIVO" | "CERRADO" | "CANCELADO";
 
 export const estadoGrupoEnum = pgEnum("estado_grupo", ["PLANIFICADO", "ACTIVO", "CONCLUIDO"]);
 
@@ -82,9 +82,53 @@ export type EstadoGrupo = "PLANIFICADO" | "ACTIVO" | "CONCLUIDO";
 
 export const estadoCuotaEnum = pgEnum("estado_cuota", [
   "PENDIENTE",
+  "EN_REVISION",
+  "VALIDADO",
+  "OBSERVADO",
   "PAGADA",
   "VENCIDA",
   "EXONERADA",
 ]);
 
-export type EstadoCuota = "PENDIENTE" | "PAGADA" | "VENCIDA" | "EXONERADA";
+export type EstadoCuota =
+  | "PENDIENTE"
+  | "EN_REVISION"
+  | "VALIDADO"
+  | "OBSERVADO"
+  | "PAGADA"
+  | "VENCIDA"
+  | "EXONERADA";
+
+/** Sesiones del taller P4 (RF-0202 a RF-0205). */
+export const estadoSesionEnum = pgEnum("estado_sesion", [
+  "PROGRAMADA",
+  "ABIERTA",
+  "REALIZADA",
+  "CANCELADA",
+]);
+
+export type EstadoSesion = "PROGRAMADA" | "ABIERTA" | "REALIZADA" | "CANCELADA";
+
+/** Asistencia por alumno (PENDIENTE solo con ventana abierta). */
+export const estadoAsistenciaEnum = pgEnum("estado_asistencia", [
+  "PENDIENTE",
+  "PRESENTE",
+  "FALTA",
+  "JUSTIFICADA",
+]);
+
+export type EstadoAsistencia = "PENDIENTE" | "PRESENTE" | "FALTA" | "JUSTIFICADA";
+
+/** Cumplimiento de fase por alumno P6 (observada exige comentario). */
+export const estadoCumplimientoEnum = pgEnum("estado_cumplimiento", [
+  "PENDIENTE",
+  "CUMPLIDA",
+  "OBSERVADA",
+]);
+
+export type EstadoCumplimiento = "PENDIENTE" | "CUMPLIDA" | "OBSERVADA";
+
+/** Entregas de avances P6/P7 (se conserva el historial de versiones). */
+export const estadoEntregaEnum = pgEnum("estado_entrega", ["ENTREGADA", "CONFORME", "OBSERVADA"]);
+
+export type EstadoEntrega = "ENTREGADA" | "CONFORME" | "OBSERVADA";

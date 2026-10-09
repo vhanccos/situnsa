@@ -50,6 +50,16 @@ export const PagoDTOSchema = z.object({
   estado: z.string(),
 });
 
+export const EstadoCuotaSchema = z.enum([
+  "PENDIENTE",
+  "EN_REVISION",
+  "VALIDADO",
+  "OBSERVADO",
+  "PAGADA",
+  "VENCIDA",
+  "EXONERADA",
+]);
+
 export const CuotaDTOSchema = z.object({
   id: z.string().uuid(),
   usuarioDni: z.string(),
@@ -57,8 +67,14 @@ export const CuotaDTOSchema = z.object({
   nroCuota: z.number(),
   monto: z.number(),
   vencimiento: z.string(),
-  estado: z.string(),
+  estado: EstadoCuotaSchema,
+  tieneComprobante: z.boolean(),
+  motivo: z.string().nullable(),
+  /** P9 FECHA: alta del comprobante (null si aún no se sube). */
+  comprobanteFecha: z.string().nullable(),
 });
+
+export type CuotaDTO = z.infer<typeof CuotaDTOSchema>;
 
 export const DeudorDTOSchema = z.object({
   usuarioId: z.string().uuid(),
@@ -66,8 +82,19 @@ export const DeudorDTOSchema = z.object({
   nombres: z.string(),
   grupoId: z.string().uuid(),
   grupoNombre: z.string(),
+  tallerId: z.string().uuid(),
+  tallerNombre: z.string(),
+  periodo: z.string().nullable(),
   cuotasVencidas: z.number(),
   deudaTotal: z.number(),
+  /** P9 ATRASO: detalle por cuota vencida (nro, monto, vencimiento). */
+  cuotas: z.array(
+    z.object({
+      nroCuota: z.number(),
+      monto: z.number(),
+      vencimiento: z.string(),
+    }),
+  ),
 });
 
 const c = initContract();
@@ -149,17 +176,67 @@ export const gruposContract = c.router({
     },
     summary: "Registro de pago de cuota (HU-0015)",
   },
+  /** P8 Mis Pagos: cuotas propias del taller (imagen o PDF, hasta 5 MB). */
+  misCuotas: {
+    method: "GET",
+    path: "/api/mis-cuotas",
+    query: z.object({ tallerId: z.string().uuid(), usuarioDni: z.string().optional() }),
+    responses: {
+      200: z.object({ items: z.array(CuotaDTOSchema) }),
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "P8 Cuotas del alumno en el taller",
+  },
+  /** P9 Validar: la cuota queda pagada, Deudores se actualiza, se avisa. */
+  validarComprobante: {
+    method: "POST",
+    path: "/api/cuotas/:id/validar",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: z.object({}),
+    responses: {
+      200: CuotaDTOSchema,
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "P9 Validar comprobante",
+  },
+  /** P9 Observar: motivo obligatorio, vuelve al alumno. */
+  observarComprobante: {
+    method: "POST",
+    path: "/api/cuotas/:id/observar",
+    pathParams: z.object({ id: z.string().uuid() }),
+    body: z.object({
+      motivo: z.string().min(5, "Cuenta el motivo de la observación").max(500),
+    }),
+    responses: {
+      200: CuotaDTOSchema,
+      400: ErrorEnvelopeSchema,
+      401: ErrorEnvelopeSchema,
+      403: ErrorEnvelopeSchema,
+      404: ErrorEnvelopeSchema,
+    },
+    summary: "P9 Observar comprobante",
+  },
 });
 
 export const reportesContract = c.router({
   deudores: {
     method: "GET",
     path: "/api/reportes/deudores",
+    query: z.object({
+      tallerId: z.string().uuid().optional(),
+      periodo: z.string().optional(),
+    }),
     responses: {
       200: z.object({ items: z.array(DeudorDTOSchema) }),
       401: ErrorEnvelopeSchema,
       403: ErrorEnvelopeSchema,
     },
-    summary: "Tesistas con cuotas vencidas (HU-0015)",
+    summary: "P9 Deudores por taller y período (HU-0015)",
   },
 });

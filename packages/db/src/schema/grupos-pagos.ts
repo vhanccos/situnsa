@@ -1,4 +1,13 @@
-import { date, integer, pgTable, primaryKey, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import {
+  date,
+  integer,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { estadoCuotaEnum, estadoGrupoEnum } from "./enums.js";
 import { talleres } from "./talleres.js";
 import { usuarios } from "./usuarios.js";
@@ -45,6 +54,13 @@ export const cronogramaPensiones = pgTable("cronograma_pensiones", {
   monto: integer("monto").notNull(),
   vencimiento: date("vencimiento").notNull(),
   estado: estadoCuotaEnum("estado").notNull().default("PENDIENTE"),
+  /** P8/P9: comprobante subido por el alumno (imagen o PDF). */
+  comprobanteRuta: text("comprobante_ruta"),
+  comprobanteSha256: varchar("comprobante_sha256", { length: 64 }),
+  /** P9 FECHA: cuándo se subió el comprobante (visible en Comprobantes por validar). */
+  comprobanteFecha: timestamp("comprobante_fecha", { withTimezone: true }),
+  /** Motivo de observación (P8 lo muestra, P9 lo exige). */
+  motivo: text("motivo"),
 });
 
 export const pagosTaller = pgTable("pagos_taller", {

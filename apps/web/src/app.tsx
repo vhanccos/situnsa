@@ -12,6 +12,7 @@ import { SessionProvider } from "./api/session.js";
 import { ToastProvider } from "./components/ui/toast.js";
 import { ActivarPage } from "./routes/activar.js";
 import { AdminPage } from "./routes/admin.js";
+import { AgendaPage } from "./routes/agenda.js";
 import { AsesorPage } from "./routes/asesor.js";
 import { ConfiguracionPage } from "./routes/configuracion.js";
 import { ExpedienteDetallePage } from "./routes/expedientes.$id.js";
@@ -19,9 +20,15 @@ import { NuevoExpedientePage } from "./routes/expedientes-nuevo.js";
 import { HomePage } from "./routes/index.js";
 import { InscripcionesPage } from "./routes/inscripciones.js";
 import { LoginPage } from "./routes/login.js";
+import { MiTallerPage } from "./routes/mi-taller.js";
 import { MiTramitePage } from "./routes/mi-tramite.js";
+import { MisPagosPage } from "./routes/mis-pagos.js";
+import { MisTalleresPage } from "./routes/mis-talleres.js";
+import { PagosTallerPage } from "./routes/pagos-taller.js";
 import { RestablecerPage } from "./routes/restablecer.js";
+import { TallerDetallePage } from "./routes/taller-detalle.js";
 import { AsesoresPage, TalleresPage } from "./routes/talleres-asesores.js";
+import { TalleresNuevoPage } from "./routes/talleres-nuevo.js";
 
 const rootRoute = createRootRoute();
 
@@ -102,6 +109,54 @@ const asesoresRoute = createRoute({
   beforeLoad: guard("/asesores"),
   component: AsesoresPage,
 });
+const talleresNuevoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/talleres/nuevo",
+  beforeLoad: guard("/talleres/nuevo"),
+  component: TalleresNuevoPage,
+});
+const tallerDetalleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/taller/$id",
+  beforeLoad: guard("/taller/x"),
+  component: function TallerDetalleRouteWrapper() {
+    const { id } = tallerDetalleRoute.useParams();
+    return <TallerDetallePage id={id} />;
+  },
+});
+const misTalleresRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mis-talleres",
+  beforeLoad: guard("/mis-talleres"),
+  component: MisTalleresPage,
+});
+const agendaRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/agenda/$id",
+  beforeLoad: guard("/agenda/x"),
+  component: function AgendaRouteWrapper() {
+    const { id } = agendaRoute.useParams();
+    return <AgendaPage id={id} />;
+  },
+});
+const miTallerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mi-taller",
+  beforeLoad: guard("/mi-taller"),
+  component: MiTallerPage,
+});
+const misPagosRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mis-pagos",
+  beforeLoad: guard("/mis-pagos"),
+  component: MisPagosPage,
+});
+const pagosTallerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/pagos-taller",
+  beforeLoad: guard("/pagos-taller"),
+  component: PagosTallerPage,
+});
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -116,6 +171,13 @@ const routeTree = rootRoute.addChildren([
   inscripcionesRoute,
   talleresRoute,
   asesoresRoute,
+  talleresNuevoRoute,
+  tallerDetalleRoute,
+  misTalleresRoute,
+  agendaRoute,
+  miTallerRoute,
+  misPagosRoute,
+  pagosTallerRoute,
 ]);
 
 const router = createRouter({ routeTree });

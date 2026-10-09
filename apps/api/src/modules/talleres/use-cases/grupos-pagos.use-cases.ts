@@ -8,8 +8,9 @@ import {
   usuarios,
 } from "@pis/db";
 import { DomainError, fail, ok, type Result } from "@pis/domain";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { DrizzleUnitOfWork } from "../../../infra/db/unit-of-work.js";
+import { AsignarAlumnoUseCase } from "./sesiones.use-cases.js";
 
 export interface Actor {
   id: string;
@@ -57,38 +58,14 @@ export class CrearGrupoUseCase {
   }
 }
 
-/** Asignación manual a grupo (HU-0011): usuario existente, sin duplicados. */
+/** Asignación manual a grupo (HU-0011): delega en el flujo P3 (validado + cupo + cuotas). */
 export class AgregarMiembroUseCase {
   async execute(
     grupoId: string,
     usuarioDni: string,
-    _actor: Actor,
+    actor: Actor,
   ): Promise<Result<{ grupoId: string; usuarioId: string }, DomainError>> {
-    const uow = new DrizzleUnitOfWork(db);
-    return uow.run(async (tx) => {
-      const g = await tx
-        .select({ id: gruposTaller.id })
-        .from(gruposTaller)
-        .where(eq(gruposTaller.id, grupoId))
-        .limit(1);
-      if (!g[0]) return fail(new DomainError("NO_ENCONTRADO", "Grupo no encontrado"));
-      const u = await tx
-        .select({ id: usuarios.id })
-        .from(usuarios)
-        .where(eq(usuarios.dni, usuarioDni))
-        .limit(1);
-      if (!u[0])
-        return fail(new DomainError("VALIDACION_FALLIDA", `Usuario DNI ${usuarioDni} no existe`));
-      const ya = await tx
-        .select()
-        .from(grupoMiembros)
-        .where(and(eq(grupoMiembros.grupoId, grupoId), eq(grupoMiembros.usuarioId, u[0].id)))
-        .limit(1);
-      if (ya.length > 0)
-        return fail(new DomainError("VALIDACION_FALLIDA", "El usuario ya es miembro del grupo"));
-      await tx.insert(grupoMiembros).values({ grupoId, usuarioId: u[0].id });
-      return ok({ grupoId, usuarioId: u[0].id });
-    });
+    return new AsignarAlumnoUseCase().execute(grupoId, usuarioDni, actor);
   }
 }
 

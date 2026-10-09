@@ -1,0 +1,1 @@
+ALTER TABLE "cronograma_pensiones" ADD COLUMN "comprobante_fecha" timestamp with time zone;

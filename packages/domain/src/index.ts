@@ -17,3 +17,6 @@ export * from "./reportes/consejo-facultad.js";
 export * from "./shared/domain-error.base.js";
 export * from "./shared/domain-event.base.js";
 export * from "./shared/result.js";
+export * from "./taller/asistencia.js";
+export * from "./taller/pase.js";
+export * from "./taller/sesiones.js";

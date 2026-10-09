@@ -20,6 +20,9 @@ import {
   registerGruposRoutes,
   registerReportesRoutes,
 } from "./modules/talleres/grupos-pagos.routes.js";
+import { registerSesionesRoutes } from "./modules/talleres/sesiones.routes.js";
+import { registerTallerArchivosRoutes } from "./modules/talleres/taller-archivos.routes.js";
+import { registerTallerAvancesRoutes } from "./modules/talleres/taller-avances.routes.js";
 import {
   registerAsesoresRoutes,
   registerTalleresRoutes,
@@ -57,6 +60,9 @@ export async function buildServer() {
   registerTalleresRoutes(app);
   registerAsesoresRoutes(app);
   registerGruposRoutes(app);
+  registerSesionesRoutes(app);
+  registerTallerAvancesRoutes(app);
+  registerTallerArchivosRoutes(app);
   registerReportesRoutes(app);
   registerReportesTitulacionRoutes(app);
   registerConfiguracionRoutes(app);

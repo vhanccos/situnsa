@@ -19,9 +19,10 @@ export async function entregarArchivo(
   reply: FastifyReply,
   storage: LocalStorageService,
   ruta: string,
-  opciones: { nombre?: string; inline?: boolean } = {},
+  opciones: { nombre?: string; inline?: boolean; contentType?: string } = {},
 ): Promise<void> {
   const nombre = (opciones.nombre ?? basename(ruta)).replace(/[^A-Za-z0-9._-]/g, "_");
+  const tipo = opciones.contentType ?? "application/pdf";
   const disposicion = `${opciones.inline ? "inline" : "attachment"}; filename="${nombre}"`;
   if (modoEntrega() === "accel") {
     const accel = storage.accelPath(ruta);
@@ -31,7 +32,7 @@ export async function entregarArchivo(
     }
     await reply
       .header("X-Accel-Redirect", accel)
-      .header("Content-Type", "application/pdf")
+      .header("Content-Type", tipo)
       .header("Content-Disposition", disposicion)
       .status(200)
       .send();
@@ -43,10 +44,21 @@ export async function entregarArchivo(
     return;
   }
   await reply
-    .header("Content-Type", "application/pdf")
+    .header("Content-Type", tipo)
     .header("Content-Length", String(archivo.bytes))
     .header("Content-Disposition", disposicion)
     .header("Cache-Control", "private, no-store")
     .status(200)
     .send(archivo.stream);
+}
+
+/** MIME por extensión (comprobantes y avances aceptan imagen, PDF y Word). */
+export function mimePorNombre(nombre: string): string {
+  const ext = nombre.split(".").pop()?.toLowerCase();
+  if (ext === "png") return "image/png";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "doc") return "application/msword";
+  if (ext === "docx")
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  return "application/pdf";
 }

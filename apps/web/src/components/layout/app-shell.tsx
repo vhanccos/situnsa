@@ -26,16 +26,24 @@ interface Item {
 
 function navPorRol(rol: string | undefined): Item[] {
   if (rol === "TESISTA") {
-    return [{ to: "/mi-tramite", etiqueta: "Mi Trámite", icono: <LayoutList size={18} /> }];
+    return [
+      { to: "/mi-tramite", etiqueta: "Mi Trámite", icono: <LayoutList size={18} /> },
+      { to: "/mi-taller", etiqueta: "Mi Taller", icono: <GraduationCap size={18} /> },
+      { to: "/mis-pagos", etiqueta: "Mis Pagos", icono: <ClipboardCheck size={18} /> },
+    ];
   }
   if (rol === "ASESOR" || rol === "JURADO") {
-    return [{ to: "/asesor", etiqueta: "Mis Alumnos", icono: <GraduationCap size={18} /> }];
+    return [
+      { to: "/asesor", etiqueta: "Mis Alumnos", icono: <GraduationCap size={18} /> },
+      { to: "/mis-talleres", etiqueta: "Mis Talleres", icono: <LayoutList size={18} /> },
+    ];
   }
   return [
     { to: "/admin", etiqueta: "Listado de Expedientes", icono: <LayoutList size={18} /> },
     { to: "/expedientes/nuevo", etiqueta: "Nuevo Expediente", icono: <FilePlus size={18} /> },
     { to: "/inscripciones", etiqueta: "Validación", icono: <ClipboardCheck size={18} /> },
     { to: "/talleres", etiqueta: "Taller de Tesis", icono: <GraduationCap size={18} /> },
+    { to: "/pagos-taller", etiqueta: "Pagos Taller", icono: <ClipboardCheck size={18} /> },
     { to: "/asesores", etiqueta: "Asesores", icono: <Users size={18} /> },
     // HU-0052: el proceso configurable es solo de administración del sistema.
     ...(rol === "ADMIN_FIPS"

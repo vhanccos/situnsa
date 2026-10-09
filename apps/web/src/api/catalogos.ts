@@ -135,6 +135,7 @@ export interface Cuota {
   monto: number;
   vencimiento: string;
   estado: string;
+  comprobanteFecha: string | null;
 }
 
 export interface Deudor {
